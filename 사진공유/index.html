@@ -462,6 +462,9 @@
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
       }
       main { padding-bottom: 96px; }
+      /* 보기 고르기와 메시지 버튼이 한 줄에 나란히 (좁으면 옆으로 밀어서 봐요) */
+      .tabs { flex-wrap: nowrap; gap: 5px; overflow-x: auto; }
+      .tab { flex-shrink: 0; padding: 8px 11px; font-size: 14px; }
     }
     /* 넓은 화면(컴퓨터): 메뉴가 왼쪽에 따로 있고, 아래로 내려도 따라와요 */
     @media (min-width: 1000px) {
@@ -471,6 +474,10 @@
       .tabs { flex-direction: column; }
       .tab { border-radius: 12px; text-align: left; }
     }
+
+    .check-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 15px; cursor: pointer; }
+    .check-row input { width: 18px; height: 18px; }
+    .lock-badge { flex-shrink: 0; padding: 2px 8px; font-size: 12px; border-radius: 10px; background: #eef0f5; color: #5b6272; }
 
     /* 팔로우 */
     .small-pink { padding: 7px 16px; font-size: 14px; border-radius: 8px; }
@@ -557,8 +564,11 @@
         <div class="tabs" id="tabs">
           <button type="button" class="tab" data-tab="all">전체</button>
           <button type="button" class="tab" data-tab="following">팔로잉</button>
+          <button type="button" class="tab" data-tab="only">🔒 팔로워만</button>
           <button type="button" class="tab" data-tab="photo">사진</button>
           <button type="button" class="tab" data-tab="video">영상</button>
+          <!-- 메시지를 주고받을 수 있는 친구 목록이 열려요 -->
+          <button type="button" class="tab" id="chatsButton">💬 메시지</button>
         </div>
       </div>
 
@@ -602,10 +612,14 @@
           <label for="photoInput" class="plain-button">사진·영상 고르기</label>
           <!-- 핸드폰에서는 카메라가 바로 열려요 -->
           <input type="file" class="hidden-file" id="cameraInput" accept="image/*" capture="environment">
-          <label for="cameraInput" class="plain-button">📷 바로 찍기</label>
+          <label for="cameraInput" class="plain-button">📷 사진 찍기</label>
+          <input type="file" class="hidden-file" id="videoCameraInput" accept="video/*" capture="environment">
+          <label for="videoCameraInput" class="plain-button">🎥 영상 찍기</label>
           <span class="date" id="composeCount"></span>
         </div>
         <div class="thumbs" id="composeThumbs"></div>
+        <!-- 켜면 나를 팔로우한 친구에게만 보이는 게시물이 돼요 -->
+        <label class="check-row"><input type="checkbox" id="onlyCheck"> 🔒 나를 팔로우한 친구에게만 보여 주기</label>
         <p class="hint" style="margin-top: 10px">진짜 이름이나 얼굴이 나온 사진·영상은 올리지 않아요. 영상은 한 개에 30MB까지 올릴 수 있어요.</p>
       </div>
       <div class="error" id="composeError"></div>
@@ -682,6 +696,24 @@
   </dialog>
 
   <!-- 6. 알림 창: 누가 나를 팔로우했는지, 누가 메시지를 보냈는지 -->
+  <dialog id="chatsDialog" aria-label="메시지">
+    <div class="dialog-body">
+      <div class="dialog-top">
+        <h2>메시지</h2>
+        <button type="button" class="plain-button" id="chatsCloseButton">닫기</button>
+      </div>
+      <p class="hint">서로 팔로우한 친구와 메시지를 주고받을 수 있어요. 친구를 누르면 대화가 열려요.</p>
+      <div id="chatsList"></div>
+      <!-- 단체 메시지: 서로 팔로우한 친구 모두에게 같은 메시지를 한 번에 보내요 -->
+      <label class="field-label" for="groupInput">단체 메시지</label>
+      <form class="comment-form" id="groupForm">
+        <input type="text" id="groupInput" placeholder="친구 모두에게 보낼 메시지" maxlength="300" autocomplete="off">
+        <button type="submit" class="upload-button" id="groupSendButton">모두에게 보내기</button>
+      </form>
+      <div class="error" id="groupError"></div>
+    </div>
+  </dialog>
+
   <dialog id="noticeDialog" aria-label="알림">
     <div class="dialog-body">
       <div class="dialog-top">
@@ -991,7 +1023,7 @@
       photoList.innerHTML = "";
       count.textContent = "";
       profileBox.hidden = true;
-      [composeDialog, viewDialog, profileDialog, noticeDialog, dmDialog].forEach(function (dialog) { dialog.close(); });
+      [composeDialog, viewDialog, profileDialog, noticeDialog, dmDialog, chatsDialog].forEach(function (dialog) { dialog.close(); });
 
       homeLink.hidden = false;
       meBox.hidden = true;
@@ -1035,11 +1067,19 @@
     // 게시물의 글 읽기. 사진이 6장을 넘으면 나머지를 묶어 둔 곳(moreBoard)이 글 끝에 숨어 있어요.
     function readPost(post) {
       const text = post.text || "";
-      const at = text.indexOf(MARK + "m");
-      if (at < 0) return { text: text, moreBoard: null, moreCount: 0 };
-      const parts = text.slice(at + 2).split(MARK);
-      const ok = /^[a-z]{1,20}$/.test(parts[0]);
-      return { text: text.slice(0, at), moreBoard: ok ? parts[0] : null, moreCount: ok ? Number(parts[1]) || 0 : 0 };
+      const at = text.indexOf(MARK);
+      const result = { text: at < 0 ? text : text.slice(0, at), moreBoard: null, moreCount: 0, followersOnly: false };
+      if (at < 0) return result;
+      // 글 뒤에 숨은 표시들: "p"는 팔로워만 보는 게시물, "m게시판이름" 다음 칸은 따로 묶어 둔 사진 수
+      const parts = text.slice(at + 1).split(MARK);
+      parts.forEach(function (part, index) {
+        if (part === "p") result.followersOnly = true;
+        if (part[0] === "m" && /^[a-z]{1,20}$/.test(part.slice(1))) {
+          result.moreBoard = part.slice(1);
+          result.moreCount = Number(parts[index + 1]) || 0;
+        }
+      });
+      return result;
     }
 
     // 게시물의 지금 글: 올린 사람이 고쳤으면 고친 글, 아니면 처음 글
@@ -1143,11 +1183,16 @@
 
     // 지금 화면에 보여 줄 게시물 고르기: 프로필 화면이면 그 사람 것만, 아니면 고른 보기(전체·팔로잉·사진·영상)대로
     function pickPosts() {
-      let posts = allPosts;
+      // 팔로워만 보는 게시물은 올린 사람과, 그 사람을 팔로우한 사람에게만 보여요
+      let posts = allPosts.filter(function (post) {
+        return !readPost(post).followersOnly || post.author === me || following[post.author];
+      });
       if (profileOf) {
         posts = posts.filter(function (post) { return post.author === profileOf; });
       } else if (tab === "following") {
         posts = posts.filter(function (post) { return following[post.author]; });
+      } else if (tab === "only") {
+        posts = posts.filter(function (post) { return readPost(post).followersOnly; });
       } else if (tab === "photo" || tab === "video") {
         posts = posts.filter(function (post) {
           return (post.media || []).some(function (item) { return (item.kind === "video") === (tab === "video"); });
@@ -1167,7 +1212,7 @@
     function showFeed() {
       const posts = pickPosts();
 
-      document.querySelectorAll("#tabs .tab").forEach(function (button) {
+      document.querySelectorAll("#tabs .tab[data-tab]").forEach(function (button) {
         button.className = !profileOf && button.dataset.tab === tab ? "tab on" : "tab";
       });
       showProfileBox();
@@ -1195,6 +1240,13 @@
           badge.className = "follow-badge";
           badge.textContent = "팔로잉";
           who.appendChild(badge);
+        }
+        // 팔로워만 보는 게시물 표시
+        if (content.followersOnly) {
+          const lock = document.createElement("span");
+          lock.className = "lock-badge";
+          lock.textContent = "🔒 팔로워만";
+          who.appendChild(lock);
         }
         card.appendChild(who);
 
@@ -1286,6 +1338,7 @@
       empty.textContent = searchInput.value.trim() ? "찾는 게시물이 없어요."
         : profileOf ? "아직 올린 게시물이 없어요."
         : tab === "following" ? "팔로우한 친구의 게시물이 아직 없어요. 친구의 프로필에서 \"팔로우\"를 눌러 보세요."
+        : tab === "only" ? "아직 팔로워만 보는 게시물이 없어요."
         : tab === "photo" ? "아직 사진이 있는 게시물이 없어요."
         : tab === "video" ? "아직 영상이 있는 게시물이 없어요."
         : "아직 게시물이 없어요. 첫 게시물을 올려 보세요!";
@@ -1299,7 +1352,7 @@
       let text = "";
       try { text = decodeURIComponent(location.hash.slice(1)); } catch (error) {}
       if (text.startsWith("u=") && text.length > 2) return { profile: text.slice(2), tab: "all" };
-      return { profile: null, tab: ["following", "photo", "video"].includes(text) ? text : "all" };
+      return { profile: null, tab: ["following", "only", "photo", "video"].includes(text) ? text : "all" };
     }
     function applyRoute() {
       const route = readRoute();
@@ -1325,7 +1378,7 @@
     document.getElementById("pageBackButton").addEventListener("click", function () { openProfile(null); });
 
     // 보기 고르기: 전체, 팔로잉, 사진, 영상
-    document.querySelectorAll("#tabs .tab").forEach(function (button) {
+    document.querySelectorAll("#tabs .tab[data-tab]").forEach(function (button) {
       button.addEventListener("click", function () {
         go(button.dataset.tab === "all" ? "" : button.dataset.tab);
       });
@@ -1524,6 +1577,7 @@
       composePhotos = [];
       composeText.value = "";
       composeError.textContent = "";
+      document.getElementById("onlyCheck").checked = false;
       showThumbs();
     }
 
@@ -1567,7 +1621,7 @@
       }
       showThumbs();
     }
-    [photoInput, cameraInput].forEach(function (input) {
+    [photoInput, cameraInput, document.getElementById("videoCameraInput")].forEach(function (input) {
       input.addEventListener("change", function () {
         pickPhotos(Array.from(input.files));
         input.value = ""; // 같은 것을 또 고를 수 있게 비워요
@@ -1610,13 +1664,13 @@
 
           // 서버는 글 하나에 사진·영상을 6개까지만 받아요.
           // 그래서 7번째부터는 이 게시물만 쓰는 게시판에 따로 묶어 올리고, 그 이름을 글 끝에 숨겨 둬요.
-          let hidden = "";
+          let hidden = document.getElementById("onlyCheck").checked ? MARK + "p" : ""; // 팔로워만 보는 게시물 표시
           const more = media.slice(SERVER_PHOTOS);
           if (more.length > 0) {
             let moreBoard = "x";
             for (let i = 0; i < 19; i++) moreBoard += "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)];
             await call("post", { board: moreBoard, text: "", media: more });
-            hidden = MARK + "m" + moreBoard + MARK + more.length;
+            hidden += MARK + "m" + moreBoard + MARK + more.length;
           }
           await call("post", { board: BOARD, text: text + hidden, media: media.slice(0, SERVER_PHOTOS) });
           clearCompose();
@@ -2323,6 +2377,15 @@
     const dmSendButton = document.getElementById("dmSendButton");
     const dmError = document.getElementById("dmError");
 
+    // 메시지는 서로 팔로우한 사이에서만 보고 보낼 수 있어요
+    function canChat(id) {
+      return !!following[id] && !!followers[id];
+    }
+    // 서로 팔로우한 친구들의 아이디
+    function chatFriends() {
+      return Object.keys(following).filter(canChat).sort();
+    }
+
     // 메시지 창 열기
     function openDm(id) {
       chatting = { id: id, board: dmBoard(me, id) };
@@ -2334,12 +2397,102 @@
       dmDialog.showModal();
       loadDm();
     }
+
+    // 서로 팔로우한 사이가 아니면 메시지 대신 안내를 보여 줘요
+    function showDmLocked() {
+      shownDm = null;
+      dmList.innerHTML = "";
+      const note = document.createElement("p");
+      note.className = "no-comment";
+      note.textContent = "서로 팔로우한 사이에서만 메시지를 볼 수 있어요.";
+      dmList.appendChild(note);
+    }
     dmButton.addEventListener("click", function () { if (profileOf) openDm(profileOf); });
+
+    // "💬 메시지" 버튼: 메시지를 주고받을 수 있는 친구 목록 보여 주기
+    const chatsDialog = document.getElementById("chatsDialog");
+    document.getElementById("chatsButton").addEventListener("click", function () {
+      const seen = localStorage.getItem(seenKey()) || "";
+      const list = document.getElementById("chatsList");
+      list.innerHTML = "";
+
+      // 서로 팔로우한 친구들만 나와요. 나에게 메시지를 보낸 친구(새것부터)가 먼저
+      const people = [];
+      const fresh = {}; // 아직 안 읽은 메시지 알림이 있는 사람
+      inbox.forEach(function (note) {
+        if (note.kind !== "d" || !canChat(note.author)) return;
+        if (!people.includes(note.author)) people.push(note.author);
+        if (isNewer(note.sk, seen)) fresh[note.author] = true;
+      });
+      chatFriends().forEach(function (id) {
+        if (!people.includes(id)) people.push(id);
+      });
+      document.getElementById("groupError").textContent = "";
+      document.getElementById("groupSendButton").textContent = "모두에게 보내기 (" + people.length + "명)";
+
+      if (people.length === 0) {
+        const none = document.createElement("p");
+        none.className = "no-comment";
+        none.textContent = "아직 메시지를 주고받을 친구가 없어요. 친구의 프로필에서 \"팔로우\"를 누르고, 친구도 나를 팔로우하면 여기에 나와요.";
+        list.appendChild(none);
+      }
+      people.forEach(function (id) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = fresh[id] ? "notice new" : "notice";
+        const text = document.createElement("span");
+        text.textContent = id + (fresh[id] ? " · 새 메시지" : "");
+        row.append(makeAvatar(id, "small"), text);
+        row.addEventListener("click", function () {
+          chatsDialog.close();
+          openDm(id);
+        });
+        list.appendChild(row);
+      });
+      chatsDialog.showModal();
+    });
+    // 단체 메시지: 서로 팔로우한 친구 한 명 한 명과의 대화에 같은 메시지를 넣어요
+    document.getElementById("groupForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const input = document.getElementById("groupInput");
+      const button = document.getElementById("groupSendButton");
+      const error = document.getElementById("groupError");
+      const text = input.value.replace(/[\u0000-\u001f]/g, " ").trim();
+      const friends = chatFriends();
+      if (!text) return;
+      if (hasBadWords(text)) { error.textContent = ERROR_TEXT.BAD_WORD; return; }
+      if (friends.length === 0) { error.textContent = "아직 서로 팔로우한 친구가 없어요."; return; }
+      if (!confirm("서로 팔로우한 친구 " + friends.length + "명 모두에게 보낼까요?")) return;
+
+      button.disabled = true;
+      error.textContent = "";
+      let sent = 0;
+      try {
+        for (const id of friends) {
+          button.textContent = "보내는 중... (" + (sent + 1) + "/" + friends.length + ")";
+          await call("post", { board: dmBoard(me, id), text: text });
+          await notifyDm(id);
+          sent++;
+        }
+        input.value = "";
+        error.textContent = friends.length + "명에게 보냈어요.";
+      } catch (problem) {
+        error.textContent = errorText(problem) + " (" + sent + "명에게는 보냈어요.)";
+      }
+      button.disabled = false;
+      button.textContent = "모두에게 보내기 (" + friends.length + "명)";
+    });
+
+    document.getElementById("chatsCloseButton").addEventListener("click", function () { chatsDialog.close(); });
+    chatsDialog.addEventListener("click", function (event) {
+      if (event.target === chatsDialog) chatsDialog.close();
+    });
 
     // 주고받은 메시지를 서버에서 받아 와서 그리기
     async function loadDm() {
       const chat = chatting;
       if (!chat) return;
+      if (!canChat(chat.id)) { showDmLocked(); return; }
       let items;
       try {
         items = await call("posts", { board: chat.board });
