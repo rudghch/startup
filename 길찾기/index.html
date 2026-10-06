@@ -585,9 +585,10 @@
       }
 
       // 우리 서버를 거쳐 카카오에 길을 물어보기 (kind: "transit", "walk", "bike")
-      async function askKakao(kind) {
-        const start = points.start.position;
-        const end = points.end.position;
+      // from, to를 주지 않으면 출발하는 곳에서 도착하는 곳까지 물어봐요
+      async function askKakao(kind, from, to) {
+        const start = from || points.start.position;
+        const end = to || points.end.position;
         const response = await fetch(ROUTE_URL, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -600,6 +601,31 @@
         const data = await response.json();
         if (!response.ok || data.status !== "OK") throw new Error(data.error || data.status || "길 없음");
         return data;
+      }
+
+      // 카카오가 알려 준 도보·자전거 길에서 좌표, 거리, 시간만 꺼내기
+      function readKakaoRoute(data) {
+        const pairs = [];
+        data.route.legs.forEach(function (leg) {
+          leg.steps.forEach(function (step) {
+            step.path.points.forEach(function (c) { pairs.push(c); });
+          });
+        });
+        if (pairs.length < 2) throw new Error("길 없음");
+        return { points: toPositions(pairs), distance: data.route.properties.totalDistance, duration: data.route.properties.totalTime };
+      }
+
+      // 대중교통을 타러 가거나 내려서 걷는 길 한 조각 만들기 (30m보다 가까우면 만들지 않아요)
+      async function walkPiece(from, to, text) {
+        if (meters(from, to) < 30) return null;
+        let walk;
+        try {
+          walk = readKakaoRoute(await askKakao("walk", from, to));
+        } catch (error) {
+          // 걷는 길을 못 받으면 곧은 선으로 잇고, 1초에 1.1m 걷는다고 어림해요
+          walk = { points: [from, to], duration: meters(from, to) / 1.1 };
+        }
+        return { type: "WALKING", points: walk.points, text: "🚶 " + text + " (" + timeText(walk.duration) + ")" };
       }
 
       // 대중교통 길은 한 번 받아 두고, 버스/지하철만 바꿔 볼 때는 다시 묻지 않아요
@@ -696,12 +722,35 @@
               } else {
                 // 가장 먼저 나온(추천) 길을 보여 줘요
                 const route = routes[0];
-                const drawn = [];
+                let parts = [];
                 route.steps.forEach(function (step) {
                   const type = step.properties.type;
-                  steps.push(stepEmojis[type] + " " + step.properties.guidance + " (" + timeText(step.properties.time) + ")");
-                  if (step.path && step.path.points && step.path.points.length > 1) {
-                    drawn.push({ points: toPositions(step.path.points), color: stepColors[type], dashed: type === "WALKING" });
+                  parts.push({
+                    type: type,
+                    points: step.path && step.path.points ? toPositions(step.path.points) : [],
+                    text: stepEmojis[type] + " " + step.properties.guidance + " (" + timeText(step.properties.time) + ")",
+                    firstStop: step.properties.stops && step.properties.stops[0] ? step.properties.stops[0].name : ""
+                  });
+                });
+
+                // 카카오는 처음 타는 곳까지, 마지막에 내려서 걷는 길을 알려 주지 않아서 따로 물어봐요
+                const ridden = parts.filter(function (part) { return part.points.length > 1; });
+                if (ridden.length > 0) {
+                  const first = ridden[0];
+                  const last = ridden[ridden.length - 1];
+                  const walks = await Promise.all([
+                    walkPiece(start, first.points[0], (first.firstStop || "타는 곳") + "까지 걷기"),
+                    walkPiece(last.points[last.points.length - 1], end, "도착하는 곳까지 걷기")
+                  ]);
+                  if (walks[0]) parts.unshift(walks[0]);
+                  if (walks[1]) parts.push(walks[1]);
+                }
+
+                const drawn = [];
+                parts.forEach(function (part) {
+                  steps.push(part.text);
+                  if (part.points.length > 1) {
+                    drawn.push({ points: part.points, color: stepColors[part.type], dashed: part.type === "WALKING" });
                   }
                 });
                 if (drawn.length > 0) pieces = drawn;
@@ -722,16 +771,7 @@
           // 도보와 자전거는 카카오에 먼저 물어보고, 안 되면 무료 길찾기 서버에 물어봐요
           if (ROUTE_URL && way.kakao) {
             try {
-              const data = await askKakao(mode);
-              const pairs = [];
-              data.route.legs.forEach(function (leg) {
-                leg.steps.forEach(function (step) {
-                  step.path.points.forEach(function (c) { pairs.push(c); });
-                });
-              });
-              if (pairs.length > 1) {
-                got = { points: toPositions(pairs), distance: data.route.properties.totalDistance, duration: data.route.properties.totalTime };
-              }
+              got = readKakaoRoute(await askKakao(mode));
             } catch (error) {
               got = null;
             }
