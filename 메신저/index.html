@@ -5,15 +5,168 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>메신저</title>
   <style>
-    body { margin: 0; padding: 60px 16px; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; background: #f4f6fb; color: #1f2430; text-align: center; }
-    h1 { font-size: 32px; }
-    p { font-size: 18px; color: #5b6272; }
-    a { color: #3b6cf6; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex;
+      justify-content: center;
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: #e9edf5;
+      color: #1f2430;
+    }
+
+    /* 대화창 전체 */
+    .chat {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      background: #b9d4ea;
+    }
+
+    /* 맨 위: 친구 이름 */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: #ffffff;
+      border-bottom: 1px solid #d5dbe6;
+    }
+    .chat-header h1 { margin: 0; font-size: 20px; }
+    .chat-header a { color: #3b6cf6; font-size: 14px; }
+
+    /* 가운데: 메시지들이 쌓이는 곳 */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .message { display: flex; flex-direction: column; max-width: 75%; }
+    .message .name { font-size: 13px; margin-bottom: 4px; color: #3d4658; }
+    .message .bubble {
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 16px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .message .time { font-size: 11px; color: #56607a; margin-top: 3px; }
+
+    /* 친구가 보낸 메시지: 왼쪽 */
+    .message.friend { align-self: flex-start; }
+    .message.friend .bubble { background: #ffffff; }
+
+    /* 내가 보낸 메시지: 오른쪽 */
+    .message.me { align-self: flex-end; align-items: flex-end; }
+    .message.me .bubble { background: #ffe94a; }
+
+    /* 맨 아래: 글 쓰는 곳 */
+    .input-area {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: #ffffff;
+      border-top: 1px solid #d5dbe6;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-family: inherit;
+      border: 1px solid #c9d0dd;
+      border-radius: 20px;
+    }
+    .input-area button {
+      padding: 0 20px;
+      font-size: 16px;
+      font-family: inherit;
+      font-weight: bold;
+      border: none;
+      border-radius: 20px;
+      background: #ffe94a;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    .input-area button:hover { background: #ffdf0f; }
   </style>
 </head>
 <body>
-  <h1>메신저</h1>
-  <p>아직 만드는 중이에요. 곧 만나요!</p>
-  <p><a href="../">처음 화면으로</a></p>
+  <div class="chat">
+    <div class="chat-header">
+      <h1>💬 하늘이</h1>
+      <a href="../">처음 화면으로</a>
+    </div>
+
+    <!-- 메시지가 쌓이는 곳 -->
+    <div class="messages" id="messages"></div>
+
+    <!-- 글 쓰는 곳 -->
+    <form class="input-area" id="messageForm">
+      <input type="text" id="messageInput" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지">
+      <button type="submit">보내기</button>
+    </form>
+  </div>
+
+  <script>
+    const messages = document.getElementById("messages");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+
+    // 지금 시간을 "오후 3:05" 같은 글자로 만들기
+    function nowText() {
+      return new Date().toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+    }
+
+    // 대화창에 메시지 하나 추가하기
+    // who: "me"(나) 또는 "friend"(친구)
+    function addMessage(who, text) {
+      const message = document.createElement("div");
+      message.className = "message " + who;
+
+      if (who === "friend") {
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = "하늘이";
+        message.appendChild(name);
+      }
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+      message.appendChild(bubble);
+
+      const time = document.createElement("div");
+      time.className = "time";
+      time.textContent = nowText();
+      message.appendChild(time);
+
+      messages.appendChild(message);
+
+      // 새 메시지가 보이도록 맨 아래로 내리기
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    // 처음에 보이는 예시 대화 (지어낸 친구예요)
+    addMessage("friend", "안녕! 뭐 하고 있어?");
+    addMessage("friend", "여기에 메시지를 써서 보내 봐 😀");
+
+    // "보내기"를 누르거나 엔터를 치면 메시지 보내기
+    messageForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const text = messageInput.value.trim();
+      if (text === "") return; // 빈 메시지는 보내지 않아요
+
+      addMessage("me", text);
+      messageInput.value = "";
+      messageInput.focus();
+    });
+  </script>
 </body>
 </html>
