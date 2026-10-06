@@ -123,7 +123,16 @@
     /* 지도와 로드뷰 */
     /* 화면이 낮아도 지도가 360px보다 작아지지 않아요 (대신 화면을 아래로 내려서 봐요) */
     .views { flex: 1 0 360px; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
-    #map { min-height: 0; }
+    .map-box { position: relative; min-height: 0; }
+    #map { width: 100%; height: 100%; }
+    #resetViewButton {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      z-index: 5;
+      font-weight: bold;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+    }
     .roadview-box { position: relative; min-height: 0; border-left: 2px solid #ffffff; background: #20242e; }
     #roadview { width: 100%; height: 100%; }
     #roadviewMessage {
@@ -213,7 +222,11 @@
 
   <div class="views" id="views">
     <!-- 지도가 그려지는 자리 -->
-    <div id="map"></div>
+    <div class="map-box">
+      <div id="map"></div>
+      <!-- 지도를 움직이거나 확대·축소한 뒤, 길 전체가 보이는 처음 모습으로 돌아가는 버튼 -->
+      <button type="button" id="resetViewButton" hidden>↺ 경로 한눈에 보기</button>
+    </div>
 
     <!-- 로드뷰(길거리 사진)가 나오는 자리 -->
     <div class="roadview-box">
@@ -542,7 +555,12 @@
         const bounds = new kakao.maps.LatLngBounds();
         routeLine.getPath().forEach(function (position) { bounds.extend(position); });
         map.setBounds(bounds, 70, 70, 70, 70);
+        resetViewButton.hidden = false;
       }
+
+      // "경로 한눈에 보기" 버튼: 길이 그려지면 나타나고, 누르면 처음 모습으로 돌아가요
+      const resetViewButton = document.getElementById("resetViewButton");
+      resetViewButton.addEventListener("click", showWholeRoute);
 
       // 창 크기가 바뀌면 지도와 로드뷰를 다시 맞추기
       window.addEventListener("resize", function () {
