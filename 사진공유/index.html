@@ -13,10 +13,14 @@
       background: #fafafa;
       color: #1f2430;
     }
+    button, input { font-family: inherit; }
+    [hidden] { display: none !important; }
+
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
       padding: 14px 16px;
       background: #ffffff;
       border-bottom: 1px solid #e1e5ee;
@@ -24,21 +28,55 @@
     header h1 { margin: 0; font-size: 22px; display: flex; align-items: center; gap: 8px; }
     header h1 img { width: 32px; height: 32px; }
     header a { color: #3b6cf6; font-size: 14px; }
+    .me-box { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+    .me-box button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border: 1px solid #d5dbe6;
+      border-radius: 8px;
+      background: #ffffff;
+      cursor: pointer;
+    }
 
     main { max-width: 900px; margin: 0 auto; padding: 20px 16px 40px; }
 
-    /* 사진 올리기 버튼 */
+    /* 로그인 / 계정 만들기 */
+    .login { max-width: 360px; margin: 20px auto; }
+    .login h2 { margin: 0 0 6px; font-size: 22px; }
+    .login p { margin: 0 0 16px; font-size: 14px; color: #5b6272; line-height: 1.5; }
+    .login form { display: flex; flex-direction: column; gap: 8px; }
+    .login input {
+      padding: 12px 14px;
+      font-size: 16px;
+      border: 1px solid #d5dbe6;
+      border-radius: 12px;
+    }
+    .error { min-height: 20px; margin-top: 8px; font-size: 13px; color: #c0392b; }
+    .link-button {
+      margin-top: 8px;
+      padding: 8px 0;
+      font-size: 15px;
+      border: none;
+      background: none;
+      color: #3b6cf6;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* 분홍 버튼 (사진 올리기, 로그인) */
     .upload-button {
       display: inline-block;
       padding: 12px 22px;
       font-size: 17px;
       font-weight: bold;
+      border: none;
       border-radius: 12px;
       background: #e1306c;
       color: #ffffff;
       cursor: pointer;
     }
     .upload-button:hover { background: #c81f5a; }
+    .upload-button:disabled { background: #e3e6ee; color: #8a91a1; cursor: default; }
     #photoInput:focus-visible + .upload-button { outline: 3px solid #1f2430; }
     /* 진짜 파일 선택 칸은 숨기고, 위의 버튼을 대신 눌러요 */
     #photoInput { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -71,11 +109,13 @@
       gap: 8px;
       padding: 10px 12px;
     }
+    .photo-card .who { min-width: 0; }
+    .photo-card .who b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .photo-card .date { font-size: 13px; color: #5b6272; }
     .photo-card button {
+      flex-shrink: 0;
       padding: 6px 12px;
       font-size: 14px;
-      font-family: inherit;
       border: 1px solid #e0b4b4;
       border-radius: 8px;
       background: #fff5f5;
@@ -88,71 +128,191 @@
 <body>
   <header>
     <h1><img src="logo.png" alt="잉스타 로고">잉스타</h1>
-    <a href="../">처음 화면으로</a>
+    <!-- 로그인하기 전에는 "처음 화면으로"만 보여요 -->
+    <a href="../" id="homeLink">처음 화면으로</a>
+    <div class="me-box" id="meBox" hidden>
+      <b id="meName"></b>
+      <button type="button" id="logoutButton">로그아웃</button>
+    </div>
   </header>
 
   <main>
-    <!-- 사진 올리기 -->
-    <input type="file" id="photoInput" accept="image/*" multiple>
-    <label for="photoInput" class="upload-button">＋ 사진 올리기</label>
+    <!-- 1. 로그인 / 계정 만들기 -->
+    <div class="login" id="loginBox" hidden>
+      <h2 id="loginTitle">로그인</h2>
+      <p id="loginHelp"></p>
+      <form id="loginForm">
+        <input type="text" id="idInput" placeholder="아이디 (2~12글자)" maxlength="12" autocomplete="username" aria-label="아이디">
+        <input type="password" id="passwordInput" placeholder="비밀번호 (4글자부터)" maxlength="50" autocomplete="current-password" aria-label="비밀번호">
+        <input type="text" id="codeInput" placeholder="가입 코드 (선생님께 물어보세요)" maxlength="30" autocomplete="off" aria-label="가입 코드" hidden>
+        <button type="submit" class="upload-button" id="loginButton">로그인</button>
+      </form>
+      <div class="error" id="loginError"></div>
+      <button type="button" class="link-button" id="modeButton">처음이에요. 계정 만들기</button>
+    </div>
 
-    <p class="count" id="count"></p>
+    <!-- 2. 사진 올리기와 사진 목록 -->
+    <div id="feedBox" hidden>
+      <input type="file" id="photoInput" accept="image/*" multiple>
+      <label for="photoInput" class="upload-button">＋ 사진 올리기</label>
 
-    <!-- 사진 목록이 그려지는 곳 -->
-    <div class="photo-list" id="photoList"></div>
-    <p class="empty" id="empty">아직 사진이 없어요. 첫 사진을 올려 보세요!</p>
+      <p class="count" id="count"></p>
+
+      <!-- 사진 목록이 그려지는 곳 -->
+      <div class="photo-list" id="photoList"></div>
+      <p class="empty" id="empty" hidden>아직 사진이 없어요. 첫 사진을 올려 보세요!</p>
+    </div>
   </main>
 
   <script>
+    // ───────── 서버 ─────────
+    // 계정과 사진은 서버(인터넷에 있는 컴퓨터)에 저장해요. 메신저와 같은 서버, 같은 계정을 써요.
+    const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
+    const BOARD = "instar"; // 잉스타 사진을 모아 두는 게시판 이름
+
+    // 로그인했다는 표(토큰)를 이 브라우저에 기억해요.
+    // 메신저와 같은 이름을 써서, 한 번 로그인하면 메신저와 잉스타 둘 다 들어가져요.
+    const TOKEN_KEY = "messenger.token";
+
+    // 사진이 너무 크면 올리는 데 오래 걸리니까 이 크기로 줄여요
+    const MAX_SIZE = 1280;
+
+    let token = localStorage.getItem(TOKEN_KEY);
+    let me = null; // 지금 로그인한 계정 아이디 (없으면 null)
+
+    // 서버가 알려 주는 문제를 쉬운 말로 바꾸기
+    const ERROR_TEXT = {
+      BAD_ID: "아이디는 띄어쓰기 없이 2~12글자로 적어 주세요.",
+      BAD_PASSWORD: "비밀번호는 4글자부터 적을 수 있어요.",
+      BAD_CODE: "가입 코드가 맞지 않아요. 선생님께 물어보세요.",
+      ID_TAKEN: "이미 누가 쓰고 있는 아이디예요. 다른 아이디를 적어 주세요.",
+      WRONG_LOGIN: "아이디나 비밀번호가 맞지 않아요.",
+      NOT_LOGGED_IN: "다시 로그인해 주세요.",
+      BAD_FILE: "사진만 올릴 수 있어요.",
+      NOT_YOURS: "내가 올린 사진만 지울 수 있어요.",
+      NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
+    };
+    function errorText(error) {
+      return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
+    }
+
+    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용)
+    async function call(action, data) {
+      let response;
+      try {
+        response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(Object.assign({ action: action, token: token }, data))
+        });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      const result = await response.json().catch(function () { return null; });
+      if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
+      return result;
+    }
+
+    // ───────── 로그인과 계정 만들기 ─────────
+    const loginBox = document.getElementById("loginBox");
+    const feedBox = document.getElementById("feedBox");
+    const loginForm = document.getElementById("loginForm");
+    const idInput = document.getElementById("idInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const codeInput = document.getElementById("codeInput");
+    const loginButton = document.getElementById("loginButton");
+    const loginError = document.getElementById("loginError");
+    const modeButton = document.getElementById("modeButton");
+    const homeLink = document.getElementById("homeLink");
+    const meBox = document.getElementById("meBox");
+
+    let signupMode = false; // true면 계정 만들기, false면 로그인
+    let needsCode = true;   // 가입 코드가 필요한지 (서버에 물어봐요)
+
+    function setMode(signup) {
+      signupMode = signup;
+      document.getElementById("loginTitle").textContent = signup ? "계정 만들기" : "로그인";
+      document.getElementById("loginHelp").textContent = signup
+        ? "진짜 이름 말고 별명으로 아이디를 지어 주세요. 비밀번호는 다른 곳에서 쓰는 것 말고 새로 지어 주세요."
+        : "메신저에서 만든 계정이 있으면 그 아이디와 비밀번호로 들어올 수 있어요.";
+      loginButton.textContent = signup ? "가입하기" : "로그인";
+      modeButton.textContent = signup ? "이미 계정이 있어요. 로그인하기" : "처음이에요. 계정 만들기";
+      passwordInput.autocomplete = signup ? "new-password" : "current-password";
+      codeInput.hidden = !(signup && needsCode);
+      loginError.textContent = "";
+    }
+    modeButton.addEventListener("click", function () { setMode(!signupMode); });
+
+    // "로그인"이나 "가입하기"를 누르면 서버에 물어보기
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const id = idInput.value.trim();
+      const password = passwordInput.value;
+
+      if (Array.from(id).length < 2 || /\s/.test(id)) { loginError.textContent = ERROR_TEXT.BAD_ID; return; }
+      if (password.length < 4) { loginError.textContent = ERROR_TEXT.BAD_PASSWORD; return; }
+
+      loginButton.disabled = true;
+      loginError.textContent = "";
+      try {
+        const result = signupMode
+          ? await call("signup", { id: id, password: password, code: codeInput.value.trim() })
+          : await call("login", { id: id, password: password });
+        token = result.token;
+        localStorage.setItem(TOKEN_KEY, token);
+        loginForm.reset();
+        enter(result.id);
+      } catch (error) {
+        loginError.textContent = errorText(error);
+      }
+      loginButton.disabled = false;
+    });
+
+    // 로그인한 뒤 사진 목록으로 들어가기
+    function enter(id) {
+      me = id;
+      document.getElementById("meName").textContent = id;
+      homeLink.hidden = true;
+      meBox.hidden = false;
+      loginBox.hidden = true;
+      feedBox.hidden = false;
+      loadPhotos();
+    }
+
+    // 로그인 화면으로 돌아가기
+    function leave() {
+      me = null;
+      token = null;
+      localStorage.removeItem(TOKEN_KEY);
+      shownPhotos = null;
+      photoList.innerHTML = "";
+      count.textContent = "";
+
+      homeLink.hidden = false;
+      meBox.hidden = true;
+      feedBox.hidden = true;
+      loginBox.hidden = false;
+      setMode(false);
+    }
+
+    document.getElementById("logoutButton").addEventListener("click", function () {
+      call("logout").catch(function () {}); // 서버에도 알려 주기 (실패해도 괜찮아요)
+      leave();
+    });
+
+    // ───────── 사진 ─────────
     const photoInput = document.getElementById("photoInput");
+    const uploadLabel = document.querySelector('label[for="photoInput"]');
     const photoList = document.getElementById("photoList");
     const empty = document.getElementById("empty");
     const count = document.getElementById("count");
+    let shownPhotos = null; // 지금 화면에 그려 둔 사진 번호들 (바뀌었을 때만 다시 그려요)
 
-    // 사진을 이 컴퓨터의 브라우저에 저장할 때 쓰는 이름
-    const STORAGE_KEY = "photo-share-photos";
-
-    // 사진이 너무 크면 저장이 안 되니까 이 크기로 줄여요
-    const MAX_SIZE = 800;
-
-    // 올린 사진들: { id, image, date } 가 차례로 들어 있어요
-    let photos = loadPhotos();
-
-    // 저장해 둔 사진 불러오기
-    function loadPhotos() {
-      try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-      } catch (error) {
-        return [];
-      }
+    // 서버가 붙여 준 번호(sk)에는 올린 시간이 들어 있어요
+    function dateText(sk) {
+      return new Date(Number(String(sk).slice(0, -6))).toLocaleDateString("ko-KR");
     }
 
-    // 이 브라우저에서 저장을 쓸 수 있는지 알아보기
-    function canUseStorage() {
-      try {
-        localStorage.setItem(STORAGE_KEY + "-test", "1");
-        localStorage.removeItem(STORAGE_KEY + "-test");
-        return true;
-      } catch (error) {
-        return false;
-      }
-    }
-    const storageWorks = canUseStorage();
-
-    // 사진 저장하기 (저장 공간이 꽉 차면 false)
-    function savePhotos() {
-      // 저장을 쓸 수 없는 곳에서는 화면에만 보여 줘요 (새로고침하면 사라져요)
-      if (!storageWorks) return true;
-
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(photos));
-        return true;
-      } catch (error) {
-        return false;
-      }
-    }
-
-    // 사진 파일을 작게 줄여서 글자(데이터)로 바꾸기
+    // 사진 파일을 작게 줄이기
     function shrinkPhoto(file) {
       return new Promise(function (resolve, reject) {
         const image = new Image();
@@ -163,44 +323,80 @@
           canvas.height = Math.round(image.height * scale);
           canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
           URL.revokeObjectURL(image.src);
-          resolve(canvas.toDataURL("image/jpeg", 0.8));
+          canvas.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error("SERVER_ERROR")); }, "image/jpeg", 0.85);
         };
         image.onerror = reject;
         image.src = URL.createObjectURL(file);
       });
     }
 
-    // 화면에 사진 목록 그리기
-    function showPhotos() {
+    // 사진 하나를 서버 보관함에 올리고, 보관함 안의 이름(key)을 돌려받기
+    async function uploadFile(blob) {
+      const place = await call("upload", { type: blob.type });
+      let response;
+      try {
+        response = await fetch(place.url, { method: "PUT", headers: { "Content-Type": blob.type }, body: blob });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      if (!response.ok) throw new Error("SERVER_ERROR");
+      return place.key;
+    }
+
+    // 서버에서 사진 목록을 받아 와서 화면에 그리기
+    async function loadPhotos() {
+      let photos;
+      try {
+        photos = await call("posts", { board: BOARD });
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        return;
+      }
+      if (!me) return;
+
+      // 바뀐 게 없으면 그대로 두기
+      const ids = photos.map(function (photo) { return photo.sk; }).join(",");
+      if (ids === shownPhotos) return;
+      shownPhotos = ids;
       photoList.innerHTML = "";
 
       photos.forEach(function (photo) {
-        const card = document.createElement("div");
-        card.className = "photo-card";
+        (photo.media || []).forEach(function (item) {
+          const card = document.createElement("div");
+          card.className = "photo-card";
 
-        const image = document.createElement("img");
-        image.src = photo.image;
-        image.alt = "올린 사진";
-        card.appendChild(image);
+          const image = document.createElement("img");
+          image.src = item.url;
+          image.alt = photo.author + "님이 올린 사진";
+          card.appendChild(image);
 
-        const info = document.createElement("div");
-        info.className = "info";
+          const info = document.createElement("div");
+          info.className = "info";
 
-        const date = document.createElement("span");
-        date.className = "date";
-        date.textContent = photo.date;
-        info.appendChild(date);
+          const who = document.createElement("div");
+          who.className = "who";
+          const name = document.createElement("b");
+          name.textContent = photo.author;
+          const date = document.createElement("span");
+          date.className = "date";
+          date.textContent = dateText(photo.sk);
+          who.append(name, date);
+          info.appendChild(who);
 
-        const deleteButton = document.createElement("button");
-        deleteButton.type = "button";
-        deleteButton.textContent = "삭제";
-        deleteButton.addEventListener("click", function () {
-          deletePhoto(photo.id);
+          // 내가 올린 사진만 지울 수 있어요
+          if (photo.author === me) {
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.textContent = "삭제";
+            deleteButton.addEventListener("click", function () {
+              deletePhoto(photo.sk);
+            });
+            info.appendChild(deleteButton);
+          }
+
+          card.appendChild(info);
+          photoList.appendChild(card);
         });
-        info.appendChild(deleteButton);
-
-        card.appendChild(info);
-        photoList.appendChild(card);
       });
 
       empty.hidden = photos.length > 0;
@@ -209,42 +405,44 @@
 
     // 사진 올리기
     async function addPhotos(files) {
-      for (const file of files) {
-        if (!file.type.startsWith("image/")) continue; // 사진이 아니면 건너뛰기
+      const photos = files.filter(function (file) {
+        return file.type.startsWith("image/"); // 사진이 아니면 건너뛰기
+      });
 
-        let image;
+      for (let i = 0; i < photos.length; i++) {
+        uploadLabel.textContent = "올리는 중... (" + (i + 1) + "/" + photos.length + ")";
+
+        let blob;
         try {
-          image = await shrinkPhoto(file);
+          blob = await shrinkPhoto(photos[i]);
         } catch (error) {
-          alert("이 사진은 열 수 없어요: " + file.name);
+          alert("이 사진은 열 수 없어요: " + photos[i].name);
           continue;
         }
 
-        // 새 사진을 맨 앞에 넣어요
-        photos.unshift({
-          id: Date.now() + "-" + Math.random().toString(16).slice(2),
-          image: image,
-          date: new Date().toLocaleDateString("ko-KR")
-        });
-
-        if (!savePhotos()) {
-          photos.shift(); // 저장하지 못한 사진은 다시 빼요
-          alert("저장 공간이 꽉 찼어요. 사진을 몇 장 지우고 다시 올려 주세요.");
+        try {
+          const key = await uploadFile(blob);
+          await call("post", { board: BOARD, text: "", media: [{ kind: "image", key: key }] });
+        } catch (error) {
+          alert(errorText(error));
+          if (error.message === "NOT_LOGGED_IN") leave();
           break;
         }
       }
-      showPhotos();
+      uploadLabel.textContent = "＋ 사진 올리기";
+      if (me) loadPhotos();
     }
 
     // 사진 삭제하기
-    function deletePhoto(id) {
+    async function deletePhoto(sk) {
       if (!confirm("이 사진을 삭제할까요?")) return;
 
-      photos = photos.filter(function (photo) {
-        return photo.id !== id;
-      });
-      savePhotos();
-      showPhotos();
+      try {
+        await call("remove", { board: BOARD, sk: sk });
+      } catch (error) {
+        alert(errorText(error));
+      }
+      loadPhotos();
     }
 
     // 사진을 고르면 올리기
@@ -253,7 +451,31 @@
       photoInput.value = ""; // 같은 사진을 또 고를 수 있게 비워요
     });
 
-    showPhotos();
+    // 15초마다, 그리고 이 창으로 돌아왔을 때 새 사진이 있는지 서버에 물어보기
+    setInterval(function () { if (me && !document.hidden) loadPhotos(); }, 15000);
+    document.addEventListener("visibilitychange", function () {
+      if (me && !document.hidden) loadPhotos();
+    });
+
+    // ───────── 시작 ─────────
+    async function start() {
+      // 전에 로그인해 둔 적이 있으면 바로 들어가기 (메신저에서 로그인한 것도 돼요)
+      if (token) {
+        try {
+          enter((await call("whoami")).id);
+          return;
+        } catch (error) {
+          if (error.message === "NOT_LOGGED_IN") { token = null; localStorage.removeItem(TOKEN_KEY); }
+        }
+      }
+      setMode(false);
+      loginBox.hidden = false;
+
+      // 가입 코드가 필요한 서버인지 물어보기
+      try { needsCode = (await call("info")).needsCode; } catch (error) {}
+      codeInput.hidden = !(signupMode && needsCode);
+    }
+    start();
   </script>
 </body>
 </html>
