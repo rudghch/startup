@@ -300,7 +300,8 @@
     </div>
   </div>
 
-  <div class="views" id="views">
+  <!-- 로드뷰는 화면에 보이는 채로 만들어야 잘 그려져서, 열린 모양으로 시작한 뒤 바로 닫아요 -->
+  <div class="views with-roadview" id="views">
     <!-- 지도가 그려지는 자리 -->
     <div class="map-box">
       <div id="map"></div>
@@ -313,7 +314,7 @@
     </div>
 
     <!-- 로드뷰(길거리 사진)가 나오는 자리. 처음에는 닫혀 있어요 -->
-    <div class="roadview-box" id="roadviewBox" hidden>
+    <div class="roadview-box" id="roadviewBox">
       <div id="roadview"></div>
       <div id="roadviewMessage">출발과 도착을 정하면<br>가는 길을 로드뷰로 보여 줘요.</div>
       <div class="roadview-controls" id="roadviewControls" hidden>
@@ -372,6 +373,12 @@
       // ---------- 로드뷰 만들기 ----------
       const roadview = new kakao.maps.Roadview(document.getElementById("roadview"));
       const roadviewClient = new kakao.maps.RoadviewClient();
+
+      // 로드뷰를 만들었으니 닫아 두고, 지도를 넓게 펴요 (처음에는 지도만 보여요)
+      document.getElementById("roadviewBox").hidden = true;
+      document.getElementById("views").classList.remove("with-roadview");
+      map.relayout();
+      map.setCenter(firstPlace);
 
       // 지금 로드뷰로 보고 있는 곳을 지도에 표시하는 주황색 동그라미
       const walkerDot = document.createElement("div");
