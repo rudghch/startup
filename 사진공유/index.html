@@ -29,14 +29,53 @@
     header h1 img { width: 32px; height: 32px; }
     header a { color: #3b6cf6; font-size: 14px; }
     .me-box { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; font-size: 15px; }
-    .me-box button {
+
+    /* 하얀 작은 버튼 (로그아웃, 닫기, 사진 고르기) */
+    .plain-button {
+      display: inline-block;
       padding: 6px 12px;
       font-size: 14px;
       border: 1px solid #d5dbe6;
       border-radius: 8px;
       background: #ffffff;
+      color: #1f2430;
       cursor: pointer;
     }
+    .plain-button:hover { background: #f1f3f8; }
+
+    /* 내 프로필 버튼 (프로필 사진 + 아이디) */
+    .me-button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px 3px 3px;
+      font-size: 15px;
+      font-weight: bold;
+      border: 1px solid #d5dbe6;
+      border-radius: 20px;
+      background: #ffffff;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    .me-button:hover { background: #f1f3f8; }
+
+    /* 동그란 프로필 사진 (사진이 없으면 아이디 첫 글자) */
+    .avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar.small { width: 26px; height: 26px; font-size: 13px; }
+    .avatar.big { width: 96px; height: 96px; font-size: 40px; }
 
     main { max-width: 900px; margin: 0 auto; padding: 20px 16px 40px; }
 
@@ -63,7 +102,7 @@
       cursor: pointer;
     }
 
-    /* 분홍 버튼 (사진 올리기, 로그인) */
+    /* 분홍 버튼 (사진 올리기, 로그인, 저장) */
     .upload-button {
       display: inline-block;
       padding: 12px 22px;
@@ -77,9 +116,9 @@
     }
     .upload-button:hover { background: #c81f5a; }
     .upload-button:disabled { background: #e3e6ee; color: #8a91a1; cursor: default; }
-    #photoInput:focus-visible + .upload-button { outline: 3px solid #1f2430; }
-    /* 진짜 파일 선택 칸은 숨기고, 위의 버튼을 대신 눌러요 */
-    #photoInput { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .hidden-file:focus-visible + label { outline: 3px solid #1f2430; }
+    /* 진짜 파일 선택 칸은 숨기고, 옆의 버튼을 대신 눌러요 */
+    .hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
     .count { margin: 16px 0; color: #5b6272; font-size: 15px; }
     .empty { padding: 60px 0; text-align: center; color: #8a91a1; font-size: 17px; }
@@ -96,7 +135,20 @@
       border-radius: 14px;
       overflow: hidden;
     }
-    .photo-card img {
+    /* 누가 올렸는지 (프로필 사진 + 아이디) */
+    .who-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .who-row b { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .photo-card .who-row { padding: 10px 12px; }
+    /* 사진을 누르면 크게 보여요 */
+    .photo-card .photo {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: #f1f3f8;
+      cursor: zoom-in;
+    }
+    .photo-card .photo img {
       display: block;
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -107,12 +159,11 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      padding: 10px 12px;
+      min-height: 46px;
+      padding: 8px 12px;
     }
-    .photo-card .who { min-width: 0; }
-    .photo-card .who b { display: block; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .photo-card .date { font-size: 13px; color: #5b6272; }
-    .photo-card button {
+    .date { font-size: 13px; color: #5b6272; }
+    .delete-button {
       flex-shrink: 0;
       padding: 6px 12px;
       font-size: 14px;
@@ -122,7 +173,67 @@
       color: #c0392b;
       cursor: pointer;
     }
-    .photo-card button:hover { background: #ffe3e3; }
+    .delete-button:hover { background: #ffe3e3; }
+
+    /* 화면 위에 뜨는 창 (크게 보기, 내 프로필) */
+    dialog {
+      width: min(560px, calc(100% - 24px));
+      max-height: calc(100% - 24px);
+      padding: 0;
+      border: none;
+      border-radius: 16px;
+      color: #1f2430;
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+    .dialog-body { padding: 14px 16px 16px; }
+    .dialog-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .dialog-top h2 { margin: 0; font-size: 20px; }
+
+    /* 크게 보기 */
+    #viewImage {
+      display: block;
+      width: 100%;
+      max-height: 60vh;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #f1f3f8;
+    }
+    .like-row { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 15px; }
+    .like-button {
+      padding: 8px 14px;
+      font-size: 16px;
+      font-weight: bold;
+      border: 1px solid #e1306c;
+      border-radius: 20px;
+      background: #ffffff;
+      color: #e1306c;
+      cursor: pointer;
+    }
+    .like-button.on { background: #e1306c; color: #ffffff; }
+    .like-button:disabled { opacity: 0.6; cursor: default; }
+
+    .comments h3 { margin: 0 0 8px; font-size: 16px; }
+    .comment { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+    .comment .text { flex: 1; min-width: 0; font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
+    .comment .text b { margin-right: 6px; }
+    .comment .delete-button { padding: 3px 8px; font-size: 12px; }
+    .no-comment { margin: 0 0 10px; font-size: 14px; color: #8a91a1; }
+    .comment-form { display: flex; gap: 8px; }
+    .comment-form input {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1px solid #d5dbe6;
+      border-radius: 12px;
+    }
+    .comment-form .upload-button { padding: 10px 16px; font-size: 15px; }
+
+    /* 내 프로필 */
+    .profile-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 18px; }
+    .hint { margin: 0 0 12px; font-size: 14px; color: #5b6272; line-height: 1.5; }
+    .button-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .button-row.end { justify-content: flex-end; }
   </style>
 </head>
 <body>
@@ -134,8 +245,9 @@
       <!-- 로그인한 뒤에도 다른 곳으로 갈 수 있는 길 -->
       <a href="../">처음 화면</a>
       <a href="../메신저/">message</a>
-      <b id="meName"></b>
-      <button type="button" id="logoutButton">로그아웃</button>
+      <!-- 누르면 내 프로필을 바꾸는 창이 열려요 -->
+      <button type="button" class="me-button" id="profileButton" title="내 프로필 바꾸기"></button>
+      <button type="button" class="plain-button" id="logoutButton">로그아웃</button>
     </div>
   </header>
 
@@ -156,7 +268,7 @@
 
     <!-- 2. 사진 올리기와 사진 목록 -->
     <div id="feedBox" hidden>
-      <input type="file" id="photoInput" accept="image/*" multiple>
+      <input type="file" class="hidden-file" id="photoInput" accept="image/*" multiple>
       <label for="photoInput" class="upload-button">＋ 사진 올리기</label>
 
       <p class="count" id="count"></p>
@@ -167,11 +279,62 @@
     </div>
   </main>
 
+  <!-- 3. 사진을 누르면 뜨는 창: 크게 보기, 좋아요, 댓글 -->
+  <dialog id="viewDialog" aria-label="사진 크게 보기">
+    <div class="dialog-body">
+      <div class="dialog-top">
+        <div class="who-row" id="viewWho"></div>
+        <button type="button" class="plain-button" id="viewCloseButton">닫기</button>
+      </div>
+      <img id="viewImage" alt="">
+
+      <div class="like-row">
+        <button type="button" class="like-button" id="likeButton">♡ 좋아요</button>
+        <span id="likeCount"></span>
+      </div>
+
+      <div class="comments">
+        <h3>댓글</h3>
+        <div id="commentList"></div>
+        <form class="comment-form" id="commentForm">
+          <input type="text" id="commentInput" placeholder="댓글 달기" maxlength="200" autocomplete="off" aria-label="댓글">
+          <button type="submit" class="upload-button" id="commentButton">올리기</button>
+        </form>
+        <div class="error" id="viewError"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 4. 내 프로필을 바꾸는 창 -->
+  <dialog id="profileDialog" aria-label="내 프로필">
+    <div class="dialog-body">
+      <div class="dialog-top">
+        <h2>내 프로필</h2>
+        <button type="button" class="plain-button" id="profileCloseButton">닫기</button>
+      </div>
+      <div class="profile-preview">
+        <span id="profilePreview"></span>
+        <b id="profileName"></b>
+      </div>
+      <p class="hint">프로필 사진은 로그인한 친구 모두에게 보여요. 얼굴이 나온 사진 말고 그림이나 풍경 사진을 골라 주세요.</p>
+      <div class="button-row">
+        <input type="file" class="hidden-file" id="profileInput" accept="image/*">
+        <label for="profileInput" class="plain-button">사진 고르기</label>
+        <button type="button" class="plain-button" id="profileResetButton">기본 그림으로</button>
+      </div>
+      <div class="error" id="profileError"></div>
+      <div class="button-row end">
+        <button type="button" class="upload-button" id="profileSaveButton">저장</button>
+      </div>
+    </div>
+  </dialog>
+
   <script>
     // ───────── 서버 ─────────
     // 계정과 사진은 서버(인터넷에 있는 컴퓨터)에 저장해요. 메신저와 같은 서버, 같은 계정을 써요.
     const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
     const BOARD = "instar"; // 잉스타 사진을 모아 두는 게시판 이름
+    const PROFILE_BOARD = "instarprofile"; // 프로필 사진을 모아 두는 게시판 이름
 
     // 로그인했다는 표(토큰)를 이 브라우저에 기억해요.
     // 메신저와 같은 이름을 써서, 한 번 로그인하면 메신저와 잉스타 둘 다 들어가져요.
@@ -179,6 +342,7 @@
 
     // 사진이 너무 크면 올리는 데 오래 걸리니까 이 크기로 줄여요
     const MAX_SIZE = 1280;
+    const PROFILE_SIZE = 320; // 프로필 사진은 더 작게
 
     let token = localStorage.getItem(TOKEN_KEY);
     let me = null; // 지금 로그인한 계정 아이디 (없으면 null)
@@ -192,7 +356,8 @@
       WRONG_LOGIN: "아이디나 비밀번호가 맞지 않아요.",
       NOT_LOGGED_IN: "다시 로그인해 주세요.",
       BAD_FILE: "사진만 올릴 수 있어요.",
-      NOT_YOURS: "내가 올린 사진만 지울 수 있어요.",
+      BAD_POST: "글이 비어 있거나 너무 길어요.",
+      NOT_YOURS: "내가 올린 것만 지울 수 있어요.",
       NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
     };
     function errorText(error) {
@@ -215,6 +380,77 @@
       return result;
     }
 
+    // ───────── 나쁜 말 가리기 (message와 같은 목록) ─────────
+    // 여기 적힌 말이 댓글에 나오면 ### 로 바꿔요. 가리고 싶은 말을 더 적거나 뺄 수 있어요.
+    const BAD_WORDS = [
+      "시발", "씨발", "씨빨", "씨바", "씨팔", "시팔", "ㅅㅂ", "ㅆㅂ",
+      "병신", "븅신", "ㅂㅅ", "지랄", "ㅈㄹ", "존나", "좆나", "ㅈㄴ", "좆", "썅",
+      "개새끼", "개새", "새끼야", "미친놈", "미친년", "미친새끼", "또라이", "등신",
+      "닥쳐", "엿먹어", "꺼져라", "죽어라", "뒤져라",
+      "fuck", "shit", "bitch"
+    ];
+    // 글자 사이에 숫자나 기호를 끼워 넣어도("시1발", "시.발") 찾아내요
+    const BAD_WORD_PATTERN = new RegExp(
+      BAD_WORDS.slice().sort(function (a, b) { return b.length - a.length; }).map(function (word) {
+        return Array.from(word).join("[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\\s]*");
+      }).join("|"),
+      "gi"
+    );
+    function hideBadWords(text) {
+      return text.replace(BAD_WORD_PATTERN, "###");
+    }
+
+    // ───────── 프로필 사진 ─────────
+    const AVATAR_COLORS = ["#e1306c", "#3b6cf6", "#1e9e6a", "#e67e22", "#8e44ad", "#16a3b8", "#c0392b", "#5b6272"];
+    let profiles = {};    // 아이디 → 프로필 사진 주소 (사진을 정한 계정만 들어 있어요)
+    let profilesKey = ""; // 프로필이 바뀌었는지 알아보는 표시
+
+    // 아이디마다 항상 같은 색이 나오게 하기
+    function colorOf(id) {
+      let sum = 0;
+      for (const ch of id) sum += ch.codePointAt(0);
+      return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+    }
+
+    // 동그란 프로필 만들기. 사진을 정했으면 사진, 아니면 아이디 첫 글자
+    // (url을 따로 주면 그 사진을 써요. null을 주면 사진 없이 첫 글자만)
+    function makeAvatar(id, size, url) {
+      const avatar = document.createElement("span");
+      avatar.className = size ? "avatar " + size : "avatar";
+      if (url === undefined) url = profiles[id];
+      if (url) {
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = "";
+        avatar.appendChild(image);
+      } else {
+        avatar.style.background = colorOf(id);
+        avatar.textContent = Array.from(id)[0];
+      }
+      return avatar;
+    }
+
+    // 프로필 사진 + 아이디 한 줄 만들기
+    function fillWho(box, id) {
+      box.innerHTML = "";
+      const name = document.createElement("b");
+      name.textContent = id;
+      box.append(makeAvatar(id), name);
+    }
+
+    // 서버에서 받은 프로필 목록을 정리하기 (한 계정에 여러 개면 가장 새것)
+    function readProfiles(list) {
+      const map = {};
+      const keys = [];
+      list.forEach(function (item) { // 새것부터 와요
+        if (item.author in map || !item.media || !item.media[0]) return;
+        map[item.author] = item.media[0].url;
+        keys.push(item.sk);
+      });
+      profiles = map;
+      profilesKey = keys.join(",");
+    }
+
     // ───────── 로그인과 계정 만들기 ─────────
     const loginBox = document.getElementById("loginBox");
     const feedBox = document.getElementById("feedBox");
@@ -227,6 +463,9 @@
     const modeButton = document.getElementById("modeButton");
     const homeLink = document.getElementById("homeLink");
     const meBox = document.getElementById("meBox");
+    const profileButton = document.getElementById("profileButton");
+    const viewDialog = document.getElementById("viewDialog");
+    const profileDialog = document.getElementById("profileDialog");
 
     let signupMode = false; // true면 계정 만들기, false면 로그인
     let needsCode = true;   // 가입 코드가 필요한지 (서버에 물어봐요)
@@ -270,10 +509,15 @@
       loginButton.disabled = false;
     });
 
+    // 맨 위 오른쪽의 내 프로필 버튼 그리기
+    function showMe() {
+      fillWho(profileButton, me);
+    }
+
     // 로그인한 뒤 사진 목록으로 들어가기
     function enter(id) {
       me = id;
-      document.getElementById("meName").textContent = id;
+      showMe();
       homeLink.hidden = true;
       meBox.hidden = false;
       loginBox.hidden = true;
@@ -287,8 +531,12 @@
       token = null;
       localStorage.removeItem(TOKEN_KEY);
       shownPhotos = null;
+      profiles = {};
+      profilesKey = "";
       photoList.innerHTML = "";
       count.textContent = "";
+      viewDialog.close();
+      profileDialog.close();
 
       homeLink.hidden = false;
       meBox.hidden = true;
@@ -315,12 +563,12 @@
       return new Date(Number(String(sk).slice(0, -6))).toLocaleDateString("ko-KR");
     }
 
-    // 사진 파일을 작게 줄이기
-    function shrinkPhoto(file) {
+    // 사진 파일을 작게 줄이기 (maxSize: 가장 긴 쪽의 길이)
+    function shrinkPhoto(file, maxSize) {
       return new Promise(function (resolve, reject) {
         const image = new Image();
         image.onload = function () {
-          const scale = Math.min(1, MAX_SIZE / Math.max(image.width, image.height));
+          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
           const canvas = document.createElement("canvas");
           canvas.width = Math.round(image.width * scale);
           canvas.height = Math.round(image.height * scale);
@@ -346,21 +594,27 @@
       return place.key;
     }
 
-    // 서버에서 사진 목록을 받아 와서 화면에 그리기
+    // 서버에서 사진 목록과 프로필을 받아 와서 화면에 그리기
     async function loadPhotos() {
       let photos;
       try {
-        photos = await call("posts", { board: BOARD });
+        const results = await Promise.all([
+          call("posts", { board: BOARD }),
+          call("posts", { board: PROFILE_BOARD })
+        ]);
+        photos = results[0];
+        if (!me) return;
+        readProfiles(results[1]);
       } catch (error) {
         if (error.message === "NOT_LOGGED_IN") leave();
         return;
       }
-      if (!me) return;
 
       // 바뀐 게 없으면 그대로 두기
-      const ids = photos.map(function (photo) { return photo.sk; }).join(",");
+      const ids = photos.map(function (photo) { return photo.sk; }).join(",") + "|" + profilesKey;
       if (ids === shownPhotos) return;
       shownPhotos = ids;
+      showMe();
       photoList.innerHTML = "";
 
       photos.forEach(function (photo) {
@@ -368,28 +622,38 @@
           const card = document.createElement("div");
           card.className = "photo-card";
 
+          // 누가 올렸는지: 프로필 사진과 아이디
+          const who = document.createElement("div");
+          who.className = "who-row";
+          fillWho(who, photo.author);
+          card.appendChild(who);
+
+          // 사진 (누르면 크게 보기)
+          const photoButton = document.createElement("button");
+          photoButton.type = "button";
+          photoButton.className = "photo";
+          photoButton.title = "크게 보기";
           const image = document.createElement("img");
           image.src = item.url;
           image.alt = photo.author + "님이 올린 사진";
-          card.appendChild(image);
+          photoButton.appendChild(image);
+          photoButton.addEventListener("click", function () {
+            openPhoto(photo, item.url);
+          });
+          card.appendChild(photoButton);
 
           const info = document.createElement("div");
           info.className = "info";
-
-          const who = document.createElement("div");
-          who.className = "who";
-          const name = document.createElement("b");
-          name.textContent = photo.author;
           const date = document.createElement("span");
           date.className = "date";
           date.textContent = dateText(photo.sk);
-          who.append(name, date);
-          info.appendChild(who);
+          info.appendChild(date);
 
           // 내가 올린 사진만 지울 수 있어요
           if (photo.author === me) {
             const deleteButton = document.createElement("button");
             deleteButton.type = "button";
+            deleteButton.className = "delete-button";
             deleteButton.textContent = "삭제";
             deleteButton.addEventListener("click", function () {
               deletePhoto(photo.sk);
@@ -417,7 +681,7 @@
 
         let blob;
         try {
-          blob = await shrinkPhoto(photos[i]);
+          blob = await shrinkPhoto(photos[i], MAX_SIZE);
         } catch (error) {
           alert("이 사진은 열 수 없어요: " + photos[i].name);
           continue;
@@ -454,11 +718,266 @@
       photoInput.value = ""; // 같은 사진을 또 고를 수 있게 비워요
     });
 
+    // ───────── 크게 보기, 좋아요, 댓글 ─────────
+    const viewImage = document.getElementById("viewImage");
+    const likeButton = document.getElementById("likeButton");
+    const likeCount = document.getElementById("likeCount");
+    const commentList = document.getElementById("commentList");
+    const commentForm = document.getElementById("commentForm");
+    const commentInput = document.getElementById("commentInput");
+    const commentButton = document.getElementById("commentButton");
+    const viewError = document.getElementById("viewError");
+
+    let viewing = null;       // 지금 크게 보고 있는 사진 (없으면 null)
+    let myLikes = [];         // 이 사진에 내가 누른 좋아요 번호들
+    let shownComments = null; // 지금 그려 둔 댓글 번호들 (바뀌었을 때만 다시 그려요)
+
+    // 사진마다 좋아요 게시판과 댓글 게시판을 따로 써요.
+    // 게시판 이름에는 영어 소문자만 쓸 수 있어서, 사진 번호의 숫자를 글자로 바꿔요 (0→a, 1→b, ...)
+    function reactionBoard(kind, sk) {
+      return kind + String(sk).replace(/\d/g, function (digit) { return "abcdefghij"[digit]; });
+    }
+
+    // 사진을 눌렀을 때: 크게 보여 주는 창 열기
+    function openPhoto(photo, url) {
+      viewing = {
+        likeBoard: reactionBoard("l", photo.sk),
+        commentBoard: reactionBoard("c", photo.sk)
+      };
+      myLikes = [];
+      shownComments = null;
+
+      fillWho(document.getElementById("viewWho"), photo.author);
+      const date = document.createElement("span");
+      date.className = "date";
+      date.textContent = dateText(photo.sk);
+      document.getElementById("viewWho").appendChild(date);
+
+      viewImage.src = url;
+      viewImage.alt = photo.author + "님이 올린 사진";
+      likeButton.className = "like-button";
+      likeButton.textContent = "♡ 좋아요";
+      likeButton.disabled = true; // 서버에서 받아 올 때까지 잠깐 기다려요
+      likeCount.textContent = "";
+      commentList.innerHTML = "";
+      commentInput.value = "";
+      viewError.textContent = "";
+
+      viewDialog.showModal();
+      loadReactions();
+    }
+
+    // 이 사진의 좋아요와 댓글을 서버에서 받아 와서 그리기
+    async function loadReactions() {
+      const view = viewing;
+      if (!view) return;
+
+      let likes, comments;
+      try {
+        const results = await Promise.all([
+          call("posts", { board: view.likeBoard }),
+          call("posts", { board: view.commentBoard })
+        ]);
+        likes = results[0];
+        comments = results[1];
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        return;
+      }
+      if (viewing !== view) return; // 그사이 창을 닫았거나 다른 사진을 열었으면 그만두기
+
+      // 좋아요: 한 사람이 여러 번 눌러도 한 명으로 세요
+      const people = new Set(likes.map(function (like) { return like.author; }));
+      myLikes = likes.filter(function (like) { return like.author === me; }).map(function (like) { return like.sk; });
+      likeButton.className = myLikes.length > 0 ? "like-button on" : "like-button";
+      likeButton.textContent = myLikes.length > 0 ? "♥ 좋아요" : "♡ 좋아요";
+      likeButton.disabled = false;
+      likeCount.textContent = people.size > 0 ? people.size + "명이 좋아해요" : "";
+
+      // 댓글: 바뀐 게 없으면 그대로 두기
+      const ids = comments.map(function (comment) { return comment.sk; }).join(",") + "|" + profilesKey;
+      if (ids === shownComments) return;
+      shownComments = ids;
+      commentList.innerHTML = "";
+
+      if (comments.length === 0) {
+        const none = document.createElement("p");
+        none.className = "no-comment";
+        none.textContent = "아직 댓글이 없어요.";
+        commentList.appendChild(none);
+      }
+
+      comments.slice().reverse().forEach(function (comment) { // 오래된 댓글부터
+        const row = document.createElement("div");
+        row.className = "comment";
+        row.appendChild(makeAvatar(comment.author, "small"));
+
+        const text = document.createElement("div");
+        text.className = "text";
+        const name = document.createElement("b");
+        name.textContent = comment.author;
+        text.append(name, hideBadWords(comment.text || ""));
+        row.appendChild(text);
+
+        // 내가 쓴 댓글만 지울 수 있어요
+        if (comment.author === me) {
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "delete-button";
+          deleteButton.textContent = "삭제";
+          deleteButton.addEventListener("click", function () {
+            deleteComment(view, comment.sk);
+          });
+          row.appendChild(deleteButton);
+        }
+        commentList.appendChild(row);
+      });
+    }
+
+    // 좋아요 누르기 / 한 번 더 누르면 취소
+    likeButton.addEventListener("click", async function () {
+      const view = viewing;
+      if (!view) return;
+      likeButton.disabled = true;
+      viewError.textContent = "";
+      try {
+        if (myLikes.length > 0) {
+          for (const sk of myLikes) await call("remove", { board: view.likeBoard, sk: sk });
+        } else {
+          await call("post", { board: view.likeBoard, text: "like" });
+        }
+      } catch (error) {
+        viewError.textContent = errorText(error);
+      }
+      await loadReactions();
+      if (viewing === view) likeButton.disabled = false;
+    });
+
+    // 댓글 달기
+    commentForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const view = viewing;
+      const text = hideBadWords(commentInput.value.trim()); // 나쁜 말은 가려서 저장해요
+      if (!view || !text) return;
+
+      commentButton.disabled = true;
+      viewError.textContent = "";
+      try {
+        await call("post", { board: view.commentBoard, text: text });
+        commentInput.value = "";
+      } catch (error) {
+        viewError.textContent = errorText(error);
+      }
+      commentButton.disabled = false;
+      loadReactions();
+    });
+
+    // 내 댓글 지우기
+    async function deleteComment(view, sk) {
+      if (!confirm("이 댓글을 삭제할까요?")) return;
+      try {
+        await call("remove", { board: view.commentBoard, sk: sk });
+      } catch (error) {
+        viewError.textContent = errorText(error);
+      }
+      loadReactions();
+    }
+
+    // 창 닫기: "닫기" 버튼, 창 바깥 어두운 곳, Esc 키
+    document.getElementById("viewCloseButton").addEventListener("click", function () { viewDialog.close(); });
+    document.getElementById("profileCloseButton").addEventListener("click", function () { profileDialog.close(); });
+    [viewDialog, profileDialog].forEach(function (dialog) {
+      dialog.addEventListener("click", function (event) {
+        if (event.target === dialog) dialog.close();
+      });
+    });
+    viewDialog.addEventListener("close", function () {
+      if (!viewDialog.open) viewing = null; // 그사이 다른 사진을 열었으면 그대로 둬요
+    });
+
+    // ───────── 내 프로필 바꾸기 ─────────
+    const profileInput = document.getElementById("profileInput");
+    const profilePreview = document.getElementById("profilePreview");
+    const profileError = document.getElementById("profileError");
+    const profileSaveButton = document.getElementById("profileSaveButton");
+    let newProfile;         // 새로 고른 사진. 안 바꿨으면 undefined, "기본 그림으로"를 눌렀으면 null
+    let previewUrl = null;  // 새로 고른 사진을 미리 보여 주는 주소
+
+    // 미리보기 그리기
+    function showProfilePreview() {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = newProfile ? URL.createObjectURL(newProfile) : null;
+      const url = newProfile === undefined ? undefined : previewUrl;
+      profilePreview.innerHTML = "";
+      profilePreview.appendChild(makeAvatar(me, "big", url));
+    }
+
+    profileButton.addEventListener("click", function () {
+      newProfile = undefined;
+      profileError.textContent = "";
+      document.getElementById("profileName").textContent = me;
+      showProfilePreview();
+      profileDialog.showModal();
+    });
+
+    // 사진을 고르면 작게 줄여서 미리 보여 주기 (아직 저장은 안 해요)
+    profileInput.addEventListener("change", async function () {
+      const file = profileInput.files[0];
+      profileInput.value = "";
+      if (!file) return;
+      profileError.textContent = "";
+      try {
+        if (!file.type.startsWith("image/")) throw new Error("BAD_FILE");
+        newProfile = await shrinkPhoto(file, PROFILE_SIZE);
+        showProfilePreview();
+      } catch (error) {
+        profileError.textContent = error.message === "BAD_FILE" ? ERROR_TEXT.BAD_FILE : "이 사진은 열 수 없어요.";
+      }
+    });
+
+    document.getElementById("profileResetButton").addEventListener("click", function () {
+      newProfile = null;
+      profileError.textContent = "";
+      showProfilePreview();
+    });
+
+    // "저장"을 누르면 서버에 올리기
+    profileSaveButton.addEventListener("click", async function () {
+      if (newProfile === undefined) { profileDialog.close(); return; } // 바꾼 게 없어요
+
+      profileSaveButton.disabled = true;
+      profileSaveButton.textContent = "저장하는 중...";
+      profileError.textContent = "";
+      try {
+        if (newProfile) {
+          const key = await uploadFile(newProfile);
+          await call("post", { board: PROFILE_BOARD, text: "", media: [{ kind: "image", key: key }] });
+        }
+        // 예전 프로필 사진은 지우기 (새 사진을 올렸으면 가장 새것 하나만 남겨요)
+        const mine = (await call("posts", { board: PROFILE_BOARD })).filter(function (item) {
+          return item.author === me;
+        });
+        for (const item of mine.slice(newProfile ? 1 : 0)) {
+          await call("remove", { board: PROFILE_BOARD, sk: item.sk });
+        }
+        profileDialog.close();
+      } catch (error) {
+        profileError.textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      profileSaveButton.disabled = false;
+      profileSaveButton.textContent = "저장";
+      if (me) loadPhotos();
+    });
+
+    // ───────── 새 소식 물어보기 ─────────
     // 15초마다, 그리고 이 창으로 돌아왔을 때 새 사진이 있는지 서버에 물어보기
     setInterval(function () { if (me && !document.hidden) loadPhotos(); }, 15000);
     document.addEventListener("visibilitychange", function () {
       if (me && !document.hidden) loadPhotos();
     });
+    // 사진을 크게 보고 있는 동안에는 5초마다 새 좋아요와 댓글이 있는지 물어보기
+    setInterval(function () { if (me && viewDialog.open && !document.hidden) loadReactions(); }, 5000);
 
     // ───────── 시작 ─────────
     async function start() {
