@@ -14,30 +14,98 @@
       background: #e9edf5;
       color: #1f2430;
     }
+    button, input, textarea { font-family: inherit; }
+    [hidden] { display: none !important; }
 
-    /* 대화창 전체 */
-    .chat {
+    /* 앱 전체 */
+    .app {
       display: flex;
       flex-direction: column;
       width: 100%;
       max-width: 480px;
       height: 100%;
-      background: #b9d4ea;
+      background: #f4f6fb;
     }
 
-    /* 맨 위: 친구 이름 */
-    .chat-header {
+    /* 맨 위: 제목과 내 계정 */
+    .app-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
+      gap: 8px;
+      padding: 12px 16px;
       background: #ffffff;
       border-bottom: 1px solid #d5dbe6;
     }
-    .chat-header h1 { margin: 0; font-size: 20px; }
-    .chat-header a { color: #3b6cf6; font-size: 14px; }
+    .app-header h1 { margin: 0; font-size: 20px; }
+    .app-header a { color: #3b6cf6; font-size: 14px; }
+    .me-box { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .me-box button {
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid #c9d0dd;
+      border-radius: 14px;
+      background: #ffffff;
+      cursor: pointer;
+    }
 
-    /* 가운데: 메시지들이 쌓이는 곳 */
+    /* 동그란 프로필 */
+    .avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .avatar.small { width: 26px; height: 26px; font-size: 12px; }
+
+    /* 화면들 (한 번에 하나만 보여요) */
+    .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+    /* 계정 만들기 화면 */
+    .login { padding: 28px 20px; overflow-y: auto; }
+    .login h2 { margin: 0 0 6px; font-size: 22px; }
+    .login p { margin: 0 0 16px; font-size: 14px; color: #56607a; line-height: 1.5; }
+    .login form { display: flex; flex-direction: column; gap: 8px; }
+    .login input {
+      padding: 12px 14px;
+      font-size: 16px;
+      border: 1px solid #c9d0dd;
+      border-radius: 20px;
+    }
+    .error { min-height: 20px; margin-top: 8px; font-size: 13px; color: #d43c3c; }
+    .link-button {
+      margin-top: 8px;
+      padding: 8px 0;
+      font-size: 15px;
+      border: none;
+      background: none;
+      color: #3b6cf6;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* 노란 버튼 */
+    .yellow-button {
+      padding: 0 20px;
+      min-height: 44px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 20px;
+      background: #ffe94a;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    .yellow-button:hover { background: #ffdf0f; }
+    .yellow-button:disabled { background: #e3e6ee; color: #8a92a6; cursor: default; }
+
+    /* 대화 화면: 메시지들이 쌓이는 곳 */
     .messages {
       flex: 1;
       overflow-y: auto;
@@ -45,9 +113,10 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      background: #b9d4ea;
     }
     .message { display: flex; flex-direction: column; max-width: 75%; }
-    .message .name { font-size: 13px; margin-bottom: 4px; color: #3d4658; }
+    .message .name { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 4px; color: #3d4658; }
     .message .bubble {
       padding: 10px 14px;
       border-radius: 16px;
@@ -58,13 +127,23 @@
     }
     .message .time { font-size: 11px; color: #56607a; margin-top: 3px; }
 
-    /* 친구가 보낸 메시지: 왼쪽 */
+    /* 다른 계정이 보낸 메시지: 왼쪽 */
     .message.friend { align-self: flex-start; }
     .message.friend .bubble { background: #ffffff; }
 
     /* 내가 보낸 메시지: 오른쪽 */
     .message.me { align-self: flex-end; align-items: flex-end; }
     .message.me .bubble { background: #ffe94a; }
+
+    /* "○○님이 들어왔어요" 같은 알림 */
+    .notice {
+      align-self: center;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: #3d4658;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 12px;
+    }
 
     /* 맨 아래: 글 쓰는 곳 */
     .input-area {
@@ -76,97 +155,610 @@
     }
     .input-area input {
       flex: 1;
+      min-width: 0;
       padding: 12px 14px;
       font-size: 16px;
-      font-family: inherit;
       border: 1px solid #c9d0dd;
       border-radius: 20px;
     }
-    .input-area button {
-      padding: 0 20px;
+
+    /* 게시물 화면 */
+    .posts-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+    .card {
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #ffffff;
+      border: 1px solid #d5dbe6;
+      border-radius: 16px;
+    }
+    .post-form textarea {
+      width: 100%;
+      min-height: 64px;
+      padding: 10px 12px;
       font-size: 16px;
-      font-family: inherit;
-      font-weight: bold;
-      border: none;
+      border: 1px solid #c9d0dd;
+      border-radius: 12px;
+      resize: vertical;
+    }
+    .post-form .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+    .file-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 14px;
+      font-size: 15px;
+      border: 1px solid #c9d0dd;
       border-radius: 20px;
-      background: #ffe94a;
-      color: #1f2430;
+      background: #ffffff;
       cursor: pointer;
     }
-    .input-area button:hover { background: #ffdf0f; }
+    .file-button:hover { background: #f1f4fa; }
+    .file-button input { display: none; }
+    .picked { margin-top: 8px; font-size: 13px; color: #56607a; }
+
+    .post-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .post-head .who { flex: 1; min-width: 0; }
+    .post-head .who b { display: block; font-size: 15px; }
+    .post-head .who span { font-size: 12px; color: #56607a; }
+    .post-head button {
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid #c9d0dd;
+      border-radius: 14px;
+      background: #ffffff;
+      color: #d43c3c;
+      cursor: pointer;
+    }
+    .post-text { margin: 0 0 10px; font-size: 16px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .post-media { display: flex; flex-direction: column; gap: 8px; }
+    .post-media img, .post-media video { width: 100%; max-height: 480px; object-fit: contain; border-radius: 12px; background: #1f2430; }
+    .empty { padding: 32px 0; text-align: center; font-size: 14px; color: #56607a; }
+
+    /* 맨 아래 메뉴 */
+    .tabs { display: flex; background: #ffffff; border-top: 1px solid #d5dbe6; }
+    .tabs button {
+      flex: 1;
+      padding: 12px 0;
+      font-size: 15px;
+      border: none;
+      background: none;
+      color: #56607a;
+      cursor: pointer;
+    }
+    .tabs button.on { color: #1f2430; font-weight: bold; box-shadow: inset 0 3px 0 #ffe94a; }
   </style>
 </head>
 <body>
-  <div class="chat">
-    <div class="chat-header">
-      <h1>💬 하늘이</h1>
-      <a href="../">처음 화면으로</a>
+  <div class="app">
+    <div class="app-header">
+      <h1>💬 메신저</h1>
+      <!-- 계정으로 들어오기 전에는 "처음 화면으로"만 보여요 -->
+      <a href="../" id="homeLink">처음 화면으로</a>
+      <div class="me-box" id="meBox" hidden>
+        <span class="avatar small" id="meAvatar"></span>
+        <b id="meName"></b>
+        <button type="button" id="logoutButton">로그아웃</button>
+      </div>
     </div>
 
-    <!-- 메시지가 쌓이는 곳 -->
-    <div class="messages" id="messages"></div>
+    <!-- 0. 서버 주소를 아직 안 넣었을 때 보이는 화면 -->
+    <div class="view login" id="setupView" hidden>
+      <h2>서버가 아직 연결되지 않았어요</h2>
+      <p>서버를 만든 다음, 이 파일 아래쪽의 <b>API_URL</b>에 서버 주소를 넣으면 시작할 수 있어요.</p>
+    </div>
 
-    <!-- 글 쓰는 곳 -->
-    <form class="input-area" id="messageForm">
-      <input type="text" id="messageInput" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지">
-      <button type="submit">보내기</button>
-    </form>
+    <!-- 1. 로그인 / 계정 만들기 화면 -->
+    <div class="view login" id="loginView" hidden>
+      <h2 id="loginTitle">로그인</h2>
+      <p id="loginHelp">아이디와 비밀번호를 적어 주세요.</p>
+      <form id="loginForm">
+        <input type="text" id="idInput" placeholder="아이디 (2~12글자)" maxlength="12" autocomplete="username" aria-label="아이디">
+        <input type="password" id="passwordInput" placeholder="비밀번호 (4글자부터)" maxlength="50" autocomplete="current-password" aria-label="비밀번호">
+        <input type="text" id="codeInput" placeholder="가입 코드 (선생님께 물어보세요)" maxlength="30" autocomplete="off" aria-label="가입 코드" hidden>
+        <button type="submit" class="yellow-button" id="loginButton">로그인</button>
+      </form>
+      <div class="error" id="loginError"></div>
+      <button type="button" class="link-button" id="modeButton">처음이에요. 계정 만들기</button>
+    </div>
+
+    <!-- 2. 대화 화면 -->
+    <div class="view" id="chatView" hidden>
+      <div class="messages" id="messages"></div>
+      <form class="input-area" id="messageForm">
+        <input type="text" id="messageInput" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지">
+        <button type="submit" class="yellow-button">보내기</button>
+      </form>
+    </div>
+
+    <!-- 3. 게시물 화면 -->
+    <div class="view" id="postsView" hidden>
+      <div class="posts-scroll">
+        <form class="card post-form" id="postForm">
+          <textarea id="postText" placeholder="무슨 일이 있었나요?" aria-label="게시물 글"></textarea>
+          <div class="picked" id="pickedText"></div>
+          <div class="row">
+            <label class="file-button">
+              📷 사진·영상 고르기
+              <input type="file" id="postFiles" accept="image/*,video/*" multiple>
+            </label>
+            <button type="submit" class="yellow-button" id="postButton">올리기</button>
+          </div>
+          <div class="error" id="postError"></div>
+        </form>
+        <div id="postList"></div>
+      </div>
+    </div>
+
+    <!-- 맨 아래 메뉴 -->
+    <div class="tabs" id="tabs" hidden>
+      <button type="button" data-view="chatView" class="on">💬 대화</button>
+      <button type="button" data-view="postsView">🖼️ 게시물</button>
+    </div>
   </div>
 
   <script>
+    // ───────── 서버 ─────────
+    // 계정, 대화, 게시물은 모두 서버(인터넷에 있는 컴퓨터)에 저장해요.
+    // 그래서 다른 컴퓨터에 있는 친구와도 주고받을 수 있어요.
+    const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
+    const BOARD = "messenger";   // 게시물을 모아 두는 게시판 이름
+
+    const TOKEN_KEY = "messenger.token";      // 로그인했다는 표(토큰)를 이 브라우저에 기억해요
+    const MAX_VIDEO_SIZE = 30 * 1024 * 1024;  // 영상은 한 개에 30MB까지
+    const MAX_IMAGE_SIDE = 1280;              // 사진은 긴 쪽을 1280px로 줄여서 올려요
+    const MAX_FILES = 6;                      // 게시물 하나에 파일 6개까지
+    const COLORS = ["#f2777a", "#f99157", "#66b36a", "#3b9ad9", "#8f6fd6", "#d966a8", "#3bb3a6", "#b98a3b"];
+
+    let token = localStorage.getItem(TOKEN_KEY);
+    let me = null; // 지금 로그인한 계정 아이디 (없으면 null)
+
+    // 서버가 알려 주는 문제를 쉬운 말로 바꾸기
+    const ERROR_TEXT = {
+      BAD_ID: "아이디는 띄어쓰기 없이 2~12글자로 적어 주세요.",
+      BAD_PASSWORD: "비밀번호는 4글자부터 적을 수 있어요.",
+      BAD_CODE: "가입 코드가 맞지 않아요. 선생님께 물어보세요.",
+      ID_TAKEN: "이미 누가 쓰고 있는 아이디예요. 다른 아이디를 적어 주세요.",
+      WRONG_LOGIN: "아이디나 비밀번호가 맞지 않아요.",
+      NOT_LOGGED_IN: "다시 로그인해 주세요.",
+      BAD_MESSAGE: "메시지는 500글자까지 보낼 수 있어요.",
+      BAD_POST: "글은 1000글자, 파일은 6개까지 올릴 수 있어요.",
+      BAD_FILE: "사진이나 영상만 올릴 수 있어요.",
+      NOT_YOURS: "내가 올린 게시물만 지울 수 있어요.",
+      NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
+    };
+    function errorText(error) {
+      return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
+    }
+
+    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용)
+    async function call(action, data) {
+      let response;
+      try {
+        response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(Object.assign({ action: action, token: token }, data))
+        });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      const result = await response.json().catch(function () { return null; });
+      if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
+      return result;
+    }
+
+    // 아이디마다 항상 같은 색이 나오게 하기
+    function colorOf(id) {
+      let sum = 0;
+      for (const ch of id) sum += ch.codePointAt(0);
+      return COLORS[sum % COLORS.length];
+    }
+    function makeAvatar(id, small) {
+      const avatar = document.createElement("span");
+      avatar.className = small ? "avatar small" : "avatar";
+      avatar.style.background = colorOf(id);
+      avatar.textContent = Array.from(id)[0];
+      return avatar;
+    }
+
+    // 서버가 붙여 준 번호(sk)에는 보낸 시간이 들어 있어요
+    function timeOf(sk) {
+      return new Date(Number(String(sk).slice(0, -6)));
+    }
+    function timeText(sk) {
+      return timeOf(sk).toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+    }
+    function dateText(sk) {
+      return timeOf(sk).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
+    }
+
+    // ───────── 로그인과 계정 만들기 ─────────
+    const loginForm = document.getElementById("loginForm");
+    const idInput = document.getElementById("idInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const codeInput = document.getElementById("codeInput");
+    const loginButton = document.getElementById("loginButton");
+    const loginError = document.getElementById("loginError");
+    const modeButton = document.getElementById("modeButton");
+    const homeLink = document.getElementById("homeLink");
+    const meBox = document.getElementById("meBox");
+    const tabs = document.getElementById("tabs");
+
+    let signupMode = false; // true면 계정 만들기, false면 로그인
+    let needsCode = true;   // 가입 코드가 필요한지 (서버에 물어봐요)
+
+    function setMode(signup) {
+      signupMode = signup;
+      document.getElementById("loginTitle").textContent = signup ? "계정 만들기" : "로그인";
+      document.getElementById("loginHelp").textContent = signup
+        ? "진짜 이름 말고 별명으로 아이디를 지어 주세요. 비밀번호는 다른 곳에서 쓰는 것 말고 새로 지어 주세요."
+        : "아이디와 비밀번호를 적어 주세요.";
+      loginButton.textContent = signup ? "가입하기" : "로그인";
+      modeButton.textContent = signup ? "이미 계정이 있어요. 로그인하기" : "처음이에요. 계정 만들기";
+      passwordInput.autocomplete = signup ? "new-password" : "current-password";
+      codeInput.hidden = !(signup && needsCode);
+      loginError.textContent = "";
+    }
+    modeButton.addEventListener("click", function () { setMode(!signupMode); });
+
+    // "로그인"이나 "가입하기"를 누르면 서버에 물어보기
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const id = idInput.value.trim();
+      const password = passwordInput.value;
+
+      if (Array.from(id).length < 2 || /\s/.test(id)) { loginError.textContent = ERROR_TEXT.BAD_ID; return; }
+      if (password.length < 4) { loginError.textContent = ERROR_TEXT.BAD_PASSWORD; return; }
+
+      loginButton.disabled = true;
+      loginError.textContent = "";
+      try {
+        const result = signupMode
+          ? await call("signup", { id: id, password: password, code: codeInput.value.trim() })
+          : await call("login", { id: id, password: password });
+        token = result.token;
+        localStorage.setItem(TOKEN_KEY, token);
+        loginForm.reset();
+        enter(result.id);
+      } catch (error) {
+        loginError.textContent = errorText(error);
+      }
+      loginButton.disabled = false;
+    });
+
+    // 로그인한 뒤 대화 화면으로 들어가기
+    function enter(id) {
+      me = id;
+      const meAvatar = document.getElementById("meAvatar");
+      meAvatar.style.background = colorOf(id);
+      meAvatar.textContent = Array.from(id)[0];
+      document.getElementById("meName").textContent = id;
+
+      homeLink.hidden = true;
+      meBox.hidden = false;
+      tabs.hidden = false;
+      showView("chatView");
+    }
+
+    // 로그인 화면으로 돌아가기
+    function leave() {
+      me = null;
+      token = null;
+      localStorage.removeItem(TOKEN_KEY);
+      lastMessage = "";
+      messages.replaceChildren();
+      shownPosts = null;
+      postList.replaceChildren();
+
+      homeLink.hidden = false;
+      meBox.hidden = true;
+      tabs.hidden = true;
+      setMode(false);
+      showView("loginView");
+    }
+
+    document.getElementById("logoutButton").addEventListener("click", function () {
+      call("logout").catch(function () {}); // 서버에도 알려 주기 (실패해도 괜찮아요)
+      leave();
+    });
+
+    // ───────── 화면 바꾸기 ─────────
+    function showView(viewId) {
+      for (const view of document.querySelectorAll(".view")) view.hidden = view.id !== viewId;
+      for (const tab of tabs.children) tab.classList.toggle("on", tab.dataset.view === viewId);
+      if (viewId === "chatView") loadMessages();
+      if (viewId === "postsView") loadPosts();
+    }
+    for (const tab of tabs.children) {
+      tab.addEventListener("click", function () { showView(tab.dataset.view); });
+    }
+    function isShowing(viewId) {
+      return me && !document.hidden && !document.getElementById(viewId).hidden;
+    }
+
+    // ───────── 대화 ─────────
     const messages = document.getElementById("messages");
     const messageForm = document.getElementById("messageForm");
     const messageInput = document.getElementById("messageInput");
+    let lastMessage = "";      // 마지막으로 받은 메시지 번호
+    let loadingMessages = false;
 
-    // 지금 시간을 "오후 3:05" 같은 글자로 만들기
-    function nowText() {
-      return new Date().toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
-    }
+    // 메시지 하나를 화면에 붙이기
+    function showMessage(item) {
+      if (item.notice) {
+        const notice = document.createElement("div");
+        notice.className = "notice";
+        notice.textContent = item.text + "님이 들어왔어요";
+        messages.appendChild(notice);
+        return;
+      }
 
-    // 대화창에 메시지 하나 추가하기
-    // who: "me"(나) 또는 "friend"(친구)
-    function addMessage(who, text) {
+      // 내가 보낸 건 오른쪽, 다른 계정이 보낸 건 왼쪽
+      const mine = item.sender === me;
       const message = document.createElement("div");
-      message.className = "message " + who;
+      message.className = "message " + (mine ? "me" : "friend");
 
-      if (who === "friend") {
+      if (!mine) {
         const name = document.createElement("div");
         name.className = "name";
-        name.textContent = "하늘이";
+        name.appendChild(makeAvatar(item.sender, true));
+        name.appendChild(document.createTextNode(item.sender));
         message.appendChild(name);
       }
 
       const bubble = document.createElement("div");
       bubble.className = "bubble";
-      bubble.textContent = text;
+      bubble.textContent = item.text;
       message.appendChild(bubble);
 
       const time = document.createElement("div");
       time.className = "time";
-      time.textContent = nowText();
+      time.textContent = timeText(item.sk);
       message.appendChild(time);
 
       messages.appendChild(message);
-
-      // 새 메시지가 보이도록 맨 아래로 내리기
-      messages.scrollTop = messages.scrollHeight;
     }
 
-    // 처음에 보이는 예시 대화 (지어낸 친구예요)
-    addMessage("friend", "안녕! 뭐 하고 있어?");
-    addMessage("friend", "여기에 메시지를 써서 보내 봐 😀");
+    // 서버에서 새 메시지만 받아 오기
+    async function loadMessages() {
+      if (loadingMessages || !me) return;
+      loadingMessages = true;
+      try {
+        const items = await call("messages", { after: lastMessage });
+        if (me && items.length > 0) {
+          // 맨 아래를 보고 있었을 때만 새 메시지 쪽으로 내려요 (위쪽을 읽는 중이면 그대로 둬요)
+          const atBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 80;
+          for (const item of items) showMessage(item);
+          if (atBottom || lastMessage === "") messages.scrollTop = messages.scrollHeight;
+          lastMessage = items[items.length - 1].sk;
+        }
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      loadingMessages = false;
+    }
 
     // "보내기"를 누르거나 엔터를 치면 메시지 보내기
-    messageForm.addEventListener("submit", function (event) {
+    messageForm.addEventListener("submit", async function (event) {
       event.preventDefault();
 
       const text = messageInput.value.trim();
       if (text === "") return; // 빈 메시지는 보내지 않아요
 
-      addMessage("me", text);
       messageInput.value = "";
       messageInput.focus();
+      try {
+        await call("send", { text: text });
+        await loadMessages();
+        messages.scrollTop = messages.scrollHeight;
+      } catch (error) {
+        messageInput.value = text; // 못 보냈으면 쓴 글을 돌려놓기
+        alert(errorText(error));
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
     });
+
+    // 3초마다 새 메시지가 왔는지 서버에 물어보기
+    // (다른 창을 보고 있을 때는 쉬고, 돌아오면 바로 물어봐요)
+    setInterval(function () { if (isShowing("chatView")) loadMessages(); }, 3000);
+    document.addEventListener("visibilitychange", function () {
+      if (isShowing("chatView")) loadMessages();
+      if (isShowing("postsView")) loadPosts();
+    });
+
+    // ───────── 게시물 ─────────
+    const postForm = document.getElementById("postForm");
+    const postText = document.getElementById("postText");
+    const postFiles = document.getElementById("postFiles");
+    const postButton = document.getElementById("postButton");
+    const postError = document.getElementById("postError");
+    const pickedText = document.getElementById("pickedText");
+    const postList = document.getElementById("postList");
+    let shownPosts = null; // 지금 화면에 그려 둔 게시물 번호들 (바뀌었을 때만 다시 그려요)
+
+    // 큰 사진을 작게 줄이기 (빨리 올라가고 저장 공간도 아껴요)
+    function shrinkImage(file) {
+      return new Promise(function (resolve) {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = function () {
+          URL.revokeObjectURL(url);
+          const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(image.width, image.height));
+          if (scale === 1) { resolve(file); return; }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(image.width * scale);
+          canvas.height = Math.round(image.height * scale);
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) { resolve(blob || file); }, "image/jpeg", 0.85);
+        };
+        image.onerror = function () { URL.revokeObjectURL(url); resolve(file); };
+        image.src = url;
+      });
+    }
+
+    // 파일 하나를 서버 보관함에 올리고, 보관함 안의 이름(key)을 돌려받기
+    async function uploadFile(blob) {
+      const place = await call("upload", { type: blob.type });
+      let response;
+      try {
+        response = await fetch(place.url, { method: "PUT", headers: { "Content-Type": blob.type }, body: blob });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      if (!response.ok) throw new Error("SERVER_ERROR");
+      return place.key;
+    }
+
+    // 고른 파일 개수 보여 주기
+    postFiles.addEventListener("change", function () {
+      const count = postFiles.files.length;
+      pickedText.textContent = count === 0 ? "" : "고른 파일 " + count + "개";
+      postError.textContent = "";
+    });
+
+    // "올리기"를 누르면 게시물 올리기
+    postForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const text = postText.value.trim();
+      const files = Array.from(postFiles.files).filter(function (file) {
+        return file.type.startsWith("image/") || file.type.startsWith("video/");
+      });
+
+      if (text === "" && files.length === 0) { postError.textContent = "글을 쓰거나 사진·영상을 골라 주세요."; return; }
+      if (files.length > MAX_FILES) { postError.textContent = "파일은 한 번에 6개까지 올릴 수 있어요."; return; }
+      for (const file of files) {
+        if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
+          postError.textContent = "영상이 너무 커요. 30MB보다 작은 영상을 골라 주세요.";
+          return;
+        }
+      }
+
+      postButton.disabled = true;
+      postError.textContent = "";
+      try {
+        const media = [];
+        for (let i = 0; i < files.length; i++) {
+          pickedText.textContent = "올리는 중... (" + (i + 1) + "/" + files.length + ")";
+          const video = files[i].type.startsWith("video/");
+          const blob = video ? files[i] : await shrinkImage(files[i]);
+          media.push({ kind: video ? "video" : "image", key: await uploadFile(blob) });
+        }
+        await call("post", { board: BOARD, text: text, media: media });
+        postForm.reset();
+        pickedText.textContent = "";
+        await loadPosts();
+      } catch (error) {
+        pickedText.textContent = "";
+        postError.textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      postButton.disabled = false;
+    });
+
+    // 서버에서 게시물을 받아 와서 새것부터 그리기
+    async function loadPosts() {
+      let posts;
+      try {
+        posts = await call("posts", { board: BOARD });
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        return;
+      }
+      if (!me) return;
+
+      // 바뀐 게 없으면 그대로 두기 (보고 있던 영상이 멈추지 않게)
+      const ids = posts.map(function (post) { return post.sk; }).join(",");
+      if (ids === shownPosts) return;
+      shownPosts = ids;
+      postList.replaceChildren();
+
+      if (posts.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "아직 게시물이 없어요. 첫 게시물을 올려 보세요!";
+        postList.appendChild(empty);
+        return;
+      }
+
+      for (const post of posts) {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const head = document.createElement("div");
+        head.className = "post-head";
+        head.appendChild(makeAvatar(post.author));
+        const who = document.createElement("div");
+        who.className = "who";
+        const name = document.createElement("b");
+        name.textContent = post.author;
+        const when = document.createElement("span");
+        when.textContent = dateText(post.sk);
+        who.append(name, when);
+        head.appendChild(who);
+
+        // 내가 올린 게시물만 지울 수 있어요
+        if (post.author === me) {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.textContent = "삭제";
+          remove.addEventListener("click", async function () {
+            if (!confirm("이 게시물을 지울까요?")) return;
+            try { await call("remove", { board: BOARD, sk: post.sk }); }
+            catch (error) { alert(errorText(error)); }
+            loadPosts();
+          });
+          head.appendChild(remove);
+        }
+        card.appendChild(head);
+
+        if (post.text) {
+          const text = document.createElement("p");
+          text.className = "post-text";
+          text.textContent = post.text;
+          card.appendChild(text);
+        }
+
+        const media = post.media || [];
+        if (media.length > 0) {
+          const mediaBox = document.createElement("div");
+          mediaBox.className = "post-media";
+          for (const item of media) {
+            const element = document.createElement(item.kind === "video" ? "video" : "img");
+            element.src = item.url;
+            if (item.kind === "video") { element.controls = true; element.preload = "metadata"; }
+            else element.alt = post.author + "님이 올린 사진";
+            mediaBox.appendChild(element);
+          }
+          card.appendChild(mediaBox);
+        }
+
+        postList.appendChild(card);
+      }
+    }
+
+    // 15초마다 새 게시물이 있는지 서버에 물어보기
+    setInterval(function () { if (isShowing("postsView")) loadPosts(); }, 15000);
+
+    // ───────── 시작 ─────────
+    async function start() {
+      if (API_URL === "") { showView("setupView"); return; }
+
+      // 전에 로그인해 둔 적이 있으면 바로 들어가기
+      if (token) {
+        try {
+          enter((await call("whoami")).id);
+          return;
+        } catch (error) {
+          if (error.message === "NOT_LOGGED_IN") { token = null; localStorage.removeItem(TOKEN_KEY); }
+        }
+      }
+      setMode(false);
+      showView("loginView");
+
+      // 가입 코드가 필요한 서버인지 물어보기
+      try { needsCode = (await call("info")).needsCode; } catch (error) {}
+      codeInput.hidden = !(signupMode && needsCode);
+    }
+    start();
   </script>
 </body>
 </html>
