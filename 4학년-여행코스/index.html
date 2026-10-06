@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>우리 반 추천 여행 코스</title>
+  <!-- 카카오맵 불러오기 (appkey는 카카오에서 받은 JavaScript 키, services는 장소 검색 도구) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: #f3f8f6;
+      color: #1f2a30;
+      font-size: 17px;
+    }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; white-space: nowrap; }
+    [hidden] { display: none !important; }
+
+    /* 맨 위 줄 */
+    header.top {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px;
+      background: #ffffff;
+      border-bottom: 2px solid #dbe7e3;
+    }
+    header.top a.brand { font-size: 22px; font-weight: 700; color: inherit; text-decoration: none; }
+    header.top .note { flex: 1; font-size: 14px; color: #a35a00; }
+    main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 80px; }
+
+    .button {
+      padding: 10px 16px; border-radius: 12px;
+      border: 2px solid #cfdcd8; background: #ffffff; font-weight: 700;
+    }
+    .button:hover, .button:focus-visible { border-color: #0f9d8a; }
+    .button.main { background: #0f9d8a; border-color: #0f9d8a; color: #ffffff; }
+    .button.main:hover { background: #0c8676; }
+    .button.small { padding: 6px 10px; font-size: 14px; border-radius: 10px; }
+    .button.danger { color: #c62828; }
+    .button.on { background: #ffe9c7; border-color: #f59f00; }
+    .button:disabled { opacity: 0.5; cursor: default; }
+    input[type="text"], input[type="password"], textarea {
+      width: 100%; padding: 10px 12px; border-radius: 12px;
+      border: 2px solid #cfdcd8; background: #ffffff;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #0f9d8a; }
+    textarea { resize: vertical; }
+    .message { margin: 8px 0 0; color: #c62828; font-size: 15px; min-height: 1.3em; }
+
+    /* 반 코드 적는 화면 */
+    .box {
+      max-width: 420px; margin: 40px auto; padding: 28px;
+      background: #ffffff; border: 2px solid #dbe7e3; border-radius: 20px;
+    }
+    .box h2 { margin: 0 0 8px; }
+    .box p { margin: 0 0 16px; color: #56666c; }
+    .box form { display: flex; gap: 8px; }
+
+    /* 처음 화면: 친구 목록 */
+    #home h1 { margin: 0 0 6px; font-size: 30px; }
+    #home p.intro { margin: 0 0 24px; color: #56666c; }
+    .students { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .student {
+      position: relative; display: block; padding: 18px 16px;
+      background: #ffffff; border: 2px solid #dbe7e3; border-radius: 18px;
+      color: inherit; text-decoration: none;
+    }
+    .student:hover, .student:focus-visible { border-color: #0f9d8a; }
+    .student .face {
+      width: 46px; height: 46px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; color: #ffffff; margin-bottom: 10px;
+    }
+    .student strong { display: block; font-size: 20px; }
+    .student span { display: block; margin-top: 4px; font-size: 14px; color: #56666c; }
+    .student span.none { color: #9aa8ad; }
+    .student .drop { position: absolute; top: 10px; right: 10px; }
+    .empty { padding: 40px 16px; text-align: center; color: #56666c; background: #ffffff; border: 2px dashed #cfdcd8; border-radius: 18px; }
+    .teacher { margin-top: 32px; padding: 20px; background: #ffffff; border: 2px solid #dbe7e3; border-radius: 18px; }
+    .teacher h2 { margin: 0 0 6px; font-size: 20px; }
+    .teacher p { margin: 0 0 12px; color: #56666c; font-size: 15px; }
+    .teacher form { display: flex; gap: 8px; align-items: flex-start; max-width: 520px; }
+
+    /* 여행 코스 화면 */
+    .course-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .course-head h1 { flex: 1; margin: 0; font-size: 26px; min-width: 200px; }
+    .course-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .map-side { position: sticky; top: 76px; }
+    #map {
+      width: 100%; height: calc(100vh - 190px); min-height: 380px;
+      border-radius: 18px; border: 2px solid #dbe7e3; background: #e6eeeb;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: #56666c; padding: 0;
+    }
+    #map.picking { border-color: #f59f00; }
+    #tools { margin-bottom: 10px; }
+    #tools .row { display: flex; gap: 8px; }
+    #tools form { flex: 1; display: flex; gap: 8px; }
+    #hint { margin: 8px 0 0; font-size: 15px; color: #56666c; }
+    #results { list-style: none; margin: 8px 0 0; padding: 0; background: #ffffff; border: 2px solid #dbe7e3; border-radius: 12px; overflow: hidden; }
+    #results button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-bottom: 1px solid #e6eeeb; background: none; font-weight: 700; }
+    #results button:hover { background: #eef7f4; }
+    #results small { display: block; font-weight: 400; color: #56666c; }
+    .pin {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: #f2622e; color: #ffffff; font-weight: 700; font-size: 16px;
+      border: 3px solid #ffffff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); cursor: pointer;
+    }
+    .pin.now { background: #0f9d8a; transform: scale(1.25); }
+
+    .course-title { margin: 0 0 6px; font-size: 24px; }
+    .course-intro { margin: 0 0 18px; color: #3d4c52; white-space: pre-wrap; }
+    .places { list-style: none; margin: 0; padding: 0; }
+    .place { margin-bottom: 14px; padding: 16px; background: #ffffff; border: 2px solid #dbe7e3; border-radius: 18px; }
+    .place.now { border-color: #0f9d8a; }
+    .place-top { display: flex; align-items: center; gap: 10px; }
+    .place-top .number {
+      flex: none; width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: #f2622e; color: #ffffff; font-weight: 700;
+    }
+    .place-top .where { flex: 1; font-size: 14px; color: #56666c; }
+    .place-top button.name { flex: 1; text-align: left; border: 0; background: none; padding: 0; font-size: 20px; font-weight: 700; }
+    .place .address { margin: 6px 0 0 42px; font-size: 14px; color: #56666c; }
+    .place .text { margin: 12px 0 0; white-space: pre-wrap; }
+    .photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .photos .photo { position: relative; width: 120px; height: 120px; }
+    .photos img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; cursor: zoom-in; background: #e6eeeb; }
+    .photos .photo button { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, 0.65); color: #ffffff; }
+    .photos label.add {
+      width: 120px; height: 120px; border-radius: 12px; border: 2px dashed #cfdcd8;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: #56666c; font-size: 15px; cursor: pointer;
+    }
+    .photos label.add:hover { border-color: #0f9d8a; }
+    .field { display: block; margin-bottom: 14px; }
+    .field > span { display: block; margin-bottom: 4px; font-weight: 700; font-size: 15px; }
+    .place textarea, .place input[type="text"] { margin-top: 10px; }
+    .savebar {
+      position: sticky; bottom: 0; display: flex; gap: 8px; align-items: center;
+      padding: 12px 0; background: #f3f8f6;
+    }
+    .savebar .message { flex: 1; margin: 0; }
+
+    /* 사진 크게 보기 */
+    #viewer { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+    #viewer img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+
+    @media (max-width: 800px) {
+      .course-body { grid-template-columns: 1fr; }
+      .map-side { position: static; }
+      #map { height: 46vh; min-height: 300px; }
+      header.top a.brand { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#">🧳 우리 반 추천 여행 코스</a>
+    <span class="note" id="modeNote"></span>
+  </header>
+
+  <main>
+    <!-- 반 코드 적는 화면 -->
+    <section id="gate" hidden>
+      <div class="box">
+        <h2>우리 반 코드를 적어 주세요</h2>
+        <p>선생님이 알려 주신 코드를 적으면 들어갈 수 있어요.</p>
+        <form id="gateForm">
+          <input type="password" id="gateInput" autocomplete="off" aria-label="우리 반 코드">
+          <button class="button main">들어가기</button>
+        </form>
+        <p class="message" id="gateMessage"></p>
+      </div>
+    </section>
+
+    <!-- 처음 화면: 친구 목록 -->
+    <section id="home" hidden>
+      <h1>누구의 여행 코스를 볼까요?</h1>
+      <p class="intro">이름을 누르면 그 친구가 추천하는 여행 코스가 나와요.</p>
+      <div id="students" class="students"></div>
+      <p class="message" id="homeMessage"></p>
+
+      <div class="teacher">
+        <h2>👩‍🏫 선생님: 학생 명부</h2>
+        <div id="teacherLocked">
+          <p>선생님 코드를 적으면 학생을 넣거나 뺄 수 있어요.</p>
+          <form id="teacherForm">
+            <input type="password" id="teacherInput" autocomplete="off" aria-label="선생님 코드">
+            <button class="button">확인</button>
+          </form>
+        </div>
+        <div id="teacherOpen" hidden>
+          <p>이름을 한 줄에 한 명씩 적고 "명부에 넣기"를 눌러 주세요. 빼려면 위 목록의 "빼기"를 눌러요.</p>
+          <form id="addForm">
+            <textarea id="addInput" rows="4" placeholder="예)&#10;하늘&#10;바다"></textarea>
+            <button class="button main" style="white-space: nowrap;">명부에 넣기</button>
+          </form>
+        </div>
+        <p class="message" id="teacherMessage"></p>
+      </div>
+    </section>
+
+    <!-- 여행 코스 화면 -->
+    <section id="course" hidden>
+      <div class="course-head">
+        <a class="button" href="#">← 친구 목록</a>
+        <h1 id="courseName"></h1>
+        <button class="button main" id="editButton" type="button"></button>
+      </div>
+      <div class="course-body">
+        <div class="map-side">
+          <div id="tools" hidden>
+            <div class="row">
+              <form id="searchForm">
+                <input type="text" id="searchInput" placeholder="가고 싶은 곳 이름 (예: 오동도)">
+                <button class="button">찾기</button>
+              </form>
+              <button class="button" id="pickButton" type="button">📍 지도에서 찍기</button>
+            </div>
+            <ul id="results" hidden></ul>
+            <p id="hint"></p>
+          </div>
+          <div id="map"></div>
+        </div>
+        <div id="panel"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="viewer" hidden><img alt="크게 본 사진"></div>
+
+  <script>
+    // ---------- 바꿔 볼 수 있는 것들 ----------
+    // 우리 서버 주소. 비어 있으면 서버 없이 이 컴퓨터에만 저장해요 (다른 컴퓨터에서는 안 보여요).
+    const API_URL = "";
+    // 지도가 처음 보여 줄 곳 (여수 경호초등학교)
+    const FIRST_PLACE = { lat: 34.72003, lng: 127.72419 };
+    const MAX_PLACES = 20;    // 코스 하나에 넣을 수 있는 곳
+    const MAX_PHOTOS = 4;     // 한 곳에 넣을 수 있는 사진
+    const PHOTO_SIZE = 1280;  // 사진을 줄일 크기 (가장 긴 쪽)
+    const FACE_COLORS = ["#0f9d8a", "#f2622e", "#3b6cf6", "#9b51e0", "#e0a100", "#d6457f"];
+
+    const ERROR_TEXT = {
+      BAD_CODE: "코드가 맞지 않아요. 다시 확인해 주세요.",
+      BAD_NAME: "이름은 1글자부터 20글자까지 적을 수 있어요.",
+      BAD_COURSE: "코스에 빠진 것이 있거나 너무 길어요.",
+      BAD_FILE: "사진 파일만 올릴 수 있어요.",
+      NO_STUDENT: "명부에 없는 친구예요.",
+      NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
+    };
+    function errorText(error) {
+      return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
+    }
+
+    const $ = function (id) { return document.getElementById(id); };
+    // 화면 조각 만들기 (tag: 종류, props: 꾸밀 내용, kids: 안에 넣을 것들)
+    function el(tag, props, kids) {
+      const node = document.createElement(tag);
+      Object.assign(node, props || {});
+      (kids || []).forEach(function (kid) { if (kid) node.append(kid); });
+      return node;
+    }
+
+    // ---------- 저장하기: 서버 또는 이 컴퓨터 ----------
+    let code = "";   // 반 코드 또는 선생님 코드
+    let role = "";   // "class"(우리 반) 또는 "teacher"(선생님)
+
+    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용)
+    async function call(action, data) {
+      if (!API_URL) return localCall(action, data || {});
+      let response;
+      try {
+        response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(Object.assign({ action: action, code: code }, data))
+        });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      const result = await response.json().catch(function () { return null; });
+      if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
+      return result;
+    }
+
+    // 이 컴퓨터의 저장 공간(IndexedDB)에서 꺼내거나 넣기
+    function idb(mode, work) {
+      return new Promise(function (resolve, reject) {
+        const open = indexedDB.open("trip-course", 1);
+        open.onupgradeneeded = function () { open.result.createObjectStore("kv"); };
+        open.onerror = function () { reject(open.error); };
+        open.onsuccess = function () {
+          const tx = open.result.transaction("kv", mode);
+          const request = work(tx.objectStore("kv"));
+          tx.oncomplete = function () { open.result.close(); resolve(request && request.result); };
+          tx.onerror = function () { reject(tx.error); };
+        };
+      });
+    }
+
+    // 서버가 없을 때 서버와 똑같이 대답해 주는 곳 (지운 사진은 이 컴퓨터에 남아요)
+    async function localCall(action, d) {
+      const list = (await idb("readonly", function (kv) { return kv.get("students"); })) || [];
+      function write() { return idb("readwrite", function (kv) { kv.put(list, "students"); }); }
+      function find() {
+        const student = list.find(function (s) { return s.id === d.id; });
+        if (!student) throw new Error("NO_STUDENT");
+        return student;
+      }
+      if (action === "check") return { role: "teacher" };
+      if (action === "students") {
+        return list.map(function (s) { return { id: s.id, name: s.name, title: s.title, count: s.places.length }; });
+      }
+      if (action === "add") {
+        const name = String(d.name || "").trim();
+        if (name.length < 1 || name.length > 20) throw new Error("BAD_NAME");
+        list.push({ id: Date.now() + "" + Math.floor(Math.random() * 1000), name: name, title: "", intro: "", places: [] });
+        return write();
+      }
+      if (action === "drop") {
+        list.splice(list.indexOf(find()), 1);
+        return write();
+      }
+      if (action === "course") {
+        const student = JSON.parse(JSON.stringify(find()));
+        for (const place of student.places) {
+          const photos = [];
+          for (const key of place.photos) {
+            const blob = await idb("readonly", function (kv) { return kv.get("photo:" + key); });
+            if (blob) photos.push({ key: key, url: URL.createObjectURL(blob) });
+          }
+          place.photos = photos;
+        }
+        return student;
+      }
+      if (action === "save") {
+        const student = find();
+        student.title = d.title;
+        student.intro = d.intro;
+        student.places = d.places;
+        return write();
+      }
+      throw new Error("BAD_ACTION");
+    }
+
+    // 사진 파일을 작게 줄이기 (maxSize: 가장 긴 쪽의 길이)
+    function shrinkPhoto(file, maxSize) {
+      return new Promise(function (resolve, reject) {
+        const image = new Image();
+        image.onload = function () {
+          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(image.width * scale);
+          canvas.height = Math.round(image.height * scale);
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(image.src);
+          canvas.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error("BAD_FILE")); }, "image/jpeg", 0.85);
+        };
+        image.onerror = function () { reject(new Error("BAD_FILE")); };
+        image.src = URL.createObjectURL(file);
+      });
+    }
+
+    // 사진 하나를 올리고, 보관함 안의 이름(key)과 볼 수 있는 주소(url)를 돌려받기
+    async function uploadPhoto(file) {
+      const blob = await shrinkPhoto(file, PHOTO_SIZE);
+      const url = URL.createObjectURL(blob);
+      if (!API_URL) {
+        const key = "local" + Date.now() + Math.floor(Math.random() * 100000);
+        await idb("readwrite", function (kv) { kv.put(blob, "photo:" + key); });
+        return { key: key, url: url };
+      }
+      const place = await call("upload", { type: blob.type });
+      let response;
+      try {
+        response = await fetch(place.url, { method: "PUT", headers: { "Content-Type": blob.type }, body: blob });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      if (!response.ok) throw new Error("SERVER_ERROR");
+      return { key: place.key, url: url };
+    }
+
+    // ---------- 화면 바꾸기 ----------
+    let current = null;   // 지금 보고 있는 친구의 코스
+    let draft = null;     // 고치는 중인 코스 (고치는 중이 아니면 null)
+    let dirty = false;    // 고친 뒤 아직 저장하지 않았는지
+    let uploading = 0;    // 지금 올리고 있는 사진 묶음 수
+    let stayHere = false; // 나가지 않기로 해서 주소를 되돌리는 중인지
+
+    function show(id) {
+      ["gate", "home", "course"].forEach(function (name) { $(name).hidden = name !== id; });
+    }
+
+    // 주소(#/s/번호)에 맞는 화면 보여 주기
+    async function route() {
+      if (!role) return show("gate");
+      if (stayHere) {
+        stayHere = false;
+        return;
+      }
+      if (draft && dirty && !confirm("고친 내용을 저장하지 않았어요. 그래도 나갈까요?")) {
+        stayHere = true;
+        history.back();
+        return;
+      }
+      draft = null;
+      dirty = false;
+      const id = location.hash.startsWith("#/s/") ? decodeURIComponent(location.hash.slice(4)) : "";
+      if (id) await openCourse(id); else await openHome();
+    }
+    window.addEventListener("hashchange", route);
+    window.addEventListener("beforeunload", function (event) {
+      if (draft && dirty) event.preventDefault();
+    });
+
+    // ---------- 반 코드 ----------
+    async function enter(newCode) {
+      code = newCode;
+      const result = await call("check");
+      role = result.role;
+      if (role === "teacher") sessionStorage.setItem("tripTeacherCode", code);
+      else localStorage.setItem("tripCode", code);
+    }
+
+    $("gateForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      $("gateMessage").textContent = "";
+      try {
+        await enter($("gateInput").value.trim());
+        $("gateInput").value = "";
+        route();
+      } catch (error) {
+        $("gateMessage").textContent = errorText(error);
+      }
+    });
+
+    $("teacherForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const before = code;
+      $("teacherMessage").textContent = "";
+      try {
+        await enter($("teacherInput").value.trim());
+        if (role !== "teacher") throw new Error("BAD_CODE");
+        $("teacherInput").value = "";
+        openHome();
+      } catch (error) {
+        code = before;
+        role = "class";
+        $("teacherMessage").textContent = errorText(error);
+      }
+    });
+
+    // ---------- 처음 화면: 친구 목록 ----------
+    async function openHome() {
+      show("home");
+      $("teacherLocked").hidden = role === "teacher";
+      $("teacherOpen").hidden = role !== "teacher";
+      $("homeMessage").textContent = "";
+      let list;
+      try {
+        list = await call("students");
+      } catch (error) {
+        $("homeMessage").textContent = errorText(error);
+        return;
+      }
+      const box = $("students");
+      box.innerHTML = "";
+      box.className = list.length ? "students" : "empty";
+      if (!list.length) {
+        box.textContent = "아직 명부에 친구가 없어요. 선생님이 아래에서 이름을 넣어 주세요.";
+        return;
+      }
+      list.forEach(function (student, index) {
+        const card = el("a", { className: "student", href: "#/s/" + encodeURIComponent(student.id) }, [
+          el("div", { className: "face", textContent: student.name.slice(0, 1) }),
+          el("strong", { textContent: student.name }),
+          student.count
+            ? el("span", { textContent: (student.title || "추천 여행 코스") + " · " + student.count + "곳" })
+            : el("span", { className: "none", textContent: "아직 코스가 없어요" })
+        ]);
+        card.firstChild.style.background = FACE_COLORS[index % FACE_COLORS.length];
+        if (role === "teacher") {
+          const drop = el("button", { className: "button small danger drop", type: "button", textContent: "빼기" });
+          drop.addEventListener("click", async function (event) {
+            event.preventDefault();
+            if (!confirm(student.name + " 친구를 명부에서 뺄까요? 이 친구의 여행 코스도 함께 지워져요.")) return;
+            try {
+              await call("drop", { id: student.id });
+            } catch (error) {
+              $("teacherMessage").textContent = errorText(error);
+            }
+            openHome();
+          });
+          card.append(drop);
+        }
+        box.append(card);
+      });
+    }
+
+    $("addForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const names = $("addInput").value.split("\n").map(function (name) { return name.trim(); }).filter(Boolean);
+      $("teacherMessage").textContent = "";
+      try {
+        for (const name of names) await call("add", { name: name });
+        $("addInput").value = "";
+      } catch (error) {
+        $("teacherMessage").textContent = errorText(error);
+      }
+      openHome();
+    });
+
+    // ---------- 지도 ----------
+    const hasMap = Boolean(window.kakao && kakao.maps);
+    let map = null, placeSearch = null, geocoder = null, line = null;
+    let pins = [];          // 지도 위의 번호 동그라미들
+    let picking = false;    // "지도에서 찍기"가 켜져 있는지
+
+    // 지도는 화면에 보일 때 한 번만 만들어요
+    function readyMap() {
+      if (!hasMap) {
+        // 카카오맵은 올린 사이트(rudghch.github.io)에서만 보여요
+        $("map").textContent = "지도를 불러오지 못했어요. 카카오맵은 웹에 올린 사이트에서만 보여요.";
+        return;
+      }
+      if (map) return map.relayout();
+      map = new kakao.maps.Map($("map"), { center: new kakao.maps.LatLng(FIRST_PLACE.lat, FIRST_PLACE.lng), level: 5 });
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      placeSearch = new kakao.maps.services.Places();
+      geocoder = new kakao.maps.services.Geocoder();
+
+      // "지도에서 찍기"가 켜져 있을 때 지도를 누르면 그곳을 코스에 넣기
+      kakao.maps.event.addListener(map, "click", function (mouseEvent) {
+        if (!picking || !draft) return;
+        const position = mouseEvent.latLng;
+        setPicking(false);
+        geocoder.coord2Address(position.getLng(), position.getLat(), function (result, status) {
+          let address = "";
+          if (status === kakao.maps.services.Status.OK && result[0]) {
+            address = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+          }
+          addPlace({ name: "", address: address, lat: position.getLat(), lng: position.getLng() });
+        });
+      });
+    }
+
+    // 코스의 곳들을 지도에 번호와 선으로 그리기 (fit: 코스 전체가 보이게 지도를 맞출지)
+    function drawMap(places, fit) {
+      if (!map) return;
+      pins.forEach(function (pin) { pin.setMap(null); });
+      pins = [];
+      if (line) line.setMap(null);
+
+      const path = places.map(function (place) { return new kakao.maps.LatLng(place.lat, place.lng); });
+      path.forEach(function (position, index) {
+        const dot = el("div", { className: "pin", textContent: index + 1 });
+        dot.addEventListener("click", function () { focusPlace(index, true); });
+        pins.push(new kakao.maps.CustomOverlay({ position: position, content: dot, map: map, zIndex: 5 }));
+      });
+      line = new kakao.maps.Polyline({ path: path, strokeWeight: 5, strokeColor: "#f2622e", strokeOpacity: 0.8, strokeStyle: "shortdash", map: map });
+
+      if (!fit) return;
+      if (path.length === 0) {
+        map.setLevel(5);
+        map.setCenter(new kakao.maps.LatLng(FIRST_PLACE.lat, FIRST_PLACE.lng));
+      } else if (path.length === 1) {
+        map.setLevel(4);
+        map.setCenter(path[0]);
+      } else {
+        const bounds = new kakao.maps.LatLngBounds();
+        path.forEach(function (position) { bounds.extend(position); });
+        map.setBounds(bounds, 60, 60, 60, 60);
+      }
+    }
+
+    // 몇 번째 곳을 눈에 띄게 하기 (scroll: 목록도 그 카드로 내릴지)
+    function focusPlace(index, scroll) {
+      const places = (draft || current).places;
+      document.querySelectorAll(".place").forEach(function (card, i) { card.classList.toggle("now", i === index); });
+      pins.forEach(function (pin, i) { pin.getContent().classList.toggle("now", i === index); });
+      if (map && places[index]) map.panTo(new kakao.maps.LatLng(places[index].lat, places[index].lng));
+      const card = document.querySelectorAll(".place")[index];
+      if (scroll && card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function setPicking(on) {
+      picking = on;
+      $("pickButton").classList.toggle("on", on);
+      $("map").classList.toggle("picking", on);
+      if (map) map.setCursor(on ? "crosshair" : "");
+      if (on) {
+        $("results").hidden = true;
+        $("hint").textContent = "지도에서 가고 싶은 곳을 눌러 주세요.";
+      }
+    }
+    $("pickButton").addEventListener("click", function () { setPicking(!picking); });
+
+    // 이름으로 찾기
+    $("searchForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const text = $("searchInput").value.trim();
+      if (text === "" || !placeSearch) return;
+      setPicking(false);
+      placeSearch.keywordSearch(text, function (data, status) {
+        const results = $("results");
+        results.innerHTML = "";
+        if (status !== kakao.maps.services.Status.OK) {
+          results.hidden = true;
+          $("hint").textContent = '"' + text + '"을(를) 찾지 못했어요. 다른 이름으로 찾아 보세요.';
+          return;
+        }
+        // 찾은 곳을 6개까지 목록으로 보여 주기
+        data.slice(0, 6).forEach(function (found) {
+          const address = found.road_address_name || found.address_name;
+          const button = el("button", { type: "button", textContent: found.place_name }, [el("small", { textContent: address })]);
+          button.addEventListener("click", function () {
+            results.hidden = true;
+            $("searchInput").value = "";
+            addPlace({ name: found.place_name, address: address, lat: Number(found.y), lng: Number(found.x) });
+          });
+          results.append(el("li", null, [button]));
+        });
+        results.hidden = false;
+        $("hint").textContent = "코스에 넣을 곳을 목록에서 골라 주세요.";
+      });
+    });
+
+    // ---------- 여행 코스 보기 ----------
+    async function openCourse(id) {
+      try {
+        current = await call("course", { id: id });
+      } catch (error) {
+        await openHome();
+        $("homeMessage").textContent = errorText(error);
+        return;
+      }
+      show("course");
+      readyMap();
+      showCourse();
+    }
+
+    function showCourse() {
+      draft = null;
+      dirty = false;
+      setPicking(false);
+      $("tools").hidden = true;
+      $("courseName").textContent = current.name + "의 추천 여행 코스";
+      $("editButton").hidden = false;
+      $("editButton").textContent = current.places.length ? "✏️ 코스 고치기" : "✏️ 코스 만들기";
+
+      const panel = $("panel");
+      panel.innerHTML = "";
+      if (!current.places.length) {
+        panel.append(el("div", { className: "empty", textContent: "아직 여행 코스가 없어요. \"코스 만들기\"를 눌러 가고 싶은 곳을 넣어 보세요!" }));
+      } else {
+        if (current.title) panel.append(el("h2", { className: "course-title", textContent: current.title }));
+        if (current.intro) panel.append(el("p", { className: "course-intro", textContent: current.intro }));
+        const list = el("ol", { className: "places" });
+        current.places.forEach(function (place, index) {
+          const name = el("button", { className: "name", type: "button", textContent: place.name });
+          name.addEventListener("click", function () { focusPlace(index, false); });
+          list.append(el("li", { className: "place" }, [
+            el("div", { className: "place-top" }, [el("span", { className: "number", textContent: index + 1 }), name]),
+            place.address ? el("p", { className: "address", textContent: place.address }) : null,
+            place.photos.length ? photoRow(place, false) : null,
+            place.text ? el("p", { className: "text", textContent: place.text }) : null
+          ]));
+        });
+        panel.append(list);
+      }
+      drawMap(current.places, true);
+    }
+
+    // 사진 줄 만들기 (editing: 고치는 중이면 지우기와 더하기 버튼도 보여 줌)
+    function photoRow(place, editing) {
+      const row = el("div", { className: "photos" });
+      place.photos.forEach(function (photo, index) {
+        const image = el("img", { src: photo.url, alt: place.name + " 사진 " + (index + 1), loading: "lazy" });
+        image.addEventListener("click", function () {
+          $("viewer").firstChild.src = photo.url;
+          $("viewer").hidden = false;
+        });
+        const box = el("div", { className: "photo" }, [image]);
+        if (editing) {
+          const remove = el("button", { type: "button", textContent: "✕", title: "사진 빼기" });
+          remove.addEventListener("click", function () {
+            place.photos.splice(index, 1);
+            dirty = true;
+            showEditor();
+          });
+          box.append(remove);
+        }
+        row.append(box);
+      });
+      if (editing && place.photos.length < MAX_PHOTOS) {
+        const input = el("input", { type: "file", accept: "image/*", multiple: true, hidden: true });
+        const label = el("label", { className: "add" }, ["＋ 사진 넣기", input]);
+        input.addEventListener("change", async function () {
+          const files = Array.from(input.files).slice(0, MAX_PHOTOS - place.photos.length);
+          const editing = draft;
+          label.firstChild.textContent = "올리는 중…";
+          uploading += 1;
+          try {
+            for (const file of files) {
+              place.photos.push(await uploadPhoto(file));
+              dirty = true;
+            }
+          } catch (error) {
+            alert(errorText(error));
+          }
+          uploading -= 1;
+          if (draft === editing) showEditor();
+        });
+        row.append(label);
+      }
+      return row;
+    }
+    $("viewer").addEventListener("click", function () { $("viewer").hidden = true; });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") $("viewer").hidden = true;
+    });
+
+    // ---------- 여행 코스 만들기·고치기 ----------
+    $("editButton").addEventListener("click", function () {
+      draft = JSON.parse(JSON.stringify(current));
+      dirty = false;
+      $("tools").hidden = false;
+      $("editButton").hidden = true;
+      $("results").hidden = true;
+      $("hint").textContent = hasMap
+        ? "가고 싶은 곳을 이름으로 찾거나, \"지도에서 찍기\"를 누른 뒤 지도를 눌러 넣어요."
+        : "지도는 웹에 올린 사이트에서만 쓸 수 있어요.";
+      if (map) map.relayout();
+      showEditor();
+    });
+
+    // 코스에 새 곳 넣기
+    function addPlace(place) {
+      if (!draft) return;
+      if (draft.places.length >= MAX_PLACES) {
+        $("hint").textContent = "코스 하나에는 " + MAX_PLACES + "곳까지 넣을 수 있어요.";
+        return;
+      }
+      draft.places.push({ name: place.name, address: place.address, lat: place.lat, lng: place.lng, text: "", photos: [] });
+      dirty = true;
+      $("hint").textContent = draft.places.length + "번째 곳을 넣었어요. 오른쪽에서 이름과 설명, 사진을 넣어 주세요.";
+      showEditor();
+      focusPlace(draft.places.length - 1, true);
+      const nameInput = document.querySelectorAll(".place input[type='text']")[draft.places.length - 1];
+      if (nameInput && !place.name) nameInput.focus();
+    }
+
+    // 글 칸 만들기: 적을 때마다 target[key]에 담아요
+    function field(tag, target, key, props) {
+      const input = el(tag, Object.assign({ value: target[key] || "" }, props));
+      if (tag === "input") input.type = "text";
+      input.addEventListener("input", function () {
+        target[key] = input.value;
+        dirty = true;
+      });
+      return input;
+    }
+
+    function showEditor() {
+      const panel = $("panel");
+      const scroll = window.scrollY;
+      panel.innerHTML = "";
+      panel.append(
+        el("label", { className: "field" }, [
+          el("span", { textContent: "코스 이름" }),
+          field("input", draft, "title", { maxLength: 40, placeholder: "예) 여수 바다 하루 여행" })
+        ]),
+        el("label", { className: "field" }, [
+          el("span", { textContent: "코스 소개" }),
+          field("textarea", draft, "intro", { maxLength: 300, rows: 2, placeholder: "이 코스를 왜 추천하는지 적어 주세요." })
+        ])
+      );
+
+      const list = el("ol", { className: "places" });
+      draft.places.forEach(function (place, index) {
+        // 순서 바꾸기와 빼기 버튼
+        function tool(text, title, disabled, work) {
+          const button = el("button", { className: "button small", type: "button", textContent: text, title: title, disabled: disabled });
+          button.addEventListener("click", function () {
+            work();
+            dirty = true;
+            showEditor();
+          });
+          return button;
+        }
+        function swap(other) {
+          draft.places[index] = draft.places[other];
+          draft.places[other] = place;
+        }
+        const number = el("span", { className: "number", textContent: index + 1, title: "지도에서 보기" });
+        number.style.cursor = "pointer";
+        number.addEventListener("click", function () { focusPlace(index, false); });
+        const remove = tool("빼기", "코스에서 빼기", false, function () { draft.places.splice(index, 1); });
+        remove.classList.add("danger");
+
+        list.append(el("li", { className: "place" }, [
+          el("div", { className: "place-top" }, [
+            number,
+            el("span", { className: "where", textContent: place.address || "지도에서 고른 곳" }),
+            tool("▲", "앞으로 옮기기", index === 0, function () { swap(index - 1); }),
+            tool("▼", "뒤로 옮기기", index === draft.places.length - 1, function () { swap(index + 1); }),
+            remove
+          ]),
+          field("input", place, "name", { maxLength: 40, placeholder: "이곳의 이름" }),
+          field("textarea", place, "text", { maxLength: 500, rows: 3, placeholder: "이곳에서 무엇을 하면 좋은지, 왜 추천하는지 적어 주세요." }),
+          photoRow(place, true)
+        ]));
+      });
+      panel.append(list);
+      if (!draft.places.length) {
+        panel.append(el("div", { className: "empty", textContent: "왼쪽에서 가고 싶은 곳을 찾아 넣어 주세요." }));
+      }
+
+      const message = el("p", { className: "message", id: "saveMessage" });
+      const save = el("button", { className: "button main", type: "button", textContent: "💾 저장하기" });
+      const cancel = el("button", { className: "button", type: "button", textContent: "그만두기" });
+      save.addEventListener("click", function () { saveCourse(save, message); });
+      cancel.addEventListener("click", function () {
+        if (dirty && !confirm("고친 내용을 저장하지 않고 그만둘까요?")) return;
+        showCourse();
+      });
+      panel.append(el("div", { className: "savebar" }, [message, cancel, save]));
+
+      drawMap(draft.places, false);
+      window.scrollTo(0, scroll);
+    }
+
+    async function saveCourse(button, message) {
+      const noName = draft.places.findIndex(function (place) { return !place.name.trim(); });
+      if (noName >= 0) {
+        message.textContent = (noName + 1) + "번 곳의 이름을 적어 주세요.";
+        focusPlace(noName, true);
+        return;
+      }
+      if (uploading) {
+        message.textContent = "사진을 올리는 중이에요. 조금만 기다려 주세요.";
+        return;
+      }
+      button.disabled = true;
+      message.textContent = "";
+      try {
+        await call("save", {
+          id: current.id,
+          title: draft.title.trim(),
+          intro: draft.intro.trim(),
+          places: draft.places.map(function (place) {
+            return {
+              name: place.name.trim(), address: place.address, text: place.text.trim(),
+              lat: place.lat, lng: place.lng,
+              photos: place.photos.map(function (photo) { return photo.key; })
+            };
+          })
+        });
+        current = await call("course", { id: current.id });
+        showCourse();
+        window.scrollTo(0, 0);
+      } catch (error) {
+        button.disabled = false;
+        message.textContent = errorText(error);
+      }
+    }
+
+    // ---------- 시작 ----------
+    (async function start() {
+      if (!API_URL) $("modeNote").textContent = "연습 중: 지금은 이 컴퓨터에만 저장돼요";
+      // 전에 적어 둔 코드가 있으면 그대로 들어가기 (선생님 코드는 창을 닫으면 잊어요)
+      const saved = sessionStorage.getItem("tripTeacherCode") || localStorage.getItem("tripCode") || "";
+      if (!API_URL || saved) {
+        try {
+          await enter(saved);
+        } catch (error) {
+          if (error.message !== "BAD_CODE") $("gateMessage").textContent = errorText(error);
+        }
+      }
+      route();
+    })();
+  </script>
+</body>
+</html>
