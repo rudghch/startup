@@ -264,6 +264,9 @@
       <button type="button" data-kind="SUBWAY">🚇 지하철</button>
     </div>
 
+    <!-- 대중교통으로 가는 여러 길 중에서 고르기 -->
+    <div class="ways" id="routeChoices" hidden></div>
+
     <p id="info">출발할 곳과 도착할 곳을 검색하거나 지도에서 찍어 보세요.</p>
     <!-- 대중교통으로 가는 순서 -->
     <ol id="steps" hidden></ol>
@@ -372,6 +375,8 @@
       const transitLink = document.getElementById("transitLink");
       const transitKinds = document.getElementById("transitKinds");
       const stepsBox = document.getElementById("steps");
+      const routeChoices = document.getElementById("routeChoices");
+      let transitChoice = 0;     // 대중교통의 여러 길 중 몇 번째를 골랐는지 (0이 첫 번째)
 
       let pickMode = null;   // 지도에서 찍는 중이면 "start" 또는 "end"
       let routeLines = [];   // 지도에 그린 길 (대중교통은 여러 조각)
@@ -381,6 +386,7 @@
       // ---------- 출발·도착 정하기 ----------
       function setPoint(which, position, name) {
         points[which] = { position: position, name: name };
+        transitChoice = 0;
         inputs[which].value = name;
 
         // 전에 꽂은 핀과 이름표 지우기
@@ -667,6 +673,23 @@
         showWholeRoute();
       }
 
+      // 대중교통으로 가는 여러 길을 버튼으로 보여 주기. 누르면 그 길로 바꿔요
+      function showChoices(choices) {
+        routeChoices.innerHTML = "";
+        choices.forEach(function (text, i) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = (i + 1) + "번 길 · " + text;
+          button.classList.toggle("on", i === transitChoice);
+          button.addEventListener("click", function () {
+            transitChoice = i;
+            findRoute();
+          });
+          routeChoices.appendChild(button);
+        });
+        routeChoices.hidden = choices.length < 2;
+      }
+
       // 가는 순서를 차례대로 보여 주기 (대중교통에서 써요)
       function showSteps(steps) {
         stepsBox.innerHTML = "";
@@ -692,6 +715,7 @@
         let pieces = [{ points: [start, end], color: way.color, dashed: true }];
         let text = "길을 찾지 못해서 곧은 선으로 이었어요. 직선 거리 약 " + distanceText(meters(start, end));
         let steps = [];
+        let choices = [];   // 대중교통에서 고를 수 있는 길들의 이름표
         let found = false;
 
         transitLink.hidden = true;
@@ -720,8 +744,22 @@
                   ? "🚇 이 길에는 지하철로 가는 방법이 없어요. 다른 종류를 골라 보세요."
                   : "🚌 이 길에는 버스만 타고 가는 방법이 없어요. 다른 종류를 골라 보세요.";
               } else {
-                // 가장 먼저 나온(추천) 길을 보여 줘요
-                const route = routes[0];
+                // 고를 수 있는 길을 5개까지 버튼으로 만들 준비 (무엇을 타는지, 시간, 요금)
+                choices = routes.slice(0, 5).map(function (candidate) {
+                  const rides = candidate.steps.filter(function (step) {
+                    return step.properties.type !== "WALKING";
+                  }).map(function (step) {
+                    const vehicle = step.properties.vehicles && step.properties.vehicles[0];
+                    return stepEmojis[step.properties.type] + " " + (vehicle ? vehicle.name : step.properties.guidance.split(" (")[0]);
+                  });
+                  const fare = candidate.properties.fare;
+                  return rides.join(" → ") + " · " + timeText(candidate.properties.totalTime)
+                    + (fare && fare.value ? " · " + fare.value.toLocaleString() + "원" : "");
+                });
+
+                // 고른 길을 보여 줘요 (처음에는 맨 앞의 추천 길)
+                if (transitChoice >= choices.length) transitChoice = 0;
+                const route = routes[transitChoice];
                 let parts = [];
                 route.steps.forEach(function (step) {
                   const type = step.properties.type;
@@ -795,6 +833,7 @@
 
         info.textContent = points.start.name + " → " + points.end.name + " · " + text;
         transitKinds.hidden = mode !== "transit";
+        showChoices(choices);
         showSteps(steps);
 
         // 안내 칸 높이가 바뀌었으니 지도 크기를 다시 맞춘 뒤에 길을 그려요
@@ -837,6 +876,7 @@
       Array.from(document.querySelectorAll("#transitKinds button")).forEach(function (button) {
         button.addEventListener("click", function () {
           transitKind = button.dataset.kind;
+          transitChoice = 0;
           turnOn(button);
           if (points.start && points.end) findRoute();
         });
