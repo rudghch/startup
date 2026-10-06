@@ -223,6 +223,17 @@
       word-break: break-word;
     }
     .message .time { font-size: 11px; color: #56607a; margin-top: 3px; }
+    /* 내 메시지 아래의 "수정", "삭제" 버튼 */
+    .message .time button {
+      margin-left: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      border: none;
+      background: none;
+      color: #2f55c8;
+      text-decoration: underline;
+      cursor: pointer;
+    }
     /* 말풍선 안의 사진·영상 */
     .bubble img, .bubble video { display: block; max-width: 100%; max-height: 300px; margin-top: 6px; border-radius: 10px; }
     .bubble img:first-child, .bubble video:first-child { margin-top: 0; }
@@ -548,6 +559,7 @@
       NO_ROOM: "들어갈 수 없는 대화방이에요.",
       NO_USER: "그런 아이디가 없어요. 아이디를 정확히 적어 주세요.",
       ROOM_FULL: "대화방에는 50명까지 초대할 수 있어요.",
+      BAD_ACTION: "서버를 고친 뒤에 쓸 수 있는 기능이에요.",
       NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
     };
     function errorText(error) {
@@ -1062,10 +1074,71 @@
 
       const time = document.createElement("div");
       time.className = "time";
-      time.textContent = timeText(item.sk);
+      time.textContent = timeText(item.sk) + (item.edited ? " · 수정됨" : "");
+
+      // 내가 보낸 메시지에는 "수정"과 "삭제" 버튼을 붙여요
+      if (mine) {
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.textContent = "수정";
+        edit.addEventListener("click", function () { editMessage(item, parts); });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "삭제";
+        remove.addEventListener("click", function () { deleteMessage(item); });
+        time.append(edit, remove);
+      }
       message.appendChild(time);
 
       messages.appendChild(message);
+    }
+
+    // ───────── 메시지 수정과 삭제 ─────────
+    // 내가 보낸 메시지만 고치거나 지울 수 있어요 (서버가 확인해요).
+    // 서버는 "이 메시지가 바뀌었어요 / 지워졌어요"라는 쪽지를 남겨서, 친구들 화면에서도 바뀌게 해요.
+    function roomName() {
+      return room.all ? "all" : room.id;
+    }
+
+    async function changeMessage(action, data) {
+      try {
+        await callRooms(action, Object.assign({ room: roomName() }, data));
+        await loadMessages();
+      } catch (error) {
+        alert(errorText(error));
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+    }
+
+    // "수정"을 누르면 새 글을 물어보고 고치기 (함께 보낸 사진·영상은 그대로 둬요)
+    function editMessage(item, parts) {
+      const answer = prompt("메시지를 고쳐 주세요.", parts.text);
+      if (answer === null) return; // 취소를 눌렀어요
+      const text = hideBadWords(answer.trim());
+      if (text === parts.text) return;
+      if (text === "" && parts.files.length === 0) { alert("글을 모두 지우려면 '삭제'를 눌러 주세요."); return; }
+      // 모두의 대화방은 사진·영상이 글 끝의 꼬리표에 들어 있어서, 꼬리표를 다시 붙여 줘요
+      const tag = item.media ? "" : item.text.slice(parts.text.length);
+      changeMessage("edit", { sk: item.sk, text: text + tag });
+    }
+
+    // "삭제"를 누르면 물어보고 지우기
+    function deleteMessage(item) {
+      if (!confirm("이 메시지를 지울까요? 친구들 화면에서도 사라져요.")) return;
+      changeMessage("unsend", { sk: item.sk });
+    }
+
+    // 서버가 남긴 쪽지대로 화면의 메시지를 고치거나 빼기 (바뀐 게 있으면 true)
+    function applyNote(note) {
+      const index = shownMessages.findIndex(function (item) { return item.sk === (note.edit || note.gone); });
+      if (index < 0) return false;
+      if (note.gone) {
+        shownMessages.splice(index, 1);
+      } else {
+        shownMessages[index].text = note.text;
+        shownMessages[index].edited = true;
+      }
+      return true;
     }
 
     // 서버에서 새 메시지만 받아 오기
@@ -1082,7 +1155,14 @@
         if (still && items.length > 0) {
           // 맨 아래를 보고 있었을 때만 새 메시지 쪽으로 내려요 (위쪽을 읽는 중이면 그대로 둬요)
           const atBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 80;
-          for (const item of items) { shownMessages.push(item); showMessage(item); }
+          let changed = false;
+          for (const item of items) {
+            // 수정·삭제 쪽지는 화면에 그리지 않고, 가리키는 메시지를 바꿔요
+            if (item.edit || item.gone) { changed = applyNote(item) || changed; continue; }
+            shownMessages.push(item);
+            showMessage(item);
+          }
+          if (changed) redrawMessages();
           if (atBottom || lastMessage === "") messages.scrollTop = messages.scrollHeight;
           lastMessage = items[items.length - 1].sk;
         }
