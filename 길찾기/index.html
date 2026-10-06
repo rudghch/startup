@@ -91,6 +91,20 @@
     #results small { color: #6b7385; margin-left: 6px; }
     #info { margin: 0; font-size: 15px; color: #3d4658; }
 
+    /* 이동 방법 고르는 버튼들 */
+    .ways { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    .transit-link {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #8e44ad;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
     /* 출발·도착하는 곳의 날씨 */
     .weather { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
     .weather-card {
@@ -211,7 +225,17 @@
       <button type="button" id="endPick">지도에서 찍기</button>
     </form>
     <ul id="results" hidden></ul>
+
+    <!-- 이동 방법 고르기 -->
+    <div class="ways" id="ways">
+      <button type="button" data-way="transit">🚌🚇 대중교통</button>
+      <button type="button" data-way="walk">🚶 도보</button>
+      <button type="button" data-way="bike">🚲 자전거</button>
+      <button type="button" data-way="car" class="on">🚗 승용차</button>
+    </div>
+
     <p id="info">출발할 곳과 도착할 곳을 검색하거나 지도에서 찍어 보세요.</p>
+    <a id="transitLink" class="transit-link" target="_blank" rel="noopener" hidden>🚌🚇 카카오맵에서 버스·지하철 길 보기 (새 창)</a>
 
     <!-- 출발·도착하는 곳의 날씨가 나오는 자리 -->
     <div class="weather">
@@ -296,6 +320,16 @@
       const points = { start: null, end: null };
       const pins = { start: null, end: null };
       const labels = { start: null, end: null };
+
+      // 이동 방법들: 길찾기 서버 이름, 선 색, 안내하는 말
+      const ways = {
+        transit: { emoji: "🚌", color: "#8e44ad" },
+        walk: { emoji: "🚶", color: "#1e9e55", server: "routed-foot", how: "걸어서" },
+        bike: { emoji: "🚲", color: "#00a3a3", server: "routed-bike", how: "자전거로" },
+        car: { emoji: "🚗", color: "#2f6bff", server: "routed-car", how: "승용차로" }
+      };
+      let mode = "car";      // 지금 고른 이동 방법
+      const transitLink = document.getElementById("transitLink");
 
       let pickMode = null;   // 지도에서 찍는 중이면 "start" 또는 "end"
       let routeLine = null;  // 지도에 그린 길
@@ -510,44 +544,82 @@
 
         const start = points.start.position;
         const end = points.end.position;
+        const way = ways[mode];
         let path = [start, end];
         let text = "";
+        let found = false;
 
-        try {
-          // 무료 길찾기 서버(OSRM)에 자동차 길을 물어봐요
-          const url = "https://router.project-osrm.org/route/v1/driving/"
-            + start.getLng() + "," + start.getLat() + ";" + end.getLng() + "," + end.getLat()
-            + "?overview=full&geometries=geojson";
-          const response = await fetch(url);
-          const data = await response.json();
-          const route = data.routes[0];
+        transitLink.hidden = true;
 
-          path = route.geometry.coordinates.map(function (c) {
-            return new kakao.maps.LatLng(c[1], c[0]);
-          });
-          text = "거리 약 " + distanceText(route.distance) + " · 자동차로 약 " + Math.max(1, Math.round(route.duration / 60)) + "분";
-        } catch (error) {
-          // 길을 못 찾으면 곧은 선으로 이어요
-          text = "길을 찾지 못해서 곧은 선으로 이었어요. 직선 거리 약 " + distanceText(meters(start, end));
+        if (mode === "transit") {
+          // 버스·지하철 길은 카카오맵에서 열어서 봐요 (지도에는 곧은 점선만 그려요)
+          text = "🚌🚇 버스·지하철 길은 아래 버튼을 눌러 카카오맵에서 볼 수 있어요. 직선 거리 약 " + distanceText(meters(start, end));
+          transitLink.href = "https://map.kakao.com/link/by/traffic/"
+            + linkPlace(points.start) + "/" + linkPlace(points.end);
+          transitLink.hidden = false;
+        } else {
+          try {
+            // 무료 길찾기 서버(OSRM)에 이동 방법에 맞는 길을 물어봐요
+            const url = "https://routing.openstreetmap.de/" + way.server + "/route/v1/driving/"
+              + start.getLng() + "," + start.getLat() + ";" + end.getLng() + "," + end.getLat()
+              + "?overview=full&geometries=geojson";
+            const response = await fetch(url);
+            const data = await response.json();
+            const route = data.routes[0];
+
+            path = route.geometry.coordinates.map(function (c) {
+              return new kakao.maps.LatLng(c[1], c[0]);
+            });
+            text = way.emoji + " 거리 약 " + distanceText(route.distance) + " · " + way.how + " 약 " + timeText(route.duration);
+            found = true;
+          } catch (error) {
+            // 길을 못 찾으면 곧은 선으로 이어요
+            text = "길을 찾지 못해서 곧은 선으로 이었어요. 직선 거리 약 " + distanceText(meters(start, end));
+          }
         }
 
         if (myId !== routeId) return; // 그 사이에 다른 길을 찾기 시작했으면 그만둬요
 
-        // 지도에 길 그리기
+        // 지도에 길 그리기 (이동 방법마다 색이 달라요, 진짜 길이 아니면 점선)
         if (routeLine) routeLine.setMap(null);
         routeLine = new kakao.maps.Polyline({
           path: path,
           strokeWeight: 6,
-          strokeColor: "#2f6bff",
+          strokeColor: way.color,
           strokeOpacity: 0.9,
+          strokeStyle: found ? "solid" : "shortdash",
           map: map
         });
 
         showWholeRoute();
 
         info.textContent = points.start.name + " → " + points.end.name + " · " + text;
-        startTour(path);
+
+        if (mode === "transit") {
+          roadviewMessage.innerHTML = "대중교통은 로드뷰 자동 보기가 없어요.<br>다른 이동 방법을 골라 보세요.";
+          roadviewMessage.hidden = false;
+          roadviewControls.hidden = true;
+        } else {
+          startTour(path);
+        }
       }
+
+      // 카카오맵 링크에 넣을 "이름,위도,경도" 만들기
+      function linkPlace(point) {
+        const name = point.name.replace(/[,\/]/g, " ");
+        return encodeURIComponent(name) + "," + point.position.getLat() + "," + point.position.getLng();
+      }
+
+      // 이동 방법 버튼을 누르면 그 방법으로 길을 다시 찾기
+      Array.from(document.querySelectorAll("#ways button")).forEach(function (button) {
+        button.addEventListener("click", function () {
+          mode = button.dataset.way;
+          Array.from(document.querySelectorAll("#ways button")).forEach(function (other) {
+            other.classList.toggle("on", other === button);
+          });
+          if (points.start && points.end) findRoute();
+        });
+      });
 
       // 길 전체가 한눈에 보이게 지도를 축소하기
       function showWholeRoute() {
@@ -694,6 +766,13 @@
         const x = Math.cos(a.getLat() * rad) * Math.sin(b.getLat() * rad)
           - Math.sin(a.getLat() * rad) * Math.cos(b.getLat() * rad) * Math.cos(dLng);
         return (Math.atan2(y, x) / rad + 360) % 360;
+      }
+
+      // 걸리는 시간(초)을 "12분" 또는 "1시간 20분" 같은 글자로
+      function timeText(seconds) {
+        const minutes = Math.max(1, Math.round(seconds / 60));
+        if (minutes < 60) return minutes + "분";
+        return Math.floor(minutes / 60) + "시간 " + (minutes % 60) + "분";
       }
 
       // 거리를 "350m" 또는 "1.2km" 같은 글자로
