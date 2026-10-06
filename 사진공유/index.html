@@ -30,6 +30,8 @@
     header a { color: #3b6cf6; font-size: 14px; }
     /* 이름을 누르면 처음 화면으로 돌아가요 */
     header h1 a { display: flex; align-items: center; gap: 8px; color: inherit; font-size: inherit; text-decoration: none; }
+    /* 만든 사람 이름 */
+    .makers { font-size: 13px; font-weight: normal; color: #5b6272; }
     .me-box { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; font-size: 15px; }
 
     /* 하얀 작은 버튼 (로그아웃, 닫기, 사진 고르기) */
@@ -427,7 +429,7 @@
 </head>
 <body>
   <header>
-    <h1><a href="../" title="처음 화면으로"><img src="logo.png" alt="잉스타 로고">잉스타</a></h1>
+    <h1><a href="../" title="처음 화면으로"><img src="logo.png" alt="잉스타 로고">잉스타</a> <small class="makers">만든 사람: 김아정, 박선유, 오유나, 여이레</small></h1>
     <!-- 로그인하기 전에는 "처음 화면으로"만 보여요 -->
     <a href="../" id="homeLink">처음 화면으로</a>
     <div class="me-box" id="meBox" hidden>
