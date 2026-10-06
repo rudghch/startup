@@ -241,6 +241,28 @@
     }
     .photo-button:hover { background: #f1f4fa; }
     .photo-button input { display: none; }
+    .photo-button.on { background: #fff9cc; border-color: #ffdf0f; }
+
+    /* 이모티콘을 고르는 판 */
+    .emoji-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+      max-height: 184px;
+      overflow-y: auto;
+      padding: 8px;
+      background: #ffffff;
+      border-top: 1px solid #d5dbe6;
+    }
+    .emoji-panel button {
+      height: 44px;
+      padding: 0;
+      font-size: 24px;
+      border: none;
+      border-radius: 10px;
+      background: none;
+      cursor: pointer;
+    }
+    .emoji-panel button:hover { background: #f1f4fa; }
     .chat-picked { padding: 8px 14px; font-size: 13px; color: #3d4658; background: #fff9cc; border-top: 1px solid #d5dbe6; }
 
     /* 다른 계정이 보낸 메시지: 왼쪽 */
@@ -406,11 +428,14 @@
         <div class="messages" id="messages"></div>
         <!-- 고른 사진·영상 개수나 올리는 중 안내가 나오는 곳 -->
         <div class="chat-picked" id="chatPicked" hidden></div>
+        <!-- 이모티콘을 고르는 판 (😀 버튼을 누르면 열려요) -->
+        <div class="emoji-panel" id="emojiPanel" hidden></div>
         <form class="input-area" id="messageForm">
           <label class="photo-button" title="사진·영상 고르기">
             📷
             <input type="file" id="chatFiles" accept="image/*,video/*" multiple aria-label="사진·영상 고르기">
           </label>
+          <button type="button" class="photo-button" id="emojiButton" title="이모티콘 고르기" aria-label="이모티콘 고르기" aria-expanded="false">😀</button>
           <input type="text" id="messageInput" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지">
           <button type="submit" class="yellow-button" id="sendButton">보내기</button>
         </form>
@@ -1138,6 +1163,43 @@
       return element;
     }
 
+    // ───────── 이모티콘 ─────────
+    // 여기 적힌 이모티콘이 판에 나와요. 더 넣거나 뺄 수 있어요.
+    const EMOJIS = [
+      "😀", "😄", "😁", "😆", "🤣", "😂", "😊", "🙂", "😉", "😍", "🥰", "😘",
+      "😋", "😜", "🤪", "😎", "🤩", "🥳", "🤔", "🤗", "😴", "😮", "😲", "😳",
+      "🥺", "😢", "😭", "😤", "😡", "😱", "🤒", "😷", "🙄", "😅", "😇", "🤫",
+      "👍", "👎", "👏", "🙌", "🙏", "👋", "🤝", "💪", "✌️", "👌", "🤞", "🫶",
+      "❤️", "🧡", "💛", "💚", "💙", "💜", "💔", "💯", "✨", "⭐", "🔥", "🎉",
+      "🎂", "🎁", "🍕", "🍔", "🍦", "🍭", "⚽", "🏀", "🎮", "🎵", "📚", "✏️",
+      "🐶", "🐱", "🐰", "🐻", "🐼", "🐧", "🌈", "☀️", "🌙", "☔", "⛄", "🌸"
+    ];
+    const emojiPanel = document.getElementById("emojiPanel");
+    const emojiButton = document.getElementById("emojiButton");
+
+    // 이모티콘 판 열고 닫기
+    function showEmojiPanel(open) {
+      emojiPanel.hidden = !open;
+      emojiButton.classList.toggle("on", open);
+      emojiButton.setAttribute("aria-expanded", String(open));
+    }
+    emojiButton.addEventListener("click", function () { showEmojiPanel(emojiPanel.hidden); });
+
+    // 판에 이모티콘 버튼을 하나씩 만들기. 누르면 글 쓰던 자리에 들어가요
+    EMOJIS.forEach(function (emoji) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = emoji;
+      button.addEventListener("click", function () {
+        const start = messageInput.selectionStart;
+        const end = messageInput.selectionEnd;
+        messageInput.value = messageInput.value.slice(0, start) + emoji + messageInput.value.slice(end);
+        messageInput.focus();
+        messageInput.selectionStart = messageInput.selectionEnd = start + emoji.length;
+      });
+      emojiPanel.appendChild(button);
+    });
+
     // 고른 사진·영상 개수 보여 주기
     const chatFiles = document.getElementById("chatFiles");
     const chatPicked = document.getElementById("chatPicked");
@@ -1160,6 +1222,7 @@
         return file.type.startsWith("image/") || file.type.startsWith("video/");
       });
       if (text === "" && files.length === 0) return; // 빈 메시지는 보내지 않아요
+      showEmojiPanel(false);
 
       if (files.length > MAX_FILES) { showChatPicked("파일은 한 번에 6개까지 보낼 수 있어요."); return; }
       for (const file of files) {
