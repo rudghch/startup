@@ -578,7 +578,8 @@
           <span id="pageAvatar"></span>
           <h2 id="pageName"></h2>
           <p class="bio" id="pageBio"></p>
-          <p class="date" id="pageFollowInfo"></p>
+          <!-- 누르면 팔로워나 팔로잉 목록이 열려요 -->
+          <div class="button-row" id="pageFollowInfo"></div>
           <div class="button-row">
             <button type="button" class="upload-button small-pink" id="followButton">팔로우</button>
             <button type="button" class="plain-button" id="dmButton">메시지 보내기</button>
@@ -696,6 +697,17 @@
   </dialog>
 
   <!-- 6. 알림 창: 누가 나를 팔로우했는지, 누가 메시지를 보냈는지 -->
+  <!-- 팔로워나 팔로잉 목록 창 -->
+  <dialog id="peopleDialog" aria-label="친구 목록">
+    <div class="dialog-body">
+      <div class="dialog-top">
+        <h2 id="peopleTitle"></h2>
+        <button type="button" class="plain-button" id="peopleCloseButton">닫기</button>
+      </div>
+      <div id="peopleList"></div>
+    </div>
+  </dialog>
+
   <dialog id="chatsDialog" aria-label="메시지">
     <div class="dialog-body">
       <div class="dialog-top">
@@ -1023,7 +1035,7 @@
       photoList.innerHTML = "";
       count.textContent = "";
       profileBox.hidden = true;
-      [composeDialog, viewDialog, profileDialog, noticeDialog, dmDialog, chatsDialog].forEach(function (dialog) { dialog.close(); });
+      [composeDialog, viewDialog, profileDialog, noticeDialog, dmDialog, chatsDialog, peopleDialog].forEach(function (dialog) { dialog.close(); });
 
       homeLink.hidden = false;
       meBox.hidden = true;
@@ -1162,9 +1174,22 @@
 
       // 팔로워 수와 팔로잉 수 (서버에서 받아 온 뒤에 보여요)
       const info = profileInfo && profileInfo.id === profileOf ? profileInfo : null;
-      document.getElementById("pageFollowInfo").textContent = info
-        ? "팔로워 " + info.followers + "명 · 팔로잉 " + info.following + "명"
-        : "";
+      const followInfo = document.getElementById("pageFollowInfo");
+      followInfo.innerHTML = "";
+      if (info) {
+        [
+          { title: profileOf + "님을 팔로우하는 친구", label: "팔로워 " + info.followers.length + "명", list: info.followers },
+          { title: profileOf + "님이 팔로우하는 친구", label: "팔로잉 " + info.following.length + "명", list: info.following }
+        ].forEach(function (kind) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "link-button";
+          button.style.margin = "0";
+          button.textContent = kind.label;
+          button.addEventListener("click", function () { openPeople(kind.title, kind.list); });
+          followInfo.appendChild(button);
+        });
+      }
 
       // 팔로우 버튼과 메시지 버튼 (내 프로필에서는 안 보여요)
       const other = profileOf !== me;
@@ -2284,7 +2309,7 @@
         results[0].forEach(function (item) { if (item.text === "f" && item.author !== id) fans.add(item.author); });
         const stars = new Set();
         results[1].forEach(function (item) { if (item.author === id && item.text) stars.add(item.text); });
-        profileInfo = { id: id, followers: fans.size, following: stars.size };
+        profileInfo = { id: id, followers: Array.from(fans).sort(), following: Array.from(stars).sort() };
       } catch (error) {
         return;
       }
@@ -2411,6 +2436,45 @@
 
     // "💬 메시지" 버튼: 메시지를 주고받을 수 있는 친구 목록 보여 주기
     const chatsDialog = document.getElementById("chatsDialog");
+
+    // 팔로워나 팔로잉 목록 보여 주기 (친구를 누르면 그 친구의 프로필로 가요)
+    const peopleDialog = document.getElementById("peopleDialog");
+    function openPeople(title, ids) {
+      document.getElementById("peopleTitle").textContent = title;
+      const list = document.getElementById("peopleList");
+      list.innerHTML = "";
+      if (ids.length === 0) {
+        const none = document.createElement("p");
+        none.className = "no-comment";
+        none.textContent = "아직 아무도 없어요.";
+        list.appendChild(none);
+      }
+      ids.forEach(function (id) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "notice";
+        const text = document.createElement("span");
+        text.textContent = id + (id === me ? " (나)" : "");
+        row.append(makeAvatar(id, "small"), text);
+        if (id !== me && following[id]) {
+          const badge = document.createElement("span");
+          badge.className = "follow-badge";
+          badge.style.marginLeft = "auto";
+          badge.textContent = "팔로잉";
+          row.appendChild(badge);
+        }
+        row.addEventListener("click", function () {
+          peopleDialog.close();
+          openProfile(id);
+        });
+        list.appendChild(row);
+      });
+      peopleDialog.showModal();
+    }
+    document.getElementById("peopleCloseButton").addEventListener("click", function () { peopleDialog.close(); });
+    peopleDialog.addEventListener("click", function (event) {
+      if (event.target === peopleDialog) peopleDialog.close();
+    });
     document.getElementById("chatsButton").addEventListener("click", function () {
       const seen = localStorage.getItem(seenKey()) || "";
       const list = document.getElementById("chatsList");
