@@ -238,6 +238,10 @@
       }
       .roadview-box { border-left: none; border-top: 2px solid #ffffff; }
 
+      /* 좁은 화면에서는 맨 위 줄이 어긋나지 않게 */
+      header > a { white-space: nowrap; }
+      header .makers { display: block; margin-left: 0; }
+
       /* 좁은 화면에서는 날씨 칸을 작게 */
       .weather { gap: 6px; }
       .weather-card { flex-wrap: wrap; gap: 2px 8px; min-height: 0; padding: 6px 8px; font-size: 12px; }
