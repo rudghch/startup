@@ -159,17 +159,24 @@
 
     /* 지도와 로드뷰 */
     /* 화면이 낮아도 지도가 360px보다 작아지지 않아요 (대신 화면을 아래로 내려서 봐요) */
-    .views { flex: 1 0 360px; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+    .views { flex: 1 0 max(420px, 60vh); display: grid; grid-template-columns: 1fr; min-height: 0; }
+    /* 로드뷰를 열면 지도와 로드뷰가 반씩 */
+    .views.with-roadview { grid-template-columns: 1fr 1fr; }
     .map-box { position: relative; min-height: 0; }
     #map { width: 100%; height: 100%; }
-    #resetViewButton {
+
+    /* 지도 위에 떠 있는 버튼들 */
+    .map-buttons {
       position: absolute;
       left: 10px;
       top: 10px;
       z-index: 5;
-      font-weight: bold;
-      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
     }
+    .map-buttons button { font-weight: bold; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3); }
     .roadview-box { position: relative; min-height: 0; border-left: 2px solid #ffffff; background: #20242e; }
     #roadview { width: 100%; height: 100%; }
     #roadviewMessage {
@@ -222,8 +229,22 @@
 
     /* 화면이 좁으면 지도와 로드뷰를 위아래로 */
     @media (max-width: 800px) {
-      .views { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .views.with-roadview {
+        flex-basis: auto;
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(360px, 1fr) minmax(280px, 1fr);
+      }
       .roadview-box { border-left: none; border-top: 2px solid #ffffff; }
+
+      /* 좁은 화면에서는 날씨 칸을 작게 */
+      .weather { gap: 6px; }
+      .weather-card { flex-wrap: wrap; gap: 2px 8px; min-height: 0; padding: 6px 8px; font-size: 12px; }
+      .weather-card .emoji { font-size: 22px; }
+      .weather-card .now { flex: 1; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; }
+      .weather-card .temp { font-size: 14px; }
+      .weather-card .rain { flex-basis: 100%; }
+      .weather-card .rain-amount, .bar-times { display: none; }
+      .bars { height: 14px; margin-top: 2px; }
     }
   </style>
 </head>
@@ -284,11 +305,15 @@
     <div class="map-box">
       <div id="map"></div>
       <!-- 지도를 움직이거나 확대·축소한 뒤, 길 전체가 보이는 처음 모습으로 돌아가는 버튼 -->
-      <button type="button" id="resetViewButton" hidden>↺ 경로 한눈에 보기</button>
+      <div class="map-buttons">
+        <!-- 로드뷰를 열고 닫는 버튼 -->
+        <button type="button" id="roadviewToggle">🎥 로드뷰 열기</button>
+        <button type="button" id="resetViewButton" hidden>↺ 경로 한눈에 보기</button>
+      </div>
     </div>
 
-    <!-- 로드뷰(길거리 사진)가 나오는 자리 -->
-    <div class="roadview-box">
+    <!-- 로드뷰(길거리 사진)가 나오는 자리. 처음에는 닫혀 있어요 -->
+    <div class="roadview-box" id="roadviewBox" hidden>
       <div id="roadview"></div>
       <div id="roadviewMessage">출발과 도착을 정하면<br>가는 길을 로드뷰로 보여 줘요.</div>
       <div class="roadview-controls" id="roadviewControls" hidden>
@@ -841,14 +866,41 @@
         roadview.relayout();
         drawRoute(pieces);
 
-        if (found) {
-          startTour(routePath.slice());
-        } else {
+        // 로드뷰로 볼 길을 기억해 두고, 로드뷰가 열려 있을 때만 바로 보여 줘요
+        tourPath = found ? routePath.slice() : [];
+        if (found && roadviewOpen) {
+          startTour(tourPath);
+        } else if (!found) {
           roadviewMessage.innerHTML = "길을 찾으면<br>가는 길을 로드뷰로 보여 줘요.";
           roadviewMessage.hidden = false;
           roadviewControls.hidden = true;
         }
       }
+
+      // ---------- 로드뷰 열고 닫기 ----------
+      const roadviewBox = document.getElementById("roadviewBox");
+      const roadviewToggle = document.getElementById("roadviewToggle");
+      const views = document.getElementById("views");
+      let roadviewOpen = false;  // 로드뷰가 열려 있는지
+      let tourPath = [];         // 로드뷰로 따라갈 길
+
+      roadviewToggle.addEventListener("click", function () {
+        roadviewOpen = !roadviewOpen;
+        roadviewBox.hidden = !roadviewOpen;
+        views.classList.toggle("with-roadview", roadviewOpen);
+        roadviewToggle.textContent = roadviewOpen ? "✕ 로드뷰 닫기" : "🎥 로드뷰 열기";
+
+        // 지도와 로드뷰 크기가 바뀌었으니 다시 맞춰요
+        map.relayout();
+        roadview.relayout();
+        showWholeRoute();
+
+        if (!roadviewOpen) {
+          stopTour();
+        } else if (tourPath.length > 0) {
+          startTour(tourPath);
+        }
+      });
 
       // 카카오맵 링크에 넣을 "이름,위도,경도" 만들기
       function linkPlace(point) {
