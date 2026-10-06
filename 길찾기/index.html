@@ -93,6 +93,27 @@
 
     /* 이동 방법 고르는 버튼들 */
     .ways { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+    /* 대중교통으로 가는 순서 */
+    #steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-height: 72px;
+      margin: 6px 0 0;
+      padding: 0;
+      overflow-y: auto;
+      list-style: none;
+      counter-reset: step;
+    }
+    #steps li {
+      padding: 4px 10px;
+      background: #ffffff;
+      border: 1px solid #dfe4ee;
+      border-radius: 14px;
+      font-size: 13px;
+      counter-increment: step;
+    }
+    #steps li::before { content: counter(step) ". "; color: #6b7385; }
     .transit-link {
       display: inline-block;
       margin-top: 6px;
@@ -234,7 +255,16 @@
       <button type="button" data-way="car" class="on">🚗 승용차</button>
     </div>
 
+    <!-- 대중교통을 골랐을 때만 보이는 종류 고르기 -->
+    <div class="ways" id="transitKinds" hidden>
+      <button type="button" data-kind="ALL" class="on">추천</button>
+      <button type="button" data-kind="BUS">🚌 버스</button>
+      <button type="button" data-kind="SUBWAY">🚇 지하철</button>
+    </div>
+
     <p id="info">출발할 곳과 도착할 곳을 검색하거나 지도에서 찍어 보세요.</p>
+    <!-- 대중교통으로 가는 순서 -->
+    <ol id="steps" hidden></ol>
     <a id="transitLink" class="transit-link" target="_blank" rel="noopener" hidden>🚌🚇 카카오맵에서 버스·지하철 길 보기 (새 창)</a>
 
     <!-- 출발·도착하는 곳의 날씨가 나오는 자리 -->
@@ -279,6 +309,8 @@
       // ---------- 바꿔 볼 수 있는 숫자들 ----------
       // 지도가 처음 보여 줄 곳 (여수 경호초등학교): (위도, 경도)
       const firstPlace = new kakao.maps.LatLng(34.72003, 127.72419);
+      // 대중교통·도보·자전거 길을 카카오에 대신 물어봐 주는 우리 서버 주소 (비어 있으면 쓰지 않아요)
+      const ROUTE_URL = "";
       // 로드뷰 한 장을 보여 주는 시간 (1000 = 1초)
       const STEP_TIME = 2000;
       // 로드뷰를 몇 미터마다 볼지 (길이 길면 자동으로 더 띄엄띄엄 봐요)
@@ -321,18 +353,27 @@
       const pins = { start: null, end: null };
       const labels = { start: null, end: null };
 
-      // 이동 방법들: 길찾기 서버 이름, 선 색, 안내하는 말
+      // 이동 방법들: 길찾기 서버 이름, 선 색, 안내하는 말 (kakao가 true면 카카오에 먼저 물어봐요)
       const ways = {
         transit: { emoji: "🚌", color: "#8e44ad" },
-        walk: { emoji: "🚶", color: "#1e9e55", server: "routed-foot", how: "걸어서" },
-        bike: { emoji: "🚲", color: "#00a3a3", server: "routed-bike", how: "자전거로" },
+        walk: { emoji: "🚶", color: "#1e9e55", server: "routed-foot", how: "걸어서", kakao: true },
+        bike: { emoji: "🚲", color: "#00a3a3", server: "routed-bike", how: "자전거로", kakao: true },
         car: { emoji: "🚗", color: "#2f6bff", server: "routed-car", how: "승용차로" }
       };
-      let mode = "car";      // 지금 고른 이동 방법
+      let mode = "car";          // 지금 고른 이동 방법
+      let transitKind = "ALL";   // 대중교통 종류: "ALL"(전체), "BUS"(버스), "SUBWAY"(지하철)
+
+      // 대중교통 길의 조각마다 쓰는 색과 이모티콘
+      const stepColors = { BUS: "#2f6bff", SUBWAY: "#8e44ad", WALKING: "#6b7385" };
+      const stepEmojis = { BUS: "🚌", SUBWAY: "🚇", WALKING: "🚶" };
+
       const transitLink = document.getElementById("transitLink");
+      const transitKinds = document.getElementById("transitKinds");
+      const stepsBox = document.getElementById("steps");
 
       let pickMode = null;   // 지도에서 찍는 중이면 "start" 또는 "end"
-      let routeLine = null;  // 지도에 그린 길
+      let routeLines = [];   // 지도에 그린 길 (대중교통은 여러 조각)
+      let routePath = [];    // 길 위의 좌표를 처음부터 끝까지 이은 것
       let routeId = 0;       // 길을 새로 찾을 때마다 1씩 커져요
 
       // ---------- 출발·도착 정하기 ----------
@@ -536,6 +577,79 @@
       }
 
       // ---------- 길 찾기 ----------
+      // [경도, 위도] 숫자 쌍들을 카카오 좌표로 바꾸기
+      function toPositions(pairs) {
+        return pairs.map(function (c) { return new kakao.maps.LatLng(c[1], c[0]); });
+      }
+
+      // 우리 서버를 거쳐 카카오에 길을 물어보기 (kind: "transit", "walk", "bike")
+      async function askKakao(kind) {
+        const start = points.start.position;
+        const end = points.end.position;
+        const response = await fetch(ROUTE_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            mode: kind,
+            start_x: start.getLng(), start_y: start.getLat(),
+            end_x: end.getLng(), end_y: end.getLat()
+          })
+        });
+        const data = await response.json();
+        if (!response.ok || data.status !== "OK") throw new Error(data.error || data.status || "길 없음");
+        return data;
+      }
+
+      // 대중교통 길은 한 번 받아 두고, 버스/지하철만 바꿔 볼 때는 다시 묻지 않아요
+      let transitSaved = { key: "", data: null };
+      async function askTransit() {
+        const key = points.start.position.toString() + points.end.position.toString();
+        if (transitSaved.key !== key) transitSaved = { key: key, data: await askKakao("transit") };
+        return transitSaved.data;
+      }
+
+      // 무료 길찾기 서버(OSRM)에 길을 물어보기
+      async function askOsrm(server) {
+        const start = points.start.position;
+        const end = points.end.position;
+        const url = "https://routing.openstreetmap.de/" + server + "/route/v1/driving/"
+          + start.getLng() + "," + start.getLat() + ";" + end.getLng() + "," + end.getLat()
+          + "?overview=full&geometries=geojson";
+        const response = await fetch(url);
+        const data = await response.json();
+        const route = data.routes[0];
+        return { points: toPositions(route.geometry.coordinates), distance: route.distance, duration: route.duration };
+      }
+
+      // 지도에 길 그리기. 조각 하나: { points: 좌표들, color: 색, dashed: 점선인지 }
+      function drawRoute(pieces) {
+        routeLines.forEach(function (line) { line.setMap(null); });
+        routePath = [];
+        routeLines = pieces.map(function (piece) {
+          piece.points.forEach(function (position) { routePath.push(position); });
+          return new kakao.maps.Polyline({
+            path: piece.points,
+            strokeWeight: 6,
+            strokeColor: piece.color,
+            strokeOpacity: 0.9,
+            strokeStyle: piece.dashed ? "shortdash" : "solid",
+            map: map
+          });
+        });
+        showWholeRoute();
+      }
+
+      // 가는 순서를 차례대로 보여 주기 (대중교통에서 써요)
+      function showSteps(steps) {
+        stepsBox.innerHTML = "";
+        steps.forEach(function (text) {
+          const item = document.createElement("li");
+          item.textContent = text;
+          stepsBox.appendChild(item);
+        });
+        stepsBox.hidden = steps.length === 0;
+      }
+
       async function findRoute() {
         routeId += 1;
         const myId = routeId;
@@ -545,62 +659,113 @@
         const start = points.start.position;
         const end = points.end.position;
         const way = ways[mode];
-        let path = [start, end];
-        let text = "";
+
+        // 길을 못 찾았을 때 쓰는 곧은 점선
+        let pieces = [{ points: [start, end], color: way.color, dashed: true }];
+        let text = "길을 찾지 못해서 곧은 선으로 이었어요. 직선 거리 약 " + distanceText(meters(start, end));
+        let steps = [];
         let found = false;
 
         transitLink.hidden = true;
 
         if (mode === "transit") {
-          // 버스·지하철 길은 카카오맵에서 열어서 봐요 (지도에는 곧은 점선만 그려요)
-          text = "🚌🚇 버스·지하철 길은 아래 버튼을 눌러 카카오맵에서 볼 수 있어요. 직선 거리 약 " + distanceText(meters(start, end));
+          // 카카오맵에서 크게 보는 버튼은 언제나 보여 줘요
           transitLink.href = "https://map.kakao.com/link/by/traffic/"
             + linkPlace(points.start) + "/" + linkPlace(points.end);
           transitLink.hidden = false;
-        } else {
-          try {
-            // 무료 길찾기 서버(OSRM)에 이동 방법에 맞는 길을 물어봐요
-            const url = "https://routing.openstreetmap.de/" + way.server + "/route/v1/driving/"
-              + start.getLng() + "," + start.getLat() + ";" + end.getLng() + "," + end.getLat()
-              + "?overview=full&geometries=geojson";
-            const response = await fetch(url);
-            const data = await response.json();
-            const route = data.routes[0];
+          text = "🚌🚇 버스·지하철 길을 가져오지 못했어요. 아래 버튼을 눌러 카카오맵에서 볼 수 있어요.";
 
-            path = route.geometry.coordinates.map(function (c) {
-              return new kakao.maps.LatLng(c[1], c[0]);
-            });
-            text = way.emoji + " 거리 약 " + distanceText(route.distance) + " · " + way.how + " 약 " + timeText(route.duration);
+          if (ROUTE_URL) {
+            try {
+              const data = await askTransit();
+
+              // 고른 종류(전체/버스/지하철)에 맞는 길만 남기기
+              const routes = data.routes.filter(function (route) {
+                const type = route.properties.type;
+                if (transitKind === "BUS") return type === "BUS";
+                if (transitKind === "SUBWAY") return type === "SUBWAY" || type === "BUS_AND_SUBWAY";
+                return true;
+              });
+
+              if (routes.length === 0) {
+                text = transitKind === "SUBWAY"
+                  ? "🚇 이 길에는 지하철로 가는 방법이 없어요. 다른 종류를 골라 보세요."
+                  : "🚌 이 길에는 버스만 타고 가는 방법이 없어요. 다른 종류를 골라 보세요.";
+              } else {
+                // 가장 먼저 나온(추천) 길을 보여 줘요
+                const route = routes[0];
+                const drawn = [];
+                route.steps.forEach(function (step) {
+                  const type = step.properties.type;
+                  steps.push(stepEmojis[type] + " " + step.properties.guidance + " (" + timeText(step.properties.time) + ")");
+                  if (step.path && step.path.points && step.path.points.length > 1) {
+                    drawn.push({ points: toPositions(step.path.points), color: stepColors[type], dashed: type === "WALKING" });
+                  }
+                });
+                if (drawn.length > 0) pieces = drawn;
+
+                const p = route.properties;
+                text = "🚌🚇 약 " + timeText(p.totalTime) + " · 거리 약 " + distanceText(p.totalDistance)
+                  + " · 갈아타기 " + p.transfers + "번"
+                  + (p.fare && p.fare.value ? " · 요금 약 " + p.fare.value.toLocaleString() + "원" : "");
+                found = true;
+              }
+            } catch (error) {
+              // 서버가 대답하지 않으면 위의 안내 글과 곧은 점선을 그대로 써요
+            }
+          }
+        } else {
+          let got = null;
+
+          // 도보와 자전거는 카카오에 먼저 물어보고, 안 되면 무료 길찾기 서버에 물어봐요
+          if (ROUTE_URL && way.kakao) {
+            try {
+              const data = await askKakao(mode);
+              const pairs = [];
+              data.route.legs.forEach(function (leg) {
+                leg.steps.forEach(function (step) {
+                  step.path.points.forEach(function (c) { pairs.push(c); });
+                });
+              });
+              if (pairs.length > 1) {
+                got = { points: toPositions(pairs), distance: data.route.properties.totalDistance, duration: data.route.properties.totalTime };
+              }
+            } catch (error) {
+              got = null;
+            }
+          }
+          if (!got) {
+            try {
+              got = await askOsrm(way.server);
+            } catch (error) {
+              got = null;
+            }
+          }
+
+          if (got) {
+            pieces = [{ points: got.points, color: way.color, dashed: false }];
+            text = way.emoji + " 거리 약 " + distanceText(got.distance) + " · " + way.how + " 약 " + timeText(got.duration);
             found = true;
-          } catch (error) {
-            // 길을 못 찾으면 곧은 선으로 이어요
-            text = "길을 찾지 못해서 곧은 선으로 이었어요. 직선 거리 약 " + distanceText(meters(start, end));
           }
         }
 
         if (myId !== routeId) return; // 그 사이에 다른 길을 찾기 시작했으면 그만둬요
 
-        // 지도에 길 그리기 (이동 방법마다 색이 달라요, 진짜 길이 아니면 점선)
-        if (routeLine) routeLine.setMap(null);
-        routeLine = new kakao.maps.Polyline({
-          path: path,
-          strokeWeight: 6,
-          strokeColor: way.color,
-          strokeOpacity: 0.9,
-          strokeStyle: found ? "solid" : "shortdash",
-          map: map
-        });
-
-        showWholeRoute();
-
         info.textContent = points.start.name + " → " + points.end.name + " · " + text;
+        transitKinds.hidden = mode !== "transit";
+        showSteps(steps);
 
-        if (mode === "transit") {
-          roadviewMessage.innerHTML = "대중교통은 로드뷰 자동 보기가 없어요.<br>다른 이동 방법을 골라 보세요.";
+        // 안내 칸 높이가 바뀌었으니 지도 크기를 다시 맞춘 뒤에 길을 그려요
+        map.relayout();
+        roadview.relayout();
+        drawRoute(pieces);
+
+        if (found) {
+          startTour(routePath.slice());
+        } else {
+          roadviewMessage.innerHTML = "길을 찾으면<br>가는 길을 로드뷰로 보여 줘요.";
           roadviewMessage.hidden = false;
           roadviewControls.hidden = true;
-        } else {
-          startTour(path);
         }
       }
 
@@ -610,22 +775,36 @@
         return encodeURIComponent(name) + "," + point.position.getLat() + "," + point.position.getLng();
       }
 
+      // 버튼 묶음에서 누른 버튼만 켜진 모양으로 바꾸기
+      function turnOn(button) {
+        Array.from(button.parentElement.querySelectorAll("button")).forEach(function (other) {
+          other.classList.toggle("on", other === button);
+        });
+      }
+
       // 이동 방법 버튼을 누르면 그 방법으로 길을 다시 찾기
       Array.from(document.querySelectorAll("#ways button")).forEach(function (button) {
         button.addEventListener("click", function () {
           mode = button.dataset.way;
-          Array.from(document.querySelectorAll("#ways button")).forEach(function (other) {
-            other.classList.toggle("on", other === button);
-          });
+          turnOn(button);
+          if (points.start && points.end) findRoute();
+        });
+      });
+
+      // 대중교통 종류(전체/버스/지하철) 버튼
+      Array.from(document.querySelectorAll("#transitKinds button")).forEach(function (button) {
+        button.addEventListener("click", function () {
+          transitKind = button.dataset.kind;
+          turnOn(button);
           if (points.start && points.end) findRoute();
         });
       });
 
       // 길 전체가 한눈에 보이게 지도를 축소하기
       function showWholeRoute() {
-        if (!routeLine) return;
+        if (routePath.length === 0) return;
         const bounds = new kakao.maps.LatLngBounds();
-        routeLine.getPath().forEach(function (position) { bounds.extend(position); });
+        routePath.forEach(function (position) { bounds.extend(position); });
         map.setBounds(bounds, 70, 70, 70, 70);
         resetViewButton.hidden = false;
       }
