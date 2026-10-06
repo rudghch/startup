@@ -130,6 +130,16 @@
     .pin-label.start { background: #1e9e55; }
     .pin-label.end { background: #e0392b; }
 
+    /* 지금 로드뷰로 보고 있는 곳 */
+    .walker {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      background: #ff8a00;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.5);
+    }
+
     .map-error { padding: 40px 16px; text-align: center; color: #5b6272; font-size: 17px; line-height: 1.6; }
 
     /* 화면이 좁으면 지도와 로드뷰를 위아래로 */
@@ -226,8 +236,10 @@
       const roadview = new kakao.maps.Roadview(document.getElementById("roadview"));
       const roadviewClient = new kakao.maps.RoadviewClient();
 
-      // 지금 로드뷰로 보고 있는 곳을 지도에 표시하는 핀
-      const walker = new kakao.maps.Marker({ zIndex: 10 });
+      // 지금 로드뷰로 보고 있는 곳을 지도에 표시하는 주황색 동그라미
+      const walkerDot = document.createElement("div");
+      walkerDot.className = "walker";
+      const walker = new kakao.maps.CustomOverlay({ content: walkerDot, zIndex: 10 });
 
       // 정해진 출발·도착: { position: 좌표, name: 이름 }
       const points = { start: null, end: null };
