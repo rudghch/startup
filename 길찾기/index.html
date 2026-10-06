@@ -119,7 +119,8 @@
     .bar-times { display: flex; justify-content: space-between; font-size: 11px; color: #6b7385; }
 
     /* 지도와 로드뷰 */
-    .views { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+    /* 화면이 낮아도 지도가 360px보다 작아지지 않아요 (대신 화면을 아래로 내려서 봐요) */
+    .views { flex: 1 0 360px; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
     #map { min-height: 0; }
     .roadview-box { position: relative; min-height: 0; border-left: 2px solid #ffffff; background: #20242e; }
     #roadview { width: 100%; height: 100%; }
@@ -527,14 +528,26 @@
           map: map
         });
 
-        // 길 전체가 한눈에 보이게 지도를 축소하기
-        const bounds = new kakao.maps.LatLngBounds();
-        path.forEach(function (position) { bounds.extend(position); });
-        map.setBounds(bounds, 70, 70, 70, 70);
+        showWholeRoute();
 
         info.textContent = points.start.name + " → " + points.end.name + " · " + text;
         startTour(path);
       }
+
+      // 길 전체가 한눈에 보이게 지도를 축소하기
+      function showWholeRoute() {
+        if (!routeLine) return;
+        const bounds = new kakao.maps.LatLngBounds();
+        routeLine.getPath().forEach(function (position) { bounds.extend(position); });
+        map.setBounds(bounds, 70, 70, 70, 70);
+      }
+
+      // 창 크기가 바뀌면 지도와 로드뷰를 다시 맞추기
+      window.addEventListener("resize", function () {
+        map.relayout();
+        roadview.relayout();
+        showWholeRoute();
+      });
 
       // ---------- 로드뷰 자동으로 보기 ----------
       const tour = { stops: [], index: 0, shown: 0, playing: false, id: 0, timer: null, lastPano: null, pan: 0 };
