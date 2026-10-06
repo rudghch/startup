@@ -39,7 +39,7 @@
     }
     .app-header h1 { margin: 0; font-size: 20px; }
     .app-header a { color: #3b6cf6; font-size: 14px; }
-    .me-box { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .me-box { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; font-size: 14px; }
     .me-box button {
       padding: 6px 10px;
       font-size: 13px;
@@ -235,6 +235,9 @@
       <!-- 계정으로 들어오기 전에는 "처음 화면으로"만 보여요 -->
       <a href="../" id="homeLink">처음 화면으로</a>
       <div class="me-box" id="meBox" hidden>
+        <!-- 로그인한 뒤에도 다른 곳으로 갈 수 있는 길 -->
+        <a href="../">처음 화면</a>
+        <a href="../사진공유/">잉스타</a>
         <span class="avatar small" id="meAvatar"></span>
         <b id="meName"></b>
         <button type="button" id="logoutButton">로그아웃</button>
