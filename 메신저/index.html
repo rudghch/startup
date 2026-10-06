@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>메신저</title>
+  <title>message</title>
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; }
@@ -231,7 +231,7 @@
 <body>
   <div class="app">
     <div class="app-header">
-      <h1>💬 메신저</h1>
+      <h1>💬 message</h1>
       <!-- 계정으로 들어오기 전에는 "처음 화면으로"만 보여요 -->
       <a href="../" id="homeLink">처음 화면으로</a>
       <div class="me-box" id="meBox" hidden>
@@ -344,6 +344,26 @@
       const result = await response.json().catch(function () { return null; });
       if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
       return result;
+    }
+
+    // ───────── 나쁜 말 가리기 ─────────
+    // 여기 적힌 말이 나오면 ### 로 바꿔서 보여 줘요. 가리고 싶은 말을 더 적거나 뺄 수 있어요.
+    const BAD_WORDS = [
+      "시발", "씨발", "씨빨", "씨바", "씨팔", "시팔", "ㅅㅂ", "ㅆㅂ",
+      "병신", "븅신", "ㅂㅅ", "지랄", "ㅈㄹ", "존나", "좆나", "ㅈㄴ", "좆", "썅",
+      "개새끼", "개새", "새끼야", "미친놈", "미친년", "미친새끼", "또라이", "등신",
+      "닥쳐", "엿먹어", "꺼져라", "죽어라", "뒤져라",
+      "fuck", "shit", "bitch"
+    ];
+    // 글자 사이에 숫자나 기호를 끼워 넣어도("시1발", "시.발") 찾아내요
+    const BAD_WORD_PATTERN = new RegExp(
+      BAD_WORDS.slice().sort(function (a, b) { return b.length - a.length; }).map(function (word) {
+        return Array.from(word).join("[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\\s]*");
+      }).join("|"),
+      "gi"
+    );
+    function hideBadWords(text) {
+      return text.replace(BAD_WORD_PATTERN, "###");
     }
 
     // 아이디마다 항상 같은 색이 나오게 하기
@@ -507,7 +527,7 @@
 
       const bubble = document.createElement("div");
       bubble.className = "bubble";
-      bubble.textContent = item.text;
+      bubble.textContent = hideBadWords(item.text);
       message.appendChild(bubble);
 
       const time = document.createElement("div");
@@ -547,7 +567,7 @@
       messageInput.value = "";
       messageInput.focus();
       try {
-        await call("send", { text: text });
+        await call("send", { text: hideBadWords(text) }); // 나쁜 말은 가려서 보내요
         await loadMessages();
         messages.scrollTop = messages.scrollHeight;
       } catch (error) {
@@ -642,7 +662,7 @@
           const blob = video ? files[i] : await shrinkImage(files[i]);
           media.push({ kind: video ? "video" : "image", key: await uploadFile(blob) });
         }
-        await call("post", { board: BOARD, text: text, media: media });
+        await call("post", { board: BOARD, text: hideBadWords(text), media: media });
         postForm.reset();
         pickedText.textContent = "";
         await loadPosts();
@@ -713,7 +733,7 @@
         if (post.text) {
           const text = document.createElement("p");
           text.className = "post-text";
-          text.textContent = post.text;
+          text.textContent = hideBadWords(post.text);
           card.appendChild(text);
         }
 
