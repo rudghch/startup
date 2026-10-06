@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>길찾기</title>
 
-  <!-- 카카오맵 불러오기 (appkey는 카카오에서 받은 JavaScript 키) -->
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1"></script>
+  <!-- 카카오맵 불러오기 (appkey는 카카오에서 받은 JavaScript 키, services는 장소 검색 도구) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
 
   <style>
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html, body { height: 100%; margin: 0; }
     body {
       display: flex;
@@ -21,15 +22,121 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
+      padding: 10px 16px;
       background: #2f6bff;
       color: #ffffff;
     }
     header h1 { margin: 0; font-size: 22px; }
     header a { color: #ffffff; font-size: 14px; }
-    #map { flex: 1; }
+
+    /* 출발·도착을 정하는 곳 */
+    .panel { padding: 10px 16px; background: #f4f6fb; border-bottom: 1px solid #dfe4ee; }
+    .row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .tag {
+      flex: none;
+      width: 48px;
+      padding: 6px 0;
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .tag.start { background: #1e9e55; }
+    .tag.end { background: #e0392b; }
+    .row input {
+      flex: 1;
+      min-width: 0;
+      padding: 9px 12px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 1px solid #c9d0dd;
+      border-radius: 8px;
+    }
+    button {
+      flex: none;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      border: 1px solid #c9d0dd;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    button:hover { background: #eef2fb; }
+    button.on { background: #2f6bff; border-color: #2f6bff; color: #ffffff; }
+
+    /* 검색 결과 목록 */
+    #results {
+      margin: 0 0 8px;
+      padding: 0;
+      list-style: none;
+      max-height: 170px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #c9d0dd;
+      border-radius: 8px;
+    }
+    #results button {
+      display: block;
+      width: 100%;
+      border: none;
+      border-bottom: 1px solid #eef0f5;
+      border-radius: 0;
+      text-align: left;
+    }
+    #results small { color: #6b7385; margin-left: 6px; }
+    #info { margin: 0; font-size: 15px; color: #3d4658; }
+
+    /* 지도와 로드뷰 */
+    .views { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+    #map { min-height: 0; }
+    .roadview-box { position: relative; min-height: 0; border-left: 2px solid #ffffff; background: #20242e; }
+    #roadview { width: 100%; height: 100%; }
+    #roadviewMessage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: #20242e;
+      color: #d5dbe6;
+      font-size: 16px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .roadview-controls {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #progress { padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.6); color: #ffffff; font-size: 13px; }
+
+    /* 지도 위의 출발·도착 이름표 */
+    .pin-label {
+      padding: 3px 8px;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .pin-label.start { background: #1e9e55; }
+    .pin-label.end { background: #e0392b; }
+
     .map-error { padding: 40px 16px; text-align: center; color: #5b6272; font-size: 17px; line-height: 1.6; }
-    .place-name { padding: 6px 10px; font-size: 14px; white-space: nowrap; }
+
+    /* 화면이 좁으면 지도와 로드뷰를 위아래로 */
+    @media (max-width: 800px) {
+      .views { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+      .roadview-box { border-left: none; border-top: 2px solid #ffffff; }
+    }
   </style>
 </head>
 <body>
@@ -38,39 +145,411 @@
     <a href="../">처음 화면으로</a>
   </header>
 
-  <!-- 지도가 그려지는 자리 -->
-  <div id="map"></div>
+  <!-- 출발·도착을 정하는 곳 -->
+  <div class="panel" id="panel">
+    <form class="row" id="startForm">
+      <span class="tag start">출발</span>
+      <input type="text" id="startInput" placeholder="출발할 곳 (예: 경호초등학교)" autocomplete="off" aria-label="출발할 곳">
+      <button type="submit">검색</button>
+      <button type="button" id="startPick">지도에서 찍기</button>
+    </form>
+    <form class="row" id="endForm">
+      <span class="tag end">도착</span>
+      <input type="text" id="endInput" placeholder="도착할 곳 (예: 여수엑스포역)" autocomplete="off" aria-label="도착할 곳">
+      <button type="submit">검색</button>
+      <button type="button" id="endPick">지도에서 찍기</button>
+    </form>
+    <ul id="results" hidden></ul>
+    <p id="info">출발할 곳과 도착할 곳을 검색하거나 지도에서 찍어 보세요.</p>
+  </div>
+
+  <div class="views" id="views">
+    <!-- 지도가 그려지는 자리 -->
+    <div id="map"></div>
+
+    <!-- 로드뷰(길거리 사진)가 나오는 자리 -->
+    <div class="roadview-box">
+      <div id="roadview"></div>
+      <div id="roadviewMessage">출발과 도착을 정하면<br>가는 길을 로드뷰로 보여 줘요.</div>
+      <div class="roadview-controls" id="roadviewControls" hidden>
+        <button type="button" id="playButton">일시정지</button>
+        <button type="button" id="restartButton">처음부터</button>
+        <span id="progress"></span>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const mapBox = document.getElementById("map");
+    if (!(window.kakao && kakao.maps)) {
+      // 카카오맵은 올린 사이트(rudghch.github.io)에서만 보여요
+      document.getElementById("panel").hidden = true;
+      const views = document.getElementById("views");
+      views.className = "map-error";
+      views.textContent = "지도를 불러오지 못했어요. 카카오맵은 웹에 올린 사이트에서만 보여요.";
+    } else {
+      startApp();
+    }
 
-    if (window.kakao && kakao.maps) {
-      // 지도가 처음 보여 줄 곳 (지금은 여수 경호초등학교)
-      // 숫자를 바꾸면 다른 곳에서 시작해요: (위도, 경도)
-      const startPlace = new kakao.maps.LatLng(34.72003, 127.72419);
+    function startApp() {
+      // ---------- 바꿔 볼 수 있는 숫자들 ----------
+      // 지도가 처음 보여 줄 곳 (여수 경호초등학교): (위도, 경도)
+      const firstPlace = new kakao.maps.LatLng(34.72003, 127.72419);
+      // 로드뷰 한 장을 보여 주는 시간 (1000 = 1초)
+      const STEP_TIME = 2000;
+      // 로드뷰를 몇 미터마다 볼지 (길이 길면 자동으로 더 띄엄띄엄 봐요)
+      const STEP_METERS = 30;
+      // 로드뷰를 최대 몇 장까지 볼지
+      const MAX_STEPS = 150;
 
-      // 지도 만들기 (level 숫자가 작을수록 가까이 보여요)
-      const map = new kakao.maps.Map(mapBox, {
-        center: startPlace,
-        level: 3
-      });
+      const info = document.getElementById("info");
+      const results = document.getElementById("results");
+      const roadviewMessage = document.getElementById("roadviewMessage");
+      const roadviewControls = document.getElementById("roadviewControls");
+      const playButton = document.getElementById("playButton");
+      const restartButton = document.getElementById("restartButton");
+      const progress = document.getElementById("progress");
 
-      // 확대/축소 버튼 달기
+      // 출발("start")과 도착("end")에 쓰는 화면 조각들
+      const inputs = { start: document.getElementById("startInput"), end: document.getElementById("endInput") };
+      const forms = { start: document.getElementById("startForm"), end: document.getElementById("endForm") };
+      const pickButtons = { start: document.getElementById("startPick"), end: document.getElementById("endPick") };
+      const words = { start: "출발", end: "도착" };
+
+      // ---------- 지도 만들기 ----------
+      const map = new kakao.maps.Map(document.getElementById("map"), { center: firstPlace, level: 3 });
       map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-      // 시작한 곳에 핀 꽂기
-      const marker = new kakao.maps.Marker({ position: startPlace });
-      marker.setMap(map);
+      const places = new kakao.maps.services.Places();      // 장소 검색
+      const geocoder = new kakao.maps.services.Geocoder();  // 좌표를 주소로 바꾸기
 
-      // 핀 위에 이름표 달기
-      const nameTag = new kakao.maps.InfoWindow({
-        content: '<div class="place-name">경호초등학교</div>'
+      // ---------- 로드뷰 만들기 ----------
+      const roadview = new kakao.maps.Roadview(document.getElementById("roadview"));
+      const roadviewClient = new kakao.maps.RoadviewClient();
+
+      // 지금 로드뷰로 보고 있는 곳을 지도에 표시하는 핀
+      const walker = new kakao.maps.Marker({ zIndex: 10 });
+
+      // 정해진 출발·도착: { position: 좌표, name: 이름 }
+      const points = { start: null, end: null };
+      const pins = { start: null, end: null };
+      const labels = { start: null, end: null };
+
+      let pickMode = null;   // 지도에서 찍는 중이면 "start" 또는 "end"
+      let routeLine = null;  // 지도에 그린 길
+      let routeId = 0;       // 길을 새로 찾을 때마다 1씩 커져요
+
+      // ---------- 출발·도착 정하기 ----------
+      function setPoint(which, position, name) {
+        points[which] = { position: position, name: name };
+        inputs[which].value = name;
+
+        // 전에 꽂은 핀과 이름표 지우기
+        if (pins[which]) pins[which].setMap(null);
+        if (labels[which]) labels[which].setMap(null);
+
+        pins[which] = new kakao.maps.Marker({ position: position, map: map });
+
+        const label = document.createElement("div");
+        label.className = "pin-label " + which;
+        label.textContent = words[which];
+        labels[which] = new kakao.maps.CustomOverlay({ position: position, content: label, yAnchor: 2.9, map: map });
+
+        if (points.start && points.end) {
+          findRoute();
+        } else {
+          map.panTo(position);
+          info.textContent = which === "start" ? "이제 도착할 곳을 정해 주세요." : "이제 출발할 곳을 정해 주세요.";
+        }
+      }
+
+      // 검색하기
+      function search(which) {
+        const text = inputs[which].value.trim();
+        if (text === "") return;
+
+        places.keywordSearch(text, function (data, status) {
+          results.innerHTML = "";
+
+          if (status !== kakao.maps.services.Status.OK) {
+            results.hidden = true;
+            info.textContent = '"' + text + '"을(를) 찾지 못했어요. 다른 이름으로 검색해 보세요.';
+            return;
+          }
+
+          // 찾은 곳을 5개까지 목록으로 보여 주기
+          data.slice(0, 5).forEach(function (place) {
+            const item = document.createElement("li");
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = place.place_name;
+
+            const address = document.createElement("small");
+            address.textContent = place.road_address_name || place.address_name;
+            button.appendChild(address);
+
+            button.addEventListener("click", function () {
+              results.hidden = true;
+              setPoint(which, new kakao.maps.LatLng(place.y, place.x), place.place_name);
+            });
+            item.appendChild(button);
+            results.appendChild(item);
+          });
+          results.hidden = false;
+          info.textContent = words[which] + "할 곳을 목록에서 골라 주세요.";
+        });
+      }
+
+      // 지도에서 찍기 켜고 끄기
+      function setPickMode(which) {
+        pickMode = which;
+        pickButtons.start.classList.toggle("on", which === "start");
+        pickButtons.end.classList.toggle("on", which === "end");
+        map.setCursor(which ? "crosshair" : "");
+        if (which) {
+          results.hidden = true;
+          info.textContent = "지도에서 " + words[which] + "할 곳을 눌러 주세요.";
+        }
+      }
+
+      ["start", "end"].forEach(function (which) {
+        forms[which].addEventListener("submit", function (event) {
+          event.preventDefault();
+          setPickMode(null);
+          search(which);
+        });
+        pickButtons[which].addEventListener("click", function () {
+          setPickMode(pickMode === which ? null : which);
+        });
       });
-      nameTag.open(map, marker);
-    } else {
-      // 카카오맵은 올린 사이트(rudghch.github.io)에서만 보여요
-      mapBox.className = "map-error";
-      mapBox.textContent = "지도를 불러오지 못했어요. 카카오맵은 웹에 올린 사이트에서만 보여요.";
+
+      // 지도를 누르면 그곳을 출발 또는 도착으로 정하기
+      kakao.maps.event.addListener(map, "click", function (mouseEvent) {
+        if (!pickMode) return;
+
+        const which = pickMode;
+        const position = mouseEvent.latLng;
+        setPickMode(null);
+
+        // 누른 곳의 주소 알아내기
+        geocoder.coord2Address(position.getLng(), position.getLat(), function (result, status) {
+          let name = "지도에서 고른 곳";
+          if (status === kakao.maps.services.Status.OK && result[0]) {
+            name = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+          }
+          setPoint(which, position, name);
+        });
+      });
+
+      // ---------- 길 찾기 ----------
+      async function findRoute() {
+        routeId += 1;
+        const myId = routeId;
+        stopTour();
+        info.textContent = "길을 찾는 중이에요...";
+
+        const start = points.start.position;
+        const end = points.end.position;
+        let path = [start, end];
+        let text = "";
+
+        try {
+          // 무료 길찾기 서버(OSRM)에 자동차 길을 물어봐요
+          const url = "https://router.project-osrm.org/route/v1/driving/"
+            + start.getLng() + "," + start.getLat() + ";" + end.getLng() + "," + end.getLat()
+            + "?overview=full&geometries=geojson";
+          const response = await fetch(url);
+          const data = await response.json();
+          const route = data.routes[0];
+
+          path = route.geometry.coordinates.map(function (c) {
+            return new kakao.maps.LatLng(c[1], c[0]);
+          });
+          text = "거리 약 " + distanceText(route.distance) + " · 자동차로 약 " + Math.max(1, Math.round(route.duration / 60)) + "분";
+        } catch (error) {
+          // 길을 못 찾으면 곧은 선으로 이어요
+          text = "길을 찾지 못해서 곧은 선으로 이었어요. 직선 거리 약 " + distanceText(meters(start, end));
+        }
+
+        if (myId !== routeId) return; // 그 사이에 다른 길을 찾기 시작했으면 그만둬요
+
+        // 지도에 길 그리기
+        if (routeLine) routeLine.setMap(null);
+        routeLine = new kakao.maps.Polyline({
+          path: path,
+          strokeWeight: 6,
+          strokeColor: "#2f6bff",
+          strokeOpacity: 0.9,
+          map: map
+        });
+
+        // 길 전체가 한눈에 보이게 지도를 축소하기
+        const bounds = new kakao.maps.LatLngBounds();
+        path.forEach(function (position) { bounds.extend(position); });
+        map.setBounds(bounds, 70, 70, 70, 70);
+
+        info.textContent = points.start.name + " → " + points.end.name + " · " + text;
+        startTour(path);
+      }
+
+      // ---------- 로드뷰 자동으로 보기 ----------
+      const tour = { stops: [], index: 0, shown: 0, playing: false, id: 0, timer: null, lastPano: null, pan: 0 };
+
+      // 로드뷰 사진이 준비되면 가는 방향을 바라보게 하기
+      kakao.maps.event.addListener(roadview, "init", function () {
+        roadview.setViewpoint({ pan: tour.pan, tilt: 0, zoom: 0 });
+      });
+
+      function startTour(path) {
+        stopTour();
+        tour.stops = makeStops(path);
+        tour.index = 0;
+        tour.shown = 0;
+        tour.lastPano = null;
+        tour.playing = true;
+
+        roadviewMessage.innerHTML = "로드뷰를 찾는 중이에요...";
+        roadviewMessage.hidden = false;
+        roadviewControls.hidden = false;
+        playButton.textContent = "일시정지";
+        showNextStop();
+      }
+
+      function stopTour() {
+        tour.id += 1;
+        tour.playing = false;
+        clearTimeout(tour.timer);
+        walker.setMap(null);
+      }
+
+      function showNextStop() {
+        if (!tour.playing) return;
+
+        // 끝까지 다 봤을 때
+        if (tour.index >= tour.stops.length) {
+          tour.playing = false;
+          playButton.textContent = "다시 보기";
+          if (tour.shown === 0) {
+            roadviewMessage.innerHTML = "이 길에는 로드뷰 사진이 없어요.<br>큰길이 있는 곳으로 다시 정해 보세요.";
+            roadviewMessage.hidden = false;
+            roadviewControls.hidden = true;
+          } else {
+            progress.textContent = "도착했어요!";
+          }
+          return;
+        }
+
+        const myId = tour.id;
+        const index = tour.index;
+        const position = tour.stops[index];
+
+        // 이 자리에서 가장 가까운 로드뷰 사진 찾기 (50m 안에서)
+        roadviewClient.getNearestPanoId(position, 50, function (panoId) {
+          if (myId !== tour.id || !tour.playing) return;
+          tour.index = index + 1;
+
+          // 사진이 없거나 방금 본 사진이면 다음 자리로 넘어가요
+          if (panoId === null || panoId === tour.lastPano) {
+            showNextStop();
+            return;
+          }
+
+          tour.lastPano = panoId;
+          tour.shown += 1;
+          tour.pan = direction(position, tour.stops[index + 1] || position);
+
+          roadviewMessage.hidden = true;
+          roadview.setPanoId(panoId, position);
+          walker.setPosition(position);
+          walker.setMap(map);
+          progress.textContent = "가는 중 " + Math.round((tour.index / tour.stops.length) * 100) + "%";
+
+          tour.timer = setTimeout(showNextStop, STEP_TIME);
+        });
+      }
+
+      playButton.addEventListener("click", function () {
+        if (tour.playing) {
+          // 일시정지
+          tour.playing = false;
+          clearTimeout(tour.timer);
+          playButton.textContent = "이어 보기";
+        } else {
+          // 이어 보기 (끝까지 봤으면 처음부터)
+          if (tour.index >= tour.stops.length) {
+            tour.index = 0;
+            tour.shown = 0;
+            tour.lastPano = null;
+          }
+          tour.playing = true;
+          playButton.textContent = "일시정지";
+          showNextStop();
+        }
+      });
+
+      restartButton.addEventListener("click", function () {
+        clearTimeout(tour.timer);
+        tour.id += 1;
+        tour.index = 0;
+        tour.shown = 0;
+        tour.lastPano = null;
+        tour.playing = true;
+        playButton.textContent = "일시정지";
+        showNextStop();
+      });
+
+      // ---------- 계산을 도와주는 것들 ----------
+      // 두 곳 사이의 거리 (미터)
+      function meters(a, b) {
+        const rad = Math.PI / 180;
+        const dLat = (b.getLat() - a.getLat()) * rad;
+        const dLng = (b.getLng() - a.getLng()) * rad;
+        const h = Math.sin(dLat / 2) ** 2
+          + Math.cos(a.getLat() * rad) * Math.cos(b.getLat() * rad) * Math.sin(dLng / 2) ** 2;
+        return 6371000 * 2 * Math.asin(Math.sqrt(h));
+      }
+
+      // a에서 b를 바라보는 방향 (북쪽이 0, 시계 방향으로 360까지)
+      function direction(a, b) {
+        const rad = Math.PI / 180;
+        const dLng = (b.getLng() - a.getLng()) * rad;
+        const y = Math.sin(dLng) * Math.cos(b.getLat() * rad);
+        const x = Math.cos(a.getLat() * rad) * Math.sin(b.getLat() * rad)
+          - Math.sin(a.getLat() * rad) * Math.cos(b.getLat() * rad) * Math.cos(dLng);
+        return (Math.atan2(y, x) / rad + 360) % 360;
+      }
+
+      // 거리를 "350m" 또는 "1.2km" 같은 글자로
+      function distanceText(m) {
+        return m < 1000 ? Math.round(m) + "m" : (m / 1000).toFixed(1) + "km";
+      }
+
+      // 길 위에 로드뷰를 볼 자리들을 일정한 간격으로 찍기
+      function makeStops(path) {
+        let total = 0;
+        for (let i = 1; i < path.length; i++) total += meters(path[i - 1], path[i]);
+        const gap = Math.max(STEP_METERS, total / MAX_STEPS);
+
+        const stops = [path[0]];
+        let left = gap; // 다음 자리까지 남은 거리
+        for (let i = 1; i < path.length; i++) {
+          const a = path[i - 1];
+          const b = path[i];
+          const length = meters(a, b);
+          let walked = 0;
+          while (length - walked >= left) {
+            walked += left;
+            const t = walked / length;
+            stops.push(new kakao.maps.LatLng(
+              a.getLat() + (b.getLat() - a.getLat()) * t,
+              a.getLng() + (b.getLng() - a.getLng()) * t
+            ));
+            left = gap;
+          }
+          left -= length - walked;
+        }
+        stops.push(path[path.length - 1]);
+        return stops;
+      }
     }
   </script>
 </body>
