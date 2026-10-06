@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>길찾기</title>
 
-  <!-- 지도를 그려 주는 도구(Leaflet) 불러오기 -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- 카카오맵 불러오기 (appkey는 카카오에서 받은 JavaScript 키) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1"></script>
 
   <style>
     * { box-sizing: border-box; }
@@ -29,6 +28,8 @@
     header h1 { margin: 0; font-size: 22px; }
     header a { color: #ffffff; font-size: 14px; }
     #map { flex: 1; }
+    .map-error { padding: 40px 16px; text-align: center; color: #5b6272; font-size: 17px; line-height: 1.6; }
+    .place-name { padding: 6px 10px; font-size: 14px; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -41,24 +42,36 @@
   <div id="map"></div>
 
   <script>
-    // 지도가 처음 보여 줄 곳 (지금은 서울시청)
-    // 숫자를 바꾸면 다른 곳에서 시작해요: [위도, 경도]
-    const startPlace = [37.5665, 126.9780];
+    const mapBox = document.getElementById("map");
 
-    // 처음 확대 정도 (숫자가 클수록 가까이 보여요)
-    const startZoom = 15;
+    if (window.kakao && kakao.maps) {
+      // 지도가 처음 보여 줄 곳 (지금은 여수 경호초등학교)
+      // 숫자를 바꾸면 다른 곳에서 시작해요: (위도, 경도)
+      const startPlace = new kakao.maps.LatLng(34.7166265, 127.7279118);
 
-    // 지도 만들기
-    const map = L.map("map").setView(startPlace, startZoom);
+      // 지도 만들기 (level 숫자가 작을수록 가까이 보여요)
+      const map = new kakao.maps.Map(mapBox, {
+        center: startPlace,
+        level: 3
+      });
 
-    // 지도 그림(타일) 가져오기 - 무료 오픈 지도(OpenStreetMap)
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> 기여자'
-    }).addTo(map);
+      // 확대/축소 버튼 달기
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
 
-    // 시작한 곳에 핀 꽂기
-    L.marker(startPlace).addTo(map).bindPopup("여기서 시작해요!").openPopup();
+      // 시작한 곳에 핀 꽂기
+      const marker = new kakao.maps.Marker({ position: startPlace });
+      marker.setMap(map);
+
+      // 핀 위에 이름표 달기
+      const nameTag = new kakao.maps.InfoWindow({
+        content: '<div class="place-name">경호초등학교</div>'
+      });
+      nameTag.open(map, marker);
+    } else {
+      // 카카오맵은 올린 사이트(rudghch.github.io)에서만 보여요
+      mapBox.className = "map-error";
+      mapBox.textContent = "지도를 불러오지 못했어요. 카카오맵은 웹에 올린 사이트에서만 보여요.";
+    }
   </script>
 </body>
 </html>
