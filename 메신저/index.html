@@ -65,6 +65,43 @@
       font-size: 16px;
     }
     .avatar.small { width: 26px; height: 26px; font-size: 12px; }
+    .avatar.big { width: 96px; height: 96px; font-size: 40px; }
+    /* 프로필 사진을 정했으면 사진을 동그랗게 보여 줘요 */
+    .avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+    /* 맨 위의 내 프로필 버튼 (누르면 프로필 사진을 바꿔요) */
+    .me-box .me-button { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; font-size: 14px; font-weight: bold; }
+    .me-box .me-button:hover { background: #fff9cc; }
+
+    /* 화면 위에 뜨는 창 (내 프로필) */
+    dialog {
+      width: calc(100% - 32px);
+      max-width: 340px;
+      padding: 20px;
+      border: none;
+      border-radius: 16px;
+      color: #1f2430;
+    }
+    dialog::backdrop { background: rgba(31, 36, 48, 0.5); }
+    dialog h2 { margin: 0 0 14px; font-size: 20px; }
+    .profile-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 18px; }
+    .hint { margin: 0 0 12px; font-size: 13px; color: #56607a; line-height: 1.5; }
+    .dialog-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .dialog-row.end { justify-content: flex-end; margin-top: 4px; }
+    .plain-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 14px;
+      font-size: 15px;
+      border: 1px solid #c9d0dd;
+      border-radius: 20px;
+      background: #ffffff;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    .plain-button:hover { background: #f1f4fa; }
+    .plain-button input { display: none; }
 
     /* 화면들 (한 번에 하나만 보여요) */
     .view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -107,6 +144,62 @@
     .yellow-button:hover { background: #ffdf0f; }
     .yellow-button:disabled { background: #e3e6ee; color: #8a92a6; cursor: default; }
 
+    /* 대화 화면 안의 두 화면: 대화방 목록과 대화방 안 */
+    .pane { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .rooms-scroll { overflow-y: auto; padding: 12px; }
+    .room-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .room-list button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      text-align: left;
+      border: 1px solid #d5dbe6;
+      border-radius: 16px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .room-list button:hover { background: #fff9cc; }
+    .room-list .room-icon { font-size: 24px; }
+    .room-list b { display: block; font-size: 16px; word-break: break-word; }
+    .room-list span span { font-size: 13px; color: #56607a; }
+    .room-form-row { display: flex; gap: 8px; margin-top: 10px; }
+    .room-form-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 14px;
+      font-size: 16px;
+      border: 1px solid #c9d0dd;
+      border-radius: 20px;
+    }
+
+    /* 대화방 안의 맨 윗줄: 목록으로, 대화방 이름, 사람 */
+    .room-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #ffffff;
+      border-bottom: 1px solid #d5dbe6;
+    }
+    .room-bar b { flex: 1; min-width: 0; font-size: 16px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .room-bar .plain-button { min-height: 36px; padding: 0 12px; font-size: 14px; }
+
+    /* 대화방 사람들 창 */
+    .member-list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; margin-bottom: 12px; overflow-y: auto; }
+    .member-list div { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+    .member-list b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .member-list .badge { font-size: 12px; color: #56607a; }
+    .member-list button, .plain-button.danger { color: #d43c3c; }
+    .member-list button {
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid #c9d0dd;
+      border-radius: 14px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
     /* 대화 화면: 메시지들이 쌓이는 곳 */
     .messages {
       flex: 1;
@@ -128,6 +221,27 @@
       word-break: break-word;
     }
     .message .time { font-size: 11px; color: #56607a; margin-top: 3px; }
+    /* 말풍선 안의 사진·영상 */
+    .bubble img, .bubble video { display: block; max-width: 100%; max-height: 300px; margin-top: 6px; border-radius: 10px; }
+    .bubble img:first-child, .bubble video:first-child { margin-top: 0; }
+
+    /* 대화에서 사진·영상을 고르는 버튼과 안내 글 */
+    .photo-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+      border: 1px solid #c9d0dd;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .photo-button:hover { background: #f1f4fa; }
+    .photo-button input { display: none; }
+    .chat-picked { padding: 8px 14px; font-size: 13px; color: #3d4658; background: #fff9cc; border-top: 1px solid #d5dbe6; }
 
     /* 다른 계정이 보낸 메시지: 왼쪽 */
     .message.friend { align-self: flex-start; }
@@ -240,8 +354,8 @@
         <!-- 로그인한 뒤에도 다른 곳으로 갈 수 있는 길 -->
         <a href="../">처음 화면</a>
         <a href="../사진공유/">잉스타</a>
-        <span class="avatar small" id="meAvatar"></span>
-        <b id="meName"></b>
+        <!-- 누르면 내 프로필 사진을 바꾸는 창이 열려요 -->
+        <button type="button" class="me-button" id="profileButton" title="내 프로필 바꾸기"></button>
         <button type="button" id="logoutButton">로그아웃</button>
       </div>
     </div>
@@ -268,11 +382,39 @@
 
     <!-- 2. 대화 화면 -->
     <div class="view" id="chatView" hidden>
-      <div class="messages" id="messages"></div>
-      <form class="input-area" id="messageForm">
-        <input type="text" id="messageInput" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지">
-        <button type="submit" class="yellow-button">보내기</button>
-      </form>
+      <!-- 2-1. 대화방 목록 (대화 화면에 처음 들어오면 보여요) -->
+      <div class="pane rooms-scroll" id="roomListPane">
+        <div class="error" id="roomNote"></div>
+        <div class="room-list" id="roomList"></div>
+        <form class="card" id="roomForm" hidden>
+          <b>＋ 새 대화방 만들기</b>
+          <div class="room-form-row">
+            <input type="text" id="roomNameInput" placeholder="대화방 이름 (20글자까지)" maxlength="20" autocomplete="off" aria-label="대화방 이름">
+            <button type="submit" class="yellow-button" id="roomCreateButton">만들기</button>
+          </div>
+          <div class="error" id="roomError"></div>
+        </form>
+      </div>
+
+      <!-- 2-2. 대화방 안 -->
+      <div class="pane" id="roomPane" hidden>
+        <div class="room-bar">
+          <button type="button" class="plain-button" id="backButton">← 목록</button>
+          <b id="roomTitle"></b>
+          <button type="button" class="plain-button" id="membersButton">👥 사람</button>
+        </div>
+        <div class="messages" id="messages"></div>
+        <!-- 고른 사진·영상 개수나 올리는 중 안내가 나오는 곳 -->
+        <div class="chat-picked" id="chatPicked" hidden></div>
+        <form class="input-area" id="messageForm">
+          <label class="photo-button" title="사진·영상 고르기">
+            📷
+            <input type="file" id="chatFiles" accept="image/*,video/*" multiple aria-label="사진·영상 고르기">
+          </label>
+          <input type="text" id="messageInput" placeholder="메시지를 입력하세요" autocomplete="off" aria-label="메시지">
+          <button type="submit" class="yellow-button" id="sendButton">보내기</button>
+        </form>
+      </div>
     </div>
 
     <!-- 3. 게시물 화면 -->
@@ -301,17 +443,63 @@
     </div>
   </div>
 
+  <!-- 대화방에 있는 사람을 보고, 초대하거나 내보내는 창 -->
+  <dialog id="membersDialog" aria-label="대화방 사람들">
+    <h2 id="membersTitle"></h2>
+    <div class="member-list" id="memberList"></div>
+    <!-- 아래는 대화방을 만든 사람(방장)에게만 보여요 -->
+    <div id="ownerTools">
+      <p class="hint">초대할 친구의 아이디를 정확히 적어 주세요. 초대와 내보내기는 방장만 할 수 있어요.</p>
+      <form class="room-form-row" id="inviteForm">
+        <input type="text" id="inviteInput" list="knownIds" placeholder="초대할 아이디" maxlength="12" autocomplete="off" aria-label="초대할 아이디">
+        <button type="submit" class="yellow-button" id="inviteButton">초대</button>
+      </form>
+      <datalist id="knownIds"></datalist>
+    </div>
+    <div class="error" id="membersError"></div>
+    <div class="dialog-row end">
+      <button type="button" class="plain-button danger" id="deleteRoomButton">대화방 없애기</button>
+      <button type="button" class="plain-button danger" id="leaveRoomButton">나가기</button>
+      <button type="button" class="plain-button" id="membersCloseButton">닫기</button>
+    </div>
+  </dialog>
+
+  <!-- 내 프로필 사진을 바꾸는 창 -->
+  <dialog id="profileDialog" aria-label="내 프로필">
+    <h2>내 프로필</h2>
+    <div class="profile-preview">
+      <span id="profilePreview"></span>
+      <b id="profileName"></b>
+    </div>
+    <p class="hint">프로필 사진은 로그인한 친구 모두에게 보이고, 잉스타에서도 같은 사진이 보여요. 얼굴이 나온 사진 말고 그림이나 풍경 사진을 골라 주세요.</p>
+    <div class="dialog-row">
+      <label class="plain-button">
+        사진 고르기
+        <input type="file" id="profileInput" accept="image/*">
+      </label>
+      <button type="button" class="plain-button" id="profileResetButton">기본 그림으로</button>
+    </div>
+    <div class="error" id="profileError"></div>
+    <div class="dialog-row end">
+      <button type="button" class="plain-button" id="profileCloseButton">닫기</button>
+      <button type="button" class="yellow-button" id="profileSaveButton">저장</button>
+    </div>
+  </dialog>
+
   <script>
     // ───────── 서버 ─────────
     // 계정, 대화, 게시물은 모두 서버(인터넷에 있는 컴퓨터)에 저장해요.
     // 그래서 다른 컴퓨터에 있는 친구와도 주고받을 수 있어요.
     const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
+    const ROOMS_URL = "https://4oakmu2znkfqdd4hlem3lnll3i0fbaqe.lambda-url.ap-northeast-2.on.aws/"; // 대화방 서버 주소
     const BOARD = "messenger";   // 게시물을 모아 두는 게시판 이름
 
     const TOKEN_KEY = "messenger.token";      // 로그인했다는 표(토큰)를 이 브라우저에 기억해요
     const MAX_VIDEO_SIZE = 30 * 1024 * 1024;  // 영상은 한 개에 30MB까지
     const MAX_IMAGE_SIDE = 1280;              // 사진은 긴 쪽을 1280px로 줄여서 올려요
     const MAX_FILES = 6;                      // 게시물 하나에 파일 6개까지
+    const PROFILE_BOARD = "instarprofile";    // 프로필 사진을 모아 두는 게시판 이름 (잉스타와 같이 써요)
+    const PROFILE_SIZE = 320;                 // 프로필 사진은 더 작게 줄여요
     const COLORS = ["#f2777a", "#f99157", "#66b36a", "#3b9ad9", "#8f6fd6", "#d966a8", "#3bb3a6", "#b98a3b"];
 
     let token = localStorage.getItem(TOKEN_KEY);
@@ -329,17 +517,21 @@
       BAD_POST: "글은 1000글자, 파일은 6개까지 올릴 수 있어요.",
       BAD_FILE: "사진이나 영상만 올릴 수 있어요.",
       NOT_YOURS: "내가 올린 게시물만 지울 수 있어요.",
+      BAD_ROOM: "대화방 이름을 1~20글자로 적어 주세요.",
+      NO_ROOM: "들어갈 수 없는 대화방이에요.",
+      NO_USER: "그런 아이디가 없어요. 아이디를 정확히 적어 주세요.",
+      ROOM_FULL: "대화방에는 50명까지 초대할 수 있어요.",
       NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
     };
     function errorText(error) {
       return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
     }
 
-    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용)
-    async function call(action, data) {
+    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용, url: 다른 서버에 시킬 때만 적어요)
+    async function call(action, data, url) {
       let response;
       try {
-        response = await fetch(API_URL, {
+        response = await fetch(url || API_URL, {
           method: "POST",
           body: JSON.stringify(Object.assign({ action: action, token: token }, data))
         });
@@ -377,12 +569,56 @@
       for (const ch of id) sum += ch.codePointAt(0);
       return COLORS[sum % COLORS.length];
     }
-    function makeAvatar(id, small) {
+
+    // ───────── 프로필 사진 ─────────
+    let profiles = {};    // 아이디 → 프로필 사진 주소 (사진을 정한 계정만 들어 있어요)
+    let profilesKey = ""; // 프로필이 바뀌었는지 알아보는 표시
+
+    // 동그란 프로필 만들기. 사진을 정했으면 사진, 아니면 아이디 첫 글자
+    // (size: "small" 작게, "big" 크게. url을 따로 주면 그 사진을 쓰고, null을 주면 첫 글자만)
+    function makeAvatar(id, size, url) {
       const avatar = document.createElement("span");
-      avatar.className = small ? "avatar small" : "avatar";
-      avatar.style.background = colorOf(id);
-      avatar.textContent = Array.from(id)[0];
+      avatar.className = size ? "avatar " + size : "avatar";
+      if (url === undefined) url = profiles[id];
+      if (url) {
+        const image = document.createElement("img");
+        image.src = url;
+        image.alt = "";
+        avatar.appendChild(image);
+      } else {
+        avatar.style.background = colorOf(id);
+        avatar.textContent = Array.from(id)[0];
+      }
       return avatar;
+    }
+
+    // 서버에서 모두의 프로필 사진을 받아 오기 (한 계정에 여러 개면 가장 새것)
+    async function loadProfiles() {
+      let list;
+      try {
+        list = await call("posts", { board: PROFILE_BOARD });
+      } catch (error) {
+        return;
+      }
+      if (!me) return;
+
+      const map = {};
+      const keys = [];
+      for (const item of list) { // 새것부터 와요
+        if (item.author in map || !item.media || !item.media[0]) continue;
+        map[item.author] = item.media[0].url;
+        keys.push(item.sk);
+      }
+      profiles = map;
+
+      // 누군가 프로필을 바꿨을 때만 화면을 다시 그려요
+      const key = keys.join(",");
+      if (key === profilesKey) return;
+      profilesKey = key;
+      showMe();
+      redrawMessages();
+      shownPosts = null;
+      if (isShowing("postsView")) loadPosts();
     }
 
     // 서버가 붙여 준 번호(sk)에는 보낸 시간이 들어 있어요
@@ -407,6 +643,8 @@
     const homeLink = document.getElementById("homeLink");
     const meBox = document.getElementById("meBox");
     const tabs = document.getElementById("tabs");
+    const profileButton = document.getElementById("profileButton");
+    const profileDialog = document.getElementById("profileDialog");
 
     let signupMode = false; // true면 계정 만들기, false면 로그인
     let needsCode = true;   // 가입 코드가 필요한지 (서버에 물어봐요)
@@ -453,15 +691,18 @@
     // 로그인한 뒤 대화 화면으로 들어가기
     function enter(id) {
       me = id;
-      const meAvatar = document.getElementById("meAvatar");
-      meAvatar.style.background = colorOf(id);
-      meAvatar.textContent = Array.from(id)[0];
-      document.getElementById("meName").textContent = id;
+      showMe();
 
       homeLink.hidden = true;
       meBox.hidden = false;
       tabs.hidden = false;
       showView("chatView");
+      loadProfiles();
+    }
+
+    // 맨 위 오른쪽의 내 프로필 버튼 그리기
+    function showMe() {
+      profileButton.replaceChildren(makeAvatar(me, "small"), document.createTextNode(me));
     }
 
     // 로그인 화면으로 돌아가기
@@ -470,9 +711,19 @@
       token = null;
       localStorage.removeItem(TOKEN_KEY);
       lastMessage = "";
+      shownMessages = [];
       messages.replaceChildren();
       shownPosts = null;
       postList.replaceChildren();
+      profiles = {};
+      profilesKey = "";
+      profileDialog.close();
+      rooms = [];
+      roomsKey = null;
+      room = null;
+      membersDialog.close();
+      roomPane.hidden = true;
+      roomListPane.hidden = false;
 
       homeLink.hidden = false;
       meBox.hidden = true;
@@ -490,7 +741,7 @@
     function showView(viewId) {
       for (const view of document.querySelectorAll(".view")) view.hidden = view.id !== viewId;
       for (const tab of tabs.children) tab.classList.toggle("on", tab.dataset.view === viewId);
-      if (viewId === "chatView") loadMessages();
+      if (viewId === "chatView") { if (room) loadMessages(); else loadRooms(); }
       if (viewId === "postsView") loadPosts();
     }
     for (const tab of tabs.children) {
@@ -500,12 +751,255 @@
       return me && !document.hidden && !document.getElementById(viewId).hidden;
     }
 
+    // ───────── 대화방 ─────────
+    // "모두의 대화방"은 로그인한 사람 모두가 들어오는 대화방이에요.
+    // 그 밖의 대화방은 누구나 만들 수 있고, 만든 사람(방장)이 친구를 초대하거나 내보내요.
+    // 서버가 "이 사람이 이 대화방 사람인지"를 확인해서, 초대받지 않은 사람은 볼 수 없어요.
+    const EVERYONE = { all: true, name: "모두의 대화방" };
+    const roomListPane = document.getElementById("roomListPane");
+    const roomPane = document.getElementById("roomPane");
+    const roomList = document.getElementById("roomList");
+    const roomForm = document.getElementById("roomForm");
+    const roomNameInput = document.getElementById("roomNameInput");
+    const roomCreateButton = document.getElementById("roomCreateButton");
+    const roomError = document.getElementById("roomError");
+    const roomNote = document.getElementById("roomNote");
+    const membersDialog = document.getElementById("membersDialog");
+    const membersError = document.getElementById("membersError");
+    const inviteInput = document.getElementById("inviteInput");
+
+    let rooms = [];      // 내가 들어 있는 대화방들: { id, name, owner, members }
+    let roomsKey = null; // 대화방 목록이 바뀌었는지 알아보는 표시
+    let room = null;     // 지금 들어가 있는 대화방 (목록을 보고 있으면 null)
+
+    // 대화방 서버에 일 시키기
+    function callRooms(action, data) {
+      return call(action, data, ROOMS_URL);
+    }
+
+    // 서버에서 내가 들어 있는 대화방 목록을 받아 오기
+    async function loadRooms() {
+      if (ROOMS_URL === "") { showRooms(); return; }
+      let list;
+      try {
+        list = await callRooms("rooms");
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        return;
+      }
+      if (!me) return;
+      rooms = list;
+
+      const key = JSON.stringify(list);
+      if (key !== roomsKey) { roomsKey = key; showRooms(); }
+
+      // 들어가 있던 대화방에서 내보내졌거나 대화방이 없어졌으면 목록으로 돌아가요
+      if (room && !room.all) {
+        const now = rooms.find(function (one) { return one.id === room.id; });
+        if (!now) {
+          kickedOut();
+        } else {
+          room = now;
+          document.getElementById("roomTitle").textContent = now.name;
+          if (membersDialog.open) showMembers();
+        }
+      }
+    }
+
+    // 대화방 목록 그리기
+    function showRooms() {
+      roomForm.hidden = ROOMS_URL === "";
+      roomList.replaceChildren();
+      [EVERYONE].concat(rooms).forEach(function (one) {
+        const button = document.createElement("button");
+        button.type = "button";
+        const icon = document.createElement("span");
+        icon.className = "room-icon";
+        icon.textContent = one.all ? "🏠" : "💬";
+        const text = document.createElement("span");
+        const name = document.createElement("b");
+        name.textContent = hideBadWords(one.name);
+        const detail = document.createElement("span");
+        detail.textContent = one.all
+          ? "로그인한 친구 모두가 함께 이야기해요"
+          : "방장 " + one.owner + " · " + (one.members.length + 1) + "명";
+        text.append(name, detail);
+        button.append(icon, text);
+        button.addEventListener("click", function () { openRoom(one); });
+        roomList.appendChild(button);
+      });
+    }
+
+    // 대화방에 들어가기
+    function openRoom(one) {
+      room = one;
+      lastMessage = "";
+      shownMessages = [];
+      messages.replaceChildren();
+      roomNote.textContent = "";
+      roomError.textContent = "";
+      document.getElementById("roomTitle").textContent = hideBadWords(one.name);
+      document.getElementById("membersButton").hidden = Boolean(one.all);
+      roomListPane.hidden = true;
+      roomPane.hidden = false;
+      loadMessages();
+    }
+
+    // 대화방 목록으로 돌아가기
+    function closeRoom() {
+      room = null;
+      membersDialog.close();
+      roomPane.hidden = true;
+      roomListPane.hidden = false;
+      loadRooms();
+    }
+    document.getElementById("backButton").addEventListener("click", closeRoom);
+
+    // 내보내졌거나 대화방이 없어졌을 때: 목록으로 돌아가서 알려 주기
+    function kickedOut() {
+      const name = room.name;
+      closeRoom();
+      roomNote.textContent = "'" + hideBadWords(name) + "' 대화방에 더 이상 들어갈 수 없어요.";
+    }
+
+    // "만들기"를 누르면 새 대화방 만들기
+    roomForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const name = hideBadWords(roomNameInput.value.trim());
+      if (name === "") { roomError.textContent = ERROR_TEXT.BAD_ROOM; return; }
+
+      roomCreateButton.disabled = true;
+      roomError.textContent = "";
+      roomNote.textContent = "";
+      try {
+        const made = await callRooms("create", { name: name });
+        roomNameInput.value = "";
+        openRoom(made);
+        loadRooms();
+      } catch (error) {
+        roomError.textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      roomCreateButton.disabled = false;
+    });
+
+    // ───────── 대화방 사람들: 초대하기, 내보내기, 나가기 ─────────
+    // 창 안에 지금 대화방의 사람들을 그리기
+    function showMembers() {
+      const owner = room.owner === me;
+      document.getElementById("membersTitle").textContent = hideBadWords(room.name);
+      document.getElementById("ownerTools").hidden = !owner;
+      document.getElementById("deleteRoomButton").hidden = !owner;
+      document.getElementById("leaveRoomButton").hidden = owner;
+
+      const list = document.getElementById("memberList");
+      list.replaceChildren();
+      [room.owner].concat(room.members).forEach(function (id, index) {
+        const row = document.createElement("div");
+        const name = document.createElement("b");
+        name.textContent = id;
+        row.append(makeAvatar(id, "small"), name);
+        if (index === 0) {
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = "방장";
+          row.appendChild(badge);
+        } else if (owner) {
+          const kick = document.createElement("button");
+          kick.type = "button";
+          kick.textContent = "내보내기";
+          kick.addEventListener("click", function () {
+            if (!confirm(id + "님을 대화방에서 내보낼까요?")) return;
+            changeMembers("kick", id);
+          });
+          row.appendChild(kick);
+        }
+        list.appendChild(row);
+      });
+    }
+
+    // 서버에 초대("invite")나 내보내기("kick")를 시키고, 바뀐 사람 목록을 다시 그리기
+    async function changeMembers(action, id) {
+      membersError.textContent = "";
+      try {
+        room = await callRooms(action, { room: room.id, id: id });
+        showMembers();
+        loadRooms();
+      } catch (error) {
+        membersError.textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+    }
+
+    // "👥 사람"을 누르면 창 열기
+    document.getElementById("membersButton").addEventListener("click", function () {
+      membersError.textContent = "";
+      inviteInput.value = "";
+      showMembers();
+
+      // 초대할 때 고르기 쉽게, 지금까지 본 아이디들을 알려 줘요
+      const known = {};
+      Object.keys(profiles).forEach(function (id) { known[id] = true; });
+      rooms.forEach(function (one) { [one.owner].concat(one.members).forEach(function (id) { known[id] = true; }); });
+      const options = document.getElementById("knownIds");
+      options.replaceChildren();
+      Object.keys(known).forEach(function (id) {
+        if (id === me || room.members.includes(id)) return;
+        const option = document.createElement("option");
+        option.value = id;
+        options.appendChild(option);
+      });
+
+      membersDialog.showModal();
+    });
+    document.getElementById("membersCloseButton").addEventListener("click", function () { membersDialog.close(); });
+
+    // "초대"를 누르면 대화방에 사람 넣기
+    document.getElementById("inviteForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const id = inviteInput.value.trim();
+      if (id === "") return;
+      if (id === me || room.members.includes(id)) { membersError.textContent = "이미 대화방에 있는 친구예요."; return; }
+      inviteInput.value = "";
+      await changeMembers("invite", id);
+    });
+
+    // "대화방 없애기"(방장)나 "나가기"(초대받은 사람)를 누르면 서버에 알리고 목록으로 돌아가기
+    async function quitRoom(action, question) {
+      if (!confirm(question)) return;
+      try {
+        await callRooms(action, { room: room.id });
+        closeRoom();
+      } catch (error) {
+        membersError.textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+    }
+    document.getElementById("deleteRoomButton").addEventListener("click", function () {
+      quitRoom("close", "'" + room.name + "' 대화방을 없앨까요? 모두가 이 대화방에 들어올 수 없게 돼요.");
+    });
+    document.getElementById("leaveRoomButton").addEventListener("click", function () {
+      quitRoom("leave", "'" + room.name + "' 대화방에서 나갈까요?");
+    });
+
+    // 10초마다 대화방 목록이 바뀌었는지 서버에 물어보기 (초대받았는지, 내보내졌는지도 이때 알아요)
+    setInterval(function () { if (isShowing("chatView")) loadRooms(); }, 10000);
+
     // ───────── 대화 ─────────
     const messages = document.getElementById("messages");
     const messageForm = document.getElementById("messageForm");
     const messageInput = document.getElementById("messageInput");
     let lastMessage = "";      // 마지막으로 받은 메시지 번호
+    let shownMessages = [];    // 지금 화면에 그려 둔 메시지들 (프로필이 바뀌면 다시 그리려고 기억해요)
     let loadingMessages = false;
+
+    // 기억해 둔 메시지를 처음부터 다시 그리기 (보고 있던 자리는 그대로)
+    function redrawMessages() {
+      const top = messages.scrollTop;
+      messages.replaceChildren();
+      for (const item of shownMessages) showMessage(item);
+      messages.scrollTop = top;
+    }
 
     // 메시지 하나를 화면에 붙이기
     function showMessage(item) {
@@ -525,14 +1019,18 @@
       if (!mine) {
         const name = document.createElement("div");
         name.className = "name";
-        name.appendChild(makeAvatar(item.sender, true));
+        name.appendChild(makeAvatar(item.sender, "small"));
         name.appendChild(document.createTextNode(item.sender));
         message.appendChild(name);
       }
 
+      // 글, 그리고 함께 보낸 사진·영상
+      // (만든 대화방의 메시지는 사진·영상이 따로 들어 있고, 모두의 대화방은 글 끝의 꼬리표에 들어 있어요)
+      const parts = item.media ? { text: item.text, files: item.media } : splitMessage(item.text);
       const bubble = document.createElement("div");
       bubble.className = "bubble";
-      bubble.textContent = hideBadWords(item.text);
+      bubble.textContent = hideBadWords(parts.text);
+      for (const file of parts.files) bubble.appendChild(makeChatMedia(parts.board, file));
       message.appendChild(bubble);
 
       const time = document.createElement("div");
@@ -545,48 +1043,177 @@
 
     // 서버에서 새 메시지만 받아 오기
     async function loadMessages() {
-      if (loadingMessages || !me) return;
+      if (loadingMessages || !me || !room) return;
+      const asked = room.all ? "all" : room.id; // 어느 대화방의 메시지를 물어봤는지 기억해요
       loadingMessages = true;
       try {
-        const items = await call("messages", { after: lastMessage });
-        if (me && items.length > 0) {
+        const items = room.all
+          ? await call("messages", { after: lastMessage })
+          : await callRooms("messages", { room: room.id, after: lastMessage });
+        // 기다리는 동안 다른 대화방으로 옮겼으면 받은 것을 버려요
+        const still = me && room && (room.all ? "all" : room.id) === asked;
+        if (still && items.length > 0) {
           // 맨 아래를 보고 있었을 때만 새 메시지 쪽으로 내려요 (위쪽을 읽는 중이면 그대로 둬요)
           const atBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 80;
-          for (const item of items) showMessage(item);
+          for (const item of items) { shownMessages.push(item); showMessage(item); }
           if (atBottom || lastMessage === "") messages.scrollTop = messages.scrollHeight;
           lastMessage = items[items.length - 1].sk;
         }
       } catch (error) {
         if (error.message === "NOT_LOGGED_IN") leave();
+        // 대화방에서 내보내졌거나 대화방이 없어졌어요
+        if (error.message === "NO_ROOM" && room && !room.all && room.id === asked) kickedOut();
       }
       loadingMessages = false;
+      // 기다리는 동안 다른 대화방으로 옮겼으면 그 대화방 것을 바로 받아 와요
+      if (me && room && (room.all ? "all" : room.id) !== asked) loadMessages();
     }
+
+    // ───────── 대화에 넣는 사진·영상 ─────────
+    // 서버의 메시지에는 글만 담을 수 있어요. 그래서 사진·영상은 보관함에 올리고,
+    // 메시지 끝에 "[[file:게시판:i.사진이름,v.영상이름]]" 같은 꼬리표를 붙여서 보내요.
+    const FILE_TAG = /\n?\[\[file:([a-z]{1,20}):([\w.,-]+)\]\]$/;
+    const mediaUrls = {};   // 파일 이름(key) → 볼 수 있는 주소
+    const boardLoads = {};  // 지금 받아 오는 중인 게시판들
+
+    // 사진·영상을 넣어 둘 게시판 이름. 한 게시판에 100개까지만 받아 올 수 있어서 1시간마다 새 게시판을 써요
+    function chatBoard() {
+      return "cm" + String(Math.floor(Date.now() / 3600000)).replace(/\d/g, function (digit) {
+        return "abcdefghij"[digit];
+      });
+    }
+
+    // 메시지를 글과 꼬리표(사진·영상 목록)로 나누기
+    function splitMessage(text) {
+      const found = text.match(FILE_TAG);
+      if (!found) return { text: text, files: [] };
+      return {
+        text: text.slice(0, found.index),
+        board: found[1],
+        files: found[2].split(",").map(function (part) {
+          return { kind: part[0] === "v" ? "video" : "image", key: part.slice(2) };
+        })
+      };
+    }
+
+    // 게시판 하나에 들어 있는 사진·영상 주소를 받아 오기
+    function loadChatBoard(board) {
+      if (!boardLoads[board]) {
+        boardLoads[board] = call("posts", { board: board }).then(function (posts) {
+          for (const post of posts) {
+            for (const item of post.media || []) mediaUrls[item.key] = item.url;
+          }
+        }).catch(function () {}).then(function () { delete boardLoads[board]; });
+      }
+      return boardLoads[board];
+    }
+
+    // 말풍선 안에 넣을 사진이나 영상 만들기
+    function makeChatMedia(board, file) {
+      const element = document.createElement(file.kind === "video" ? "video" : "img");
+      if (file.kind === "video") { element.controls = true; element.preload = "metadata"; }
+      else element.alt = "사진";
+
+      function fill() {
+        if (mediaUrls[file.key]) element.src = mediaUrls[file.key];
+        else if (file.kind === "image") element.alt = "볼 수 없는 사진이에요";
+      }
+      // 주소가 오래돼서 안 열리면 한 번만 새로 받아 와요
+      let retried = false;
+      element.addEventListener("error", function () {
+        if (retried) return;
+        retried = true;
+        delete mediaUrls[file.key];
+        loadChatBoard(board).then(fill);
+      });
+      // 다 열렸을 때 맨 아래를 보고 있었으면 계속 맨 아래가 보이게 해요
+      element.addEventListener(file.kind === "video" ? "loadedmetadata" : "load", function () {
+        const gap = messages.scrollHeight - messages.scrollTop - messages.clientHeight;
+        if (gap < element.offsetHeight + 120) messages.scrollTop = messages.scrollHeight;
+      });
+
+      if (file.url) element.src = file.url; // 만든 대화방의 메시지는 서버가 주소를 바로 줘요
+      else if (mediaUrls[file.key]) fill();
+      else loadChatBoard(board).then(fill);
+      return element;
+    }
+
+    // 고른 사진·영상 개수 보여 주기
+    const chatFiles = document.getElementById("chatFiles");
+    const chatPicked = document.getElementById("chatPicked");
+    const sendButton = document.getElementById("sendButton");
+    function showChatPicked(text) {
+      chatPicked.textContent = text;
+      chatPicked.hidden = text === "";
+    }
+    chatFiles.addEventListener("change", function () {
+      const count = chatFiles.files.length;
+      showChatPicked(count === 0 ? "" : "사진·영상 " + count + "개를 골랐어요. 보내기를 누르면 함께 보내요.");
+    });
 
     // "보내기"를 누르거나 엔터를 치면 메시지 보내기
     messageForm.addEventListener("submit", async function (event) {
       event.preventDefault();
 
       const text = messageInput.value.trim();
-      if (text === "") return; // 빈 메시지는 보내지 않아요
+      const files = Array.from(chatFiles.files).filter(function (file) {
+        return file.type.startsWith("image/") || file.type.startsWith("video/");
+      });
+      if (text === "" && files.length === 0) return; // 빈 메시지는 보내지 않아요
+
+      if (files.length > MAX_FILES) { showChatPicked("파일은 한 번에 6개까지 보낼 수 있어요."); return; }
+      for (const file of files) {
+        if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
+          showChatPicked("영상이 너무 커요. 30MB보다 작은 영상을 골라 주세요.");
+          return;
+        }
+      }
 
       messageInput.value = "";
       messageInput.focus();
+      sendButton.disabled = true;
       try {
-        await call("send", { text: hideBadWords(text) }); // 나쁜 말은 가려서 보내요
+        const media = [];
+        for (let i = 0; i < files.length; i++) {
+          showChatPicked("올리는 중... (" + (i + 1) + "/" + files.length + ")");
+          const video = files[i].type.startsWith("video/");
+          const blob = video ? files[i] : await shrinkImage(files[i]);
+          media.push({ kind: video ? "video" : "image", key: await uploadFile(blob) });
+        }
+        const clean = hideBadWords(text); // 나쁜 말은 가려서 보내요
+        if (!room.all) {
+          // 만든 대화방: 글과 사진·영상을 함께 보낼 수 있어요
+          await callRooms("send", { room: room.id, text: clean, media: media });
+        } else {
+          // 모두의 대화방: 글만 보낼 수 있어서 사진·영상은 꼬리표로 붙여요
+          let tag = "";
+          if (media.length > 0) {
+            const board = chatBoard();
+            await call("post", { board: board, text: "", media: media });
+            tag = "\n[[file:" + board + ":" + media.map(function (item) {
+              return (item.kind === "video" ? "v." : "i.") + item.key;
+            }).join(",") + "]]";
+          }
+          await call("send", { text: clean + tag });
+        }
+        chatFiles.value = "";
+        showChatPicked("");
         await loadMessages();
         messages.scrollTop = messages.scrollHeight;
       } catch (error) {
         messageInput.value = text; // 못 보냈으면 쓴 글을 돌려놓기
-        alert(errorText(error));
+        showChatPicked(errorText(error));
         if (error.message === "NOT_LOGGED_IN") leave();
+        if (error.message === "NO_ROOM" && room && !room.all) kickedOut();
       }
+      sendButton.disabled = false;
     });
 
     // 3초마다 새 메시지가 왔는지 서버에 물어보기
     // (다른 창을 보고 있을 때는 쉬고, 돌아오면 바로 물어봐요)
     setInterval(function () { if (isShowing("chatView")) loadMessages(); }, 3000);
     document.addEventListener("visibilitychange", function () {
-      if (isShowing("chatView")) loadMessages();
+      if (isShowing("chatView")) { loadRooms(); loadMessages(); }
       if (isShowing("postsView")) loadPosts();
     });
 
@@ -601,13 +1228,13 @@
     let shownPosts = null; // 지금 화면에 그려 둔 게시물 번호들 (바뀌었을 때만 다시 그려요)
 
     // 큰 사진을 작게 줄이기 (빨리 올라가고 저장 공간도 아껴요)
-    function shrinkImage(file) {
+    function shrinkImage(file, maxSide) {
       return new Promise(function (resolve) {
         const url = URL.createObjectURL(file);
         const image = new Image();
         image.onload = function () {
           URL.revokeObjectURL(url);
-          const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(image.width, image.height));
+          const scale = Math.min(1, (maxSide || MAX_IMAGE_SIDE) / Math.max(image.width, image.height));
           if (scale === 1) { resolve(file); return; }
           const canvas = document.createElement("canvas");
           canvas.width = Math.round(image.width * scale);
@@ -762,6 +1389,84 @@
 
     // 15초마다 새 게시물이 있는지 서버에 물어보기
     setInterval(function () { if (isShowing("postsView")) loadPosts(); }, 15000);
+
+    // ───────── 내 프로필 바꾸기 ─────────
+    const profileInput = document.getElementById("profileInput");
+    const profilePreview = document.getElementById("profilePreview");
+    const profileError = document.getElementById("profileError");
+    const profileSaveButton = document.getElementById("profileSaveButton");
+    let newProfile;        // 새로 고른 사진. 안 바꿨으면 undefined, "기본 그림으로"를 눌렀으면 null
+    let previewUrl = null; // 미리 보여 주려고 만든 사진 주소
+
+    // 창 안에 지금 고른 모습을 크게 보여 주기
+    function showProfilePreview() {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = newProfile ? URL.createObjectURL(newProfile) : null;
+      const url = newProfile === undefined ? undefined : previewUrl;
+      profilePreview.replaceChildren(makeAvatar(me, "big", url));
+    }
+
+    // 맨 위의 내 프로필 버튼을 누르면 창 열기
+    profileButton.addEventListener("click", function () {
+      newProfile = undefined;
+      profileError.textContent = "";
+      document.getElementById("profileName").textContent = me;
+      showProfilePreview();
+      profileDialog.showModal();
+    });
+    document.getElementById("profileCloseButton").addEventListener("click", function () { profileDialog.close(); });
+
+    // 사진을 고르면 작게 줄여서 미리 보여 주기
+    profileInput.addEventListener("change", async function () {
+      const file = profileInput.files[0];
+      profileInput.value = ""; // 같은 사진을 또 고를 수 있게 비워요
+      if (!file) return;
+      if (!file.type.startsWith("image/")) { profileError.textContent = "사진만 고를 수 있어요."; return; }
+      profileError.textContent = "";
+      profileSaveButton.disabled = true; // 사진을 줄이는 동안에는 저장을 잠깐 막아요
+      newProfile = await shrinkImage(file, PROFILE_SIZE);
+      profileSaveButton.disabled = false;
+      showProfilePreview();
+    });
+
+    // "기본 그림으로"를 누르면 아이디 첫 글자 그림으로 되돌리기
+    document.getElementById("profileResetButton").addEventListener("click", function () {
+      newProfile = null;
+      profileError.textContent = "";
+      showProfilePreview();
+    });
+
+    // "저장"을 누르면 서버에 올리기
+    profileSaveButton.addEventListener("click", async function () {
+      if (newProfile === undefined) { profileDialog.close(); return; } // 바꾼 게 없어요
+
+      profileSaveButton.disabled = true;
+      profileSaveButton.textContent = "저장하는 중...";
+      profileError.textContent = "";
+      try {
+        if (newProfile) {
+          const key = await uploadFile(newProfile);
+          await call("post", { board: PROFILE_BOARD, text: "", media: [{ kind: "image", key: key }] });
+        }
+        // 예전 프로필 사진은 지우기 (새 사진을 올렸으면 가장 새것 하나만 남겨요)
+        const mine = (await call("posts", { board: PROFILE_BOARD })).filter(function (item) {
+          return item.author === me;
+        });
+        for (const item of mine.slice(newProfile ? 1 : 0)) {
+          await call("remove", { board: PROFILE_BOARD, sk: item.sk });
+        }
+        profileDialog.close();
+      } catch (error) {
+        profileError.textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      profileSaveButton.disabled = false;
+      profileSaveButton.textContent = "저장";
+      if (me) loadProfiles();
+    });
+
+    // 30초마다 친구들이 프로필 사진을 바꿨는지 서버에 물어보기
+    setInterval(function () { if (me && !document.hidden) loadProfiles(); }, 30000);
 
     // ───────── 시작 ─────────
     async function start() {
