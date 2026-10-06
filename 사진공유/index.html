@@ -29,7 +29,7 @@
     header h1 img { width: 32px; height: 32px; }
     header a { color: #3b6cf6; font-size: 14px; }
     /* 이름을 누르면 처음 화면으로 돌아가요 */
-    header h1 a { display: flex; align-items: center; gap: 8px; color: inherit; font-size: inherit; text-decoration: none; }
+    header h1 a { display: flex; align-items: center; gap: 8px; flex-shrink: 0; color: inherit; font-size: inherit; text-decoration: none; white-space: nowrap; }
     /* 만든 사람 이름 */
     .makers { font-size: 13px; font-weight: normal; color: #5b6272; }
     .me-box { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; font-size: 15px; }
@@ -425,6 +425,95 @@
     /* 내 프로필 바꾸기 */
     .profile-preview { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 18px; }
     .field-label { display: block; margin: 14px 0 6px; font-size: 15px; font-weight: bold; }
+
+    /* 메뉴: 새 게시물 버튼, 검색, 보기 고르기(전체·팔로잉·사진·영상) */
+    .side { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+    .search {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1px solid #d5dbe6;
+      border-radius: 12px;
+    }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tab {
+      padding: 8px 14px;
+      font-size: 15px;
+      border: 1px solid #d5dbe6;
+      border-radius: 20px;
+      background: #ffffff;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    .tab:hover { background: #f1f3f8; }
+    .tab.on { background: #1f2430; border-color: #1f2430; color: #ffffff; font-weight: bold; }
+    .feed-main .count:first-child, .feed-main .profile-box { margin-top: 0; }
+    .feed-main .profile-box { margin-bottom: 16px; }
+
+    /* 좁은 화면(핸드폰): 새 게시물 버튼이 화면 아래에 계속 떠 있어요 */
+    @media (max-width: 999px) {
+      #composeButton {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        z-index: 5;
+        transform: translateX(-50%);
+        border-radius: 28px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+      }
+      main { padding-bottom: 96px; }
+    }
+    /* 넓은 화면(컴퓨터): 메뉴가 왼쪽에 따로 있고, 아래로 내려도 따라와요 */
+    @media (min-width: 1000px) {
+      main { max-width: 1160px; }
+      .feed-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 28px; align-items: start; }
+      .side { position: sticky; top: 20px; margin-bottom: 0; }
+      .tabs { flex-direction: column; }
+      .tab { border-radius: 12px; text-align: left; }
+    }
+
+    /* 팔로우 */
+    .small-pink { padding: 7px 16px; font-size: 14px; border-radius: 8px; }
+    .small-pink.on { background: #ffffff; color: #e1306c; border: 1px solid #e1306c; }
+    .follow-badge { flex-shrink: 0; padding: 2px 8px; font-size: 12px; border-radius: 10px; background: #fff0f5; color: #e1306c; }
+    .profile-box .button-row { justify-content: center; }
+
+    /* 알림 */
+    #bellButton { position: relative; }
+    .badge {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      min-width: 20px;
+      padding: 1px 5px;
+      font-size: 12px;
+      font-weight: bold;
+      border-radius: 10px;
+      background: #e1306c;
+      color: #ffffff;
+    }
+    .notice {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 6px;
+      font-size: 15px;
+      text-align: left;
+      border: none;
+      border-bottom: 1px solid #eef0f5;
+      background: none;
+      color: #1f2430;
+      cursor: pointer;
+    }
+    .notice:hover { background: #f1f3f8; }
+    .notice.new { font-weight: bold; }
+    .notice .date { margin-left: auto; font-weight: normal; }
+
+    /* 메시지 */
+    .dm-list { display: flex; flex-direction: column; gap: 6px; height: 45vh; margin-bottom: 10px; padding: 10px; overflow-y: auto; border-radius: 12px; background: #f1f3f8; }
+    .dm { align-self: flex-start; max-width: 80%; padding: 8px 12px; font-size: 15px; line-height: 1.4; border-radius: 14px; background: #ffffff; overflow-wrap: anywhere; }
+    .dm.mine { align-self: flex-end; background: #e1306c; color: #ffffff; }
   </style>
 </head>
 <body>
@@ -436,6 +525,8 @@
       <!-- 로그인한 뒤에도 다른 곳으로 갈 수 있는 길 -->
       <a href="../">처음 화면</a>
       <a href="../메신저/">message</a>
+      <!-- 알림: 누가 나를 팔로우했거나 메시지를 보냈을 때 숫자가 떠요 -->
+      <button type="button" class="plain-button" id="bellButton" title="알림">🔔<span class="badge" id="bellCount" hidden></span></button>
       <!-- 누르면 내 프로필 화면으로 가요 -->
       <button type="button" class="me-button" id="profileButton" title="내 프로필 보기"></button>
       <button type="button" class="plain-button" id="logoutButton">로그아웃</button>
@@ -458,25 +549,41 @@
     </div>
 
     <!-- 2. 게시물 목록 -->
-    <div id="feedBox" hidden>
-      <button type="button" class="upload-button" id="composeButton">＋ 새 게시물</button>
-
-      <!-- 누군가의 프로필을 눌렀을 때만 보여요: 그 사람의 프로필과 그 사람이 올린 게시물 -->
-      <div class="profile-box" id="profileBox" hidden>
-        <span id="pageAvatar"></span>
-        <h2 id="pageName"></h2>
-        <p class="bio" id="pageBio"></p>
-        <div class="button-row">
-          <button type="button" class="plain-button" id="pageEditButton">프로필 바꾸기</button>
-          <button type="button" class="plain-button" id="pageBackButton">← 모든 게시물 보기</button>
+    <div id="feedBox" class="feed-layout" hidden>
+      <!-- 메뉴: 컴퓨터에서는 왼쪽에, 핸드폰에서는 위에 보여요 (새 게시물 버튼은 핸드폰에서 화면 아래에 떠 있어요) -->
+      <div class="side">
+        <button type="button" class="upload-button" id="composeButton">＋ 새 게시물</button>
+        <input type="search" class="search" id="searchInput" placeholder="글이나 아이디로 검색" aria-label="게시물 검색">
+        <div class="tabs" id="tabs">
+          <button type="button" class="tab" data-tab="all">전체</button>
+          <button type="button" class="tab" data-tab="following">팔로잉</button>
+          <button type="button" class="tab" data-tab="photo">사진</button>
+          <button type="button" class="tab" data-tab="video">영상</button>
         </div>
       </div>
 
-      <p class="count" id="count"></p>
+      <div class="feed-main">
+        <!-- 누군가의 프로필을 눌렀을 때만 보여요: 그 사람의 프로필과 그 사람이 올린 게시물 -->
+        <div class="profile-box" id="profileBox" hidden>
+          <span id="pageAvatar"></span>
+          <h2 id="pageName"></h2>
+          <p class="bio" id="pageBio"></p>
+          <p class="date" id="pageFollowInfo"></p>
+          <div class="button-row">
+            <button type="button" class="upload-button small-pink" id="followButton">팔로우</button>
+            <button type="button" class="plain-button" id="dmButton">메시지 보내기</button>
+            <button type="button" class="plain-button" id="pageEditButton">프로필 바꾸기</button>
+            <button type="button" class="plain-button" id="pageBackButton">← 모든 게시물 보기</button>
+          </div>
+          <p class="hint" id="pageHint" style="margin: 0"></p>
+        </div>
 
-      <!-- 게시물이 그려지는 곳 -->
-      <div class="photo-list" id="photoList"></div>
-      <p class="empty" id="empty" hidden></p>
+        <p class="count" id="count"></p>
+
+        <!-- 게시물이 그려지는 곳 -->
+        <div class="photo-list" id="photoList"></div>
+        <p class="empty" id="empty" hidden></p>
+      </div>
     </div>
   </main>
 
@@ -571,6 +678,34 @@
       <div class="button-row end">
         <button type="button" class="upload-button" id="profileSaveButton">저장</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- 6. 알림 창: 누가 나를 팔로우했는지, 누가 메시지를 보냈는지 -->
+  <dialog id="noticeDialog" aria-label="알림">
+    <div class="dialog-body">
+      <div class="dialog-top">
+        <h2>알림</h2>
+        <button type="button" class="plain-button" id="noticeCloseButton">닫기</button>
+      </div>
+      <div id="noticeList"></div>
+    </div>
+  </dialog>
+
+  <!-- 7. 메시지 창: 서로 팔로우한 친구와 주고받아요 -->
+  <dialog id="dmDialog" aria-label="메시지">
+    <div class="dialog-body">
+      <div class="dialog-top">
+        <div class="who-row" id="dmWho"></div>
+        <button type="button" class="plain-button" id="dmCloseButton">닫기</button>
+      </div>
+      <p class="hint">비밀 대화가 아니에요. 선생님이 볼 수 있으니 비밀이나 개인정보는 쓰지 않아요.</p>
+      <div class="dm-list" id="dmList"></div>
+      <form class="comment-form" id="dmForm">
+        <input type="text" id="dmInput" placeholder="메시지 쓰기" maxlength="300" autocomplete="off" aria-label="메시지">
+        <button type="submit" class="upload-button" id="dmSendButton">보내기</button>
+      </form>
+      <div class="error" id="dmError"></div>
     </div>
   </dialog>
 
@@ -824,8 +959,15 @@
       meBox.hidden = false;
       loginBox.hidden = true;
       feedBox.hidden = false;
+      // 주소 끝(#...)에 적힌 화면부터 보여 줘요. 그래서 프로필 화면에서 새로고침해도 그 프로필이 다시 나와요.
+      const route = readRoute();
+      profileOf = route.profile;
+      tab = route.tab;
+      showFeed();
       loadPhotos();
       loadBios();
+      loadSocial();
+      if (profileOf) loadProfileInfo(profileOf);
     }
 
     // 로그인 화면으로 돌아가기
@@ -841,12 +983,15 @@
       profilesKey = "";
       bios = {};
       counts = {};
+      following = {};
+      followers = {};
+      inbox = [];
+      profileInfo = null;
+      chatting = null;
       photoList.innerHTML = "";
       count.textContent = "";
       profileBox.hidden = true;
-      composeDialog.close();
-      viewDialog.close();
-      profileDialog.close();
+      [composeDialog, viewDialog, profileDialog, noticeDialog, dmDialog].forEach(function (dialog) { dialog.close(); });
 
       homeLink.hidden = false;
       meBox.hidden = true;
@@ -869,6 +1014,12 @@
     let postsBySk = {};     // 게시물 번호 → 게시물
     let shownPhotos = null; // 서버에서 마지막으로 받은 게시물 번호들 (바뀌었을 때만 다시 그려요)
     let profileOf = null;   // 지금 보고 있는 프로필의 아이디 (모든 게시물을 볼 때는 null)
+    let tab = "all";        // 고른 보기: all(전체), following(팔로잉), photo(사진), video(영상)
+    const searchInput = document.getElementById("searchInput");
+    const followButton = document.getElementById("followButton");
+    const dmButton = document.getElementById("dmButton");
+    const noticeDialog = document.getElementById("noticeDialog");
+    const dmDialog = document.getElementById("dmDialog");
 
     // 서버가 붙여 준 번호(sk)에는 올린 시간이 들어 있어요
     function dateText(sk) {
@@ -968,14 +1119,57 @@
       bio.textContent = text || (profileOf === me ? "아직 자기소개가 없어요. \"프로필 바꾸기\"를 눌러 써 보세요." : "아직 자기소개가 없어요.");
       bio.className = text ? "bio" : "bio none";
       document.getElementById("pageEditButton").hidden = profileOf !== me;
+
+      // 팔로워 수와 팔로잉 수 (서버에서 받아 온 뒤에 보여요)
+      const info = profileInfo && profileInfo.id === profileOf ? profileInfo : null;
+      document.getElementById("pageFollowInfo").textContent = info
+        ? "팔로워 " + info.followers + "명 · 팔로잉 " + info.following + "명"
+        : "";
+
+      // 팔로우 버튼과 메시지 버튼 (내 프로필에서는 안 보여요)
+      const other = profileOf !== me;
+      const iFollow = !!following[profileOf];
+      const followsMe = !!followers[profileOf];
+      followButton.hidden = !other;
+      followButton.className = iFollow ? "upload-button small-pink on" : "upload-button small-pink";
+      followButton.textContent = iFollow ? "팔로잉 ✓ (누르면 취소)" : "팔로우";
+      dmButton.hidden = !(other && iFollow && followsMe);
+      const hint = document.getElementById("pageHint");
+      hint.hidden = !other;
+      hint.textContent = iFollow && followsMe ? "서로 팔로우하는 사이예요."
+        : followsMe ? profileOf + "님이 나를 팔로우하고 있어요. 나도 팔로우하면 메시지를 주고받을 수 있어요."
+        : "서로 팔로우하면 메시지를 주고받을 수 있어요.";
     }
 
-    // 받아 둔 게시물을 화면에 그리기 (프로필 화면이면 그 사람이 올린 것만)
-    function showFeed() {
-      const posts = profileOf
-        ? allPosts.filter(function (post) { return post.author === profileOf; })
-        : allPosts;
+    // 지금 화면에 보여 줄 게시물 고르기: 프로필 화면이면 그 사람 것만, 아니면 고른 보기(전체·팔로잉·사진·영상)대로
+    function pickPosts() {
+      let posts = allPosts;
+      if (profileOf) {
+        posts = posts.filter(function (post) { return post.author === profileOf; });
+      } else if (tab === "following") {
+        posts = posts.filter(function (post) { return following[post.author]; });
+      } else if (tab === "photo" || tab === "video") {
+        posts = posts.filter(function (post) {
+          return (post.media || []).some(function (item) { return (item.kind === "video") === (tab === "video"); });
+        });
+      }
+      // 검색: 글이나 올린 사람 아이디에 찾는 말이 들어 있는 것만
+      const word = searchInput.value.trim().toLowerCase();
+      if (word) {
+        posts = posts.filter(function (post) {
+          return (post.author + "\n" + postText(post)).toLowerCase().includes(word);
+        });
+      }
+      return posts;
+    }
 
+    // 받아 둔 게시물을 화면에 그리기
+    function showFeed() {
+      const posts = pickPosts();
+
+      document.querySelectorAll("#tabs .tab").forEach(function (button) {
+        button.className = !profileOf && button.dataset.tab === tab ? "tab on" : "tab";
+      });
       showProfileBox();
       cardWatcher.disconnect();
       visiblePosts.clear();
@@ -995,6 +1189,13 @@
         const who = document.createElement("div");
         who.className = "who-row";
         who.appendChild(makeWhoButton(post.author));
+        // 내가 팔로우하는 사람의 게시물에는 표시를 붙여요
+        if (following[post.author]) {
+          const badge = document.createElement("span");
+          badge.className = "follow-badge";
+          badge.textContent = "팔로잉";
+          who.appendChild(badge);
+        }
         card.appendChild(who);
 
         if (media.length > 0) {
@@ -1081,21 +1282,56 @@
         cardWatcher.observe(card);
       });
 
-      empty.hidden = posts.length > 0;
-      empty.textContent = profileOf ? "아직 올린 게시물이 없어요." : "아직 게시물이 없어요. 첫 게시물을 올려 보세요!";
+      empty.hidden = posts.length > 0 || shownPhotos === null; // 서버에서 받아 오기 전에는 비워 둬요
+      empty.textContent = searchInput.value.trim() ? "찾는 게시물이 없어요."
+        : profileOf ? "아직 올린 게시물이 없어요."
+        : tab === "following" ? "팔로우한 친구의 게시물이 아직 없어요. 친구의 프로필에서 \"팔로우\"를 눌러 보세요."
+        : tab === "photo" ? "아직 사진이 있는 게시물이 없어요."
+        : tab === "video" ? "아직 영상이 있는 게시물이 없어요."
+        : "아직 게시물이 없어요. 첫 게시물을 올려 보세요!";
       count.textContent = posts.length > 0 ? "게시물 " + posts.length + "개" : "";
     }
 
-    // 누군가의 프로필을 눌렀을 때: 그 사람의 프로필과 게시물만 보여 주기 (null이면 모든 게시물)
-    function openProfile(id) {
-      profileOf = id;
+    // ───────── 어느 화면을 보고 있는지 주소 끝(#...)에 적어 두기 ─────────
+    // 그래서 새로고침해도 보던 화면이 다시 나오고, 브라우저의 "뒤로" 버튼도 써요.
+    //   #u=아이디 → 그 사람의 프로필 화면,  #following · #photo · #video → 그 보기,  없으면 전체
+    function readRoute() {
+      let text = "";
+      try { text = decodeURIComponent(location.hash.slice(1)); } catch (error) {}
+      if (text.startsWith("u=") && text.length > 2) return { profile: text.slice(2), tab: "all" };
+      return { profile: null, tab: ["following", "photo", "video"].includes(text) ? text : "all" };
+    }
+    function applyRoute() {
+      const route = readRoute();
+      profileOf = route.profile;
+      tab = route.tab;
       viewDialog.close();
+      noticeDialog.close();
       showFeed();
       window.scrollTo(0, 0);
-      if (id) loadBios();
+      if (profileOf) { loadBios(); loadProfileInfo(profileOf); }
+    }
+    function go(route) {
+      if (location.hash.replace(/^#/, "") === route) applyRoute();
+      else location.hash = route; // 주소가 바뀌면 아래 hashchange가 화면을 바꿔 줘요
+    }
+    window.addEventListener("hashchange", function () { if (me) applyRoute(); });
+
+    // 누군가의 프로필을 눌렀을 때: 그 사람의 프로필과 게시물만 보여 주기 (null이면 모든 게시물)
+    function openProfile(id) {
+      go(id ? "u=" + encodeURIComponent(id) : "");
     }
     profileButton.addEventListener("click", function () { openProfile(me); });
     document.getElementById("pageBackButton").addEventListener("click", function () { openProfile(null); });
+
+    // 보기 고르기: 전체, 팔로잉, 사진, 영상
+    document.querySelectorAll("#tabs .tab").forEach(function (button) {
+      button.addEventListener("click", function () {
+        go(button.dataset.tab === "all" ? "" : button.dataset.tab);
+      });
+    });
+    // 검색 칸에 글자를 칠 때마다 바로 골라서 보여 줘요
+    searchInput.addEventListener("input", showFeed);
 
     // 게시물 삭제하기
     async function deletePost(post) {
@@ -1903,12 +2139,296 @@
       if (me) { loadPhotos(); loadBios(); }
     });
 
-    // ───────── 새 소식 물어보기 ─────────
-    // 15초마다, 그리고 이 창으로 돌아왔을 때 새 게시물이 있는지 서버에 물어보기
-    setInterval(function () { if (me && !document.hidden) loadPhotos(); }, 15000);
-    document.addEventListener("visibilitychange", function () {
-      if (me && !document.hidden) loadPhotos();
+    // ───────── 팔로우, 알림, 메시지 ─────────
+    // 서버는 고치지 않고 게시판을 나눠 써요.
+    //   "g"+아이디 글자: 그 사람이 팔로우하는 목록 (글에 팔로우한 아이디를 적어요)
+    //   "n"+아이디 글자: 그 사람의 알림함. 팔로우한 사람이 "f"를, 메시지를 보낸 사람이 "d"를 남겨요
+    //   "d"+두 아이디 글자: 두 사람이 주고받는 메시지
+    let following = {};     // 내가 팔로우하는 아이디 → 그 표시의 번호(sk)들
+    let followers = {};     // 나를 팔로우하는 아이디 → true
+    let inbox = [];         // 내 알림들 (새것부터) { sk, author, kind: "f"(팔로우)나 "d"(메시지) }
+    let followingKey = "";  // 팔로우 목록이 바뀌었는지 알아보는 표시
+    let profileInfo = null; // 보고 있는 프로필의 { id, followers: 수, following: 수 }
+    let chatting = null;    // 메시지 창을 열어 둔 상대 { id, board }
+    let shownDm = null;     // 지금 그려 둔 메시지 번호들
+    const dmNotified = {};  // 아이디 → 마지막으로 메시지 알림을 남긴 시간
+
+    // 아이디를 게시판 이름에 쓸 수 있는 영어 소문자 12글자로 바꾸기 (같은 아이디는 항상 같은 글자가 나와요)
+    function lettersOf(text) {
+      let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+      for (let i = 0; i < text.length; i++) {
+        const code = text.charCodeAt(i);
+        h1 = Math.imul(h1 ^ code, 2654435761);
+        h2 = Math.imul(h2 ^ code, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      let number = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+      let letters = "";
+      for (let i = 0; i < 12; i++) {
+        letters += "abcdefghijklmnopqrstuvwxyz"[number % 26];
+        number = Math.floor(number / 26);
+      }
+      return letters;
+    }
+    function followingBoard(id) { return "g" + lettersOf(id); }
+    function inboxBoard(id) { return "n" + lettersOf(id); }
+    function dmBoard(a, b) { return "d" + lettersOf([a, b].sort().join(MARK)); }
+
+    // 번호(sk) 두 개 가운데 a가 더 새것인지
+    function isNewer(a, b) {
+      return a.length !== b.length ? a.length > b.length : a > b;
+    }
+
+    // 내 팔로우 목록과 알림함을 서버에서 받아 오기
+    async function loadSocial() {
+      let mine, notes;
+      try {
+        const results = await Promise.all([
+          call("posts", { board: followingBoard(me) }),
+          call("posts", { board: inboxBoard(me) })
+        ]);
+        mine = results[0];
+        notes = results[1];
+      } catch (error) {
+        return;
+      }
+      if (!me) return;
+
+      following = {};
+      mine.forEach(function (item) {
+        if (item.author !== me || !item.text) return;
+        (following[item.text] = following[item.text] || []).push(item.sk);
+      });
+      followers = {};
+      inbox = [];
+      notes.forEach(function (item) {
+        if (item.author === me || (item.text !== "f" && item.text !== "d")) return;
+        if (item.text === "f") {
+          if (followers[item.author]) return; // 같은 사람의 팔로우 알림은 한 번만
+          followers[item.author] = true;
+        }
+        inbox.push({ sk: item.sk, author: item.author, kind: item.text });
+      });
+      showBell();
+
+      // 팔로우 목록이 바뀌었으면 게시물의 "팔로잉" 표시도 다시 그려요
+      const key = Object.keys(following).sort().join(MARK) + "|" + Object.keys(followers).sort().join(MARK);
+      if (key === followingKey) return;
+      followingKey = key;
+      showFeed();
+    }
+
+    // 프로필 화면에 보여 줄 팔로워 수와 팔로잉 수 받아 오기
+    async function loadProfileInfo(id) {
+      try {
+        const results = await Promise.all([
+          call("posts", { board: inboxBoard(id) }),
+          call("posts", { board: followingBoard(id) })
+        ]);
+        const fans = new Set();
+        results[0].forEach(function (item) { if (item.text === "f" && item.author !== id) fans.add(item.author); });
+        const stars = new Set();
+        results[1].forEach(function (item) { if (item.author === id && item.text) stars.add(item.text); });
+        profileInfo = { id: id, followers: fans.size, following: stars.size };
+      } catch (error) {
+        return;
+      }
+      if (me) showProfileBox();
+    }
+
+    // 팔로우하기 / 한 번 더 누르면 취소
+    followButton.addEventListener("click", async function () {
+      const id = profileOf;
+      if (!id || id === me) return;
+      followButton.disabled = true;
+      try {
+        if (following[id]) {
+          for (const sk of following[id]) await call("remove", { board: followingBoard(me), sk: sk });
+          // 그 사람 알림함에 남겨 둔 내 팔로우 표시도 지워요
+          for (const item of await call("posts", { board: inboxBoard(id) })) {
+            if (item.author === me && item.text === "f") await call("remove", { board: inboxBoard(id), sk: item.sk });
+          }
+        } else {
+          await call("post", { board: followingBoard(me), text: id });
+          await call("post", { board: inboxBoard(id), text: "f" }); // 그 사람에게 알림이 가요
+        }
+      } catch (error) {
+        alert(errorText(error));
+      }
+      followButton.disabled = false;
+      await loadSocial();
+      showProfileBox();
+      loadProfileInfo(id);
     });
+
+    // ── 알림 ──
+    function seenKey() { return "instar.seen." + me; }
+    function unreadCount() {
+      const seen = localStorage.getItem(seenKey()) || "";
+      return inbox.filter(function (note) { return isNewer(note.sk, seen); }).length;
+    }
+    // 종 옆에 안 읽은 알림 수 보여 주기
+    function showBell() {
+      const number = unreadCount();
+      const badge = document.getElementById("bellCount");
+      badge.hidden = number === 0;
+      badge.textContent = number;
+      document.getElementById("bellButton").title = number > 0 ? "새 알림 " + number + "개" : "알림";
+    }
+
+    // 종을 누르면 알림 목록 보여 주기
+    document.getElementById("bellButton").addEventListener("click", function () {
+      const seen = localStorage.getItem(seenKey()) || "";
+      const list = document.getElementById("noticeList");
+      list.innerHTML = "";
+
+      if (inbox.length === 0) {
+        const none = document.createElement("p");
+        none.className = "no-comment";
+        none.textContent = "아직 알림이 없어요.";
+        list.appendChild(none);
+      }
+      inbox.slice(0, 30).forEach(function (note) {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = isNewer(note.sk, seen) ? "notice new" : "notice";
+        const text = document.createElement("span");
+        text.textContent = note.kind === "f"
+          ? note.author + "님이 나를 팔로우했어요."
+          : note.author + "님이 메시지를 보냈어요.";
+        const date = document.createElement("span");
+        date.className = "date";
+        date.textContent = dateText(note.sk);
+        row.append(makeAvatar(note.author, "small"), text, date);
+        // 누르면 팔로우 알림은 그 사람의 프로필로, 메시지 알림은 메시지 창으로
+        row.addEventListener("click", function () {
+          noticeDialog.close();
+          if (note.kind === "f") openProfile(note.author);
+          else openDm(note.author);
+        });
+        list.appendChild(row);
+      });
+
+      // 열어 봤으니 모두 읽은 것으로
+      if (inbox.length > 0) localStorage.setItem(seenKey(), inbox[0].sk);
+      showBell();
+      noticeDialog.showModal();
+    });
+
+    // ── 메시지 ──
+    const dmList = document.getElementById("dmList");
+    const dmForm = document.getElementById("dmForm");
+    const dmInput = document.getElementById("dmInput");
+    const dmSendButton = document.getElementById("dmSendButton");
+    const dmError = document.getElementById("dmError");
+
+    // 메시지 창 열기
+    function openDm(id) {
+      chatting = { id: id, board: dmBoard(me, id) };
+      shownDm = null;
+      fillWho(document.getElementById("dmWho"), id);
+      dmList.innerHTML = "";
+      dmInput.value = "";
+      dmError.textContent = "";
+      dmDialog.showModal();
+      loadDm();
+    }
+    dmButton.addEventListener("click", function () { if (profileOf) openDm(profileOf); });
+
+    // 주고받은 메시지를 서버에서 받아 와서 그리기
+    async function loadDm() {
+      const chat = chatting;
+      if (!chat) return;
+      let items;
+      try {
+        items = await call("posts", { board: chat.board });
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        return;
+      }
+      if (chatting !== chat) return;
+
+      // 두 사람이 쓴 것만 보여 줘요
+      items = items.filter(function (item) { return item.author === me || item.author === chat.id; });
+      const ids = items.map(function (item) { return item.sk; }).join(",");
+      if (ids === shownDm) return;
+      shownDm = ids;
+      dmList.innerHTML = "";
+
+      if (items.length === 0) {
+        const none = document.createElement("p");
+        none.className = "no-comment";
+        none.textContent = "아직 주고받은 메시지가 없어요. 먼저 인사해 보세요!";
+        dmList.appendChild(none);
+      }
+      items.slice().reverse().forEach(function (item) { // 오래된 것부터
+        const bubble = document.createElement("div");
+        bubble.className = item.author === me ? "dm mine" : "dm";
+        bubble.textContent = hideBadWords(item.text || "");
+        dmList.appendChild(bubble);
+      });
+      dmList.scrollTop = dmList.scrollHeight; // 가장 새 메시지가 보이게 맨 아래로
+    }
+
+    // 상대의 알림함에 "메시지가 왔어요" 남기기 (너무 자주 남기지 않게 2분에 한 번만, 예전 알림은 지워요)
+    async function notifyDm(id) {
+      if (Date.now() - (dmNotified[id] || 0) < 120000) return;
+      dmNotified[id] = Date.now();
+      try {
+        const board = inboxBoard(id);
+        const old = (await call("posts", { board: board })).filter(function (item) {
+          return item.author === me && item.text === "d";
+        });
+        await call("post", { board: board, text: "d" });
+        for (const item of old) await call("remove", { board: board, sk: item.sk });
+      } catch (error) {}
+    }
+
+    // 메시지 보내기
+    dmForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const chat = chatting;
+      const text = dmInput.value.replace(/[\u0000-\u001f]/g, " ").trim();
+      if (!chat || !text) return;
+      if (hasBadWords(text)) { dmError.textContent = ERROR_TEXT.BAD_WORD; return; }
+      if (!following[chat.id] || !followers[chat.id]) {
+        dmError.textContent = "서로 팔로우한 친구에게만 메시지를 보낼 수 있어요.";
+        return;
+      }
+
+      dmSendButton.disabled = true;
+      dmError.textContent = "";
+      try {
+        await call("post", { board: chat.board, text: text });
+        dmInput.value = "";
+        notifyDm(chat.id);
+      } catch (error) {
+        dmError.textContent = errorText(error);
+      }
+      dmSendButton.disabled = false;
+      loadDm();
+    });
+
+    document.getElementById("noticeCloseButton").addEventListener("click", function () { noticeDialog.close(); });
+    document.getElementById("dmCloseButton").addEventListener("click", function () { dmDialog.close(); });
+    [noticeDialog, dmDialog].forEach(function (dialog) {
+      dialog.addEventListener("click", function (event) {
+        if (event.target === dialog) dialog.close();
+      });
+    });
+    dmDialog.addEventListener("close", function () {
+      if (!dmDialog.open) chatting = null;
+    });
+
+    // ───────── 새 소식 물어보기 ─────────
+    // 15초마다, 그리고 이 창으로 돌아왔을 때 새 게시물과 새 알림이 있는지 서버에 물어보기
+    setInterval(function () { if (me && !document.hidden) { loadPhotos(); loadSocial(); } }, 15000);
+    document.addEventListener("visibilitychange", function () {
+      if (me && !document.hidden) { loadPhotos(); loadSocial(); }
+    });
+    // 메시지 창을 열어 둔 동안에는 3초마다 새 메시지가 있는지 물어보기
+    setInterval(function () { if (me && dmDialog.open && !document.hidden) loadDm(); }, 3000);
     // 게시물을 크게 보고 있는 동안에는 5초마다 새 좋아요와 댓글이 있는지 물어보기
     setInterval(function () { if (me && viewDialog.open && !document.hidden) loadReactions(); }, 5000);
     // 화면에 보이는 게시물의 좋아요 수와 댓글 수는 30초마다 다시 물어보기
