@@ -39,6 +39,8 @@
     }
     .app-header h1 { margin: 0; font-size: 20px; }
     .app-header a { color: #3b6cf6; font-size: 14px; }
+    /* 이름을 누르면 처음 화면으로 돌아가요 */
+    .app-header h1 a { color: inherit; font-size: inherit; text-decoration: none; }
     .me-box { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; font-size: 14px; }
     .me-box button {
       padding: 6px 10px;
@@ -231,7 +233,7 @@
 <body>
   <div class="app">
     <div class="app-header">
-      <h1>💬 message</h1>
+      <h1><a href="../" title="처음 화면으로">💬 message</a></h1>
       <!-- 계정으로 들어오기 전에는 "처음 화면으로"만 보여요 -->
       <a href="../" id="homeLink">처음 화면으로</a>
       <div class="me-box" id="meBox" hidden>
