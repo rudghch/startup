@@ -1947,6 +1947,7 @@
     // 배를 댈 곳을 찾을 때 카카오맵에 물어볼 말
     const DOCK_WORDS = ["마리나", "요트", "선착장", "여객선터미널", "항구"];
     const DOCK_RADIUS = 20000; // 도착지에서 몇 m 안을 찾을지 (카카오는 20000까지)
+    const DOCK_SKIP = ["주차장", "호텔", "리조트", "웨딩", "민원", "식당", "카페", "펜션", "편의점"]; // 이름에 이 말이 있으면 빼요
 
     let boat = BOATS[1];
     let routePoints = []; // 지도에서 찍은 곳들 (첫째는 출발, 마지막은 도착)
@@ -2099,6 +2100,7 @@
           if (ask !== routeAsk) return;
           if (status === kakao.maps.services.Status.OK) {
             results.forEach(function (item) {
+              if (DOCK_SKIP.some(function (word) { return item.place_name.includes(word); })) return;
               found[item.id] = { name: item.place_name, address: item.road_address_name || item.address_name, lat: Number(item.y), lng: Number(item.x), km: Number(item.distance) / 1000 };
             });
           }
