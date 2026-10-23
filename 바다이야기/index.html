@@ -198,6 +198,7 @@
     .card b { display: block; font-size: 17px; margin-bottom: 4px; }
     .card span { display: block; font-size: 13px; color: #5b6272; }
     .tag { display: inline-block; margin-bottom: 4px; padding: 1px 7px; border-radius: 999px; background: #e6f3f7; color: #0b6e8a; font-size: 12px; }
+    .tag.web { background: #efeaff; color: #5a3bb5; }
 
     /* 고른 사진·영상 미리보기 */
     .picked { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -242,6 +243,7 @@
       text-align: center;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
+    .pin.web { border-color: #e9e2ff; background: #6a4fc7; }
     .pin.now { border-color: #ff8c00; }
     .pin.draft { background: #ff8c00; border-color: #ff8c00; }
     .alert-pin {
@@ -312,6 +314,8 @@
     .view-body h2 { margin: 0 0 6px; }
     #viewText { margin: 0 0 12px; white-space: pre-wrap; line-height: 1.6; }
     .meta { margin: 10px 0; color: #5b6272; font-size: 14px; }
+    .credit { margin: -4px 0 10px; color: #5b6272; font-size: 13px; line-height: 1.5; }
+    .credit a { color: #0b6e8a; }
     .view-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
     .view-buttons .danger, .danger { color: #c0392b; }
     .ask { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #fff4e0; font-size: 14px; }
@@ -383,9 +387,10 @@
     <section id="storyPane">
       <div id="storyListPane">
         <h2>🏝️ 섬과 바다 이야기</h2>
-        <p class="intro">섬의 모습, 바다 생물, 어업 도구를 사진·영상으로 올리고 찍은 곳을 지도에 표시해요. 모르는 바다 생물은 "❓ 이게 뭐예요?"로 물어보세요.</p>
+        <p class="intro">섬의 모습, 바다 생물, 어업 도구를 사진·영상으로 올리고 찍은 곳을 지도에 표시해요. 모르는 바다 생물은 "❓ 이게 뭐예요?"로 물어보세요. 🌐 표시는 누구나 쓸 수 있게 허락된 인터넷 사진이에요.</p>
         <button type="button" class="primary" id="newStoryButton">＋ 사진·영상 올리기</button>
         <input type="search" id="storyFilter" placeholder="섬 이름이나 설명으로 찾기">
+        <div class="chips" id="storySources"></div>
         <div class="chips" id="storyKinds"></div>
         <p class="count" id="storyCount"></p>
         <div id="storyList"></div>
@@ -452,6 +457,7 @@
       <h2 id="viewTitle"></h2>
       <p id="viewText"></p>
       <p class="meta" id="viewMeta"></p>
+      <p class="credit" id="viewCredit" hidden></p>
       <div class="view-buttons">
         <button type="button" class="soft" id="showOnMapButton">🗺️ 지도에서 보기</button>
         <button type="button" class="soft danger" id="deleteButton" hidden>지우기</button>
@@ -881,13 +887,96 @@
       drawStorySpots();
     }
 
-    // 고른 종류와 찾는 말에 맞는 게시물만
+    // ── 🌐 인터넷 사진 ──
+    // 위키미디어 공용(commons.wikimedia.org)에서 누구나 쓸 수 있게 허락된 사진만 모아 internet-photos.json에 넣어 두었어요.
+    // 사진을 쓸 때는 찍은 사람과 허락 종류(라이선스)를 꼭 함께 보여 줘야 해요.
+    const WEB_PHOTOS_FILE = "internet-photos.json";
+    let webPhotos = [];
+
+    // 허락 종류(라이선스) 이름을 쉬운 말로 (CC BY, CC BY-SA는 찍은 사람 이름을 꼭 함께 보여 주면 써도 돼요)
+    function licenseName(license) {
+      if (/^CC0|^Public domain/i.test(license)) return license + " (저작권 걱정 없음)";
+      if (/^Attribution$/i.test(license)) return "출처 표시";
+      if (/^KOGL Type 1/i.test(license)) return "공공누리 1유형 (출처 표시)";
+      if (/^CC BY-SA/i.test(license)) return license + " (출처 표시, 같은 조건으로 나누기)";
+      if (/^CC BY/i.test(license)) return license + " (출처 표시)";
+      return license;
+    }
+
+    // 글자를 정해진 영어 소문자 19글자로 바꾸기 (인터넷 사진의 댓글 게시판 이름에 써요)
+    function lettersOfText(text) {
+      let hash = 2166136261;
+      let letters = "";
+      for (let round = 0; letters.length < 19; round++) {
+        for (const ch of text + round) hash = Math.imul(hash ^ ch.charCodeAt(0), 16777619) >>> 0;
+        letters += "abcdefghijklmnopqrstuvwxyz"[hash % 26];
+      }
+      return letters;
+    }
+
+    async function loadWebPhotos() {
+      try {
+        const response = await fetch(WEB_PHOTOS_FILE);
+        const data = await response.json();
+        webPhotos = data.photos.map(function (photo) {
+          return {
+            sk: "web-" + lettersOfText(photo.page),
+            web: true,
+            author: photo.artist || "이름 없음",
+            island: photo.island,
+            kind: photo.kind || "view",
+            text: photo.text || "",
+            lat: photo.lat,
+            lng: photo.lng,
+            media: [{ kind: "image", url: photo.photo }],
+            page: photo.page,
+            license: photo.license,
+            licenseUrl: photo.licenseUrl,
+            comments: "w" + lettersOfText(photo.page)
+          };
+        });
+      } catch (error) {
+        webPhotos = []; // 파일을 못 읽으면 친구들 사진만 보여요
+      }
+      drawStoryList();
+      drawStorySpots();
+    }
+
+    // 어디서 온 사진을 볼지: "all"(모두), "friends"(친구들이 올린 것), "web"(인터넷 사진)
+    let storySourceFilter = "all";
+    function drawSourceFilter() {
+      const box = $("storySources");
+      box.textContent = "";
+      [
+        { id: "all", name: "모두" },
+        { id: "friends", name: "👥 친구들이 올린 것 " + stories.length },
+        { id: "web", name: "🌐 인터넷 사진 " + webPhotos.length }
+      ].forEach(function (source) {
+        const button = el("button", "soft" + (storySourceFilter === source.id ? " on" : ""), source.name);
+        button.type = "button";
+        button.addEventListener("click", function () {
+          storySourceFilter = source.id;
+          drawSourceFilter();
+          drawStoryList();
+          drawStorySpots();
+        });
+        box.append(button);
+      });
+    }
+
+    // 고른 곳·종류와 찾는 말에 맞는 게시물만 (친구들 것 먼저, 인터넷 사진은 뒤에)
     function shownStories() {
       const words = $("storyFilter").value.trim().toLowerCase();
-      return stories.filter(function (story) {
+      const pool = storySourceFilter === "friends" ? stories : storySourceFilter === "web" ? webPhotos : stories.concat(webPhotos);
+      return pool.filter(function (story) {
         if (storyKindFilter !== "all" && story.kind !== storyKindFilter) return false;
         return !words || (story.island + " " + story.text).toLowerCase().includes(words);
       });
+    }
+
+    // 댓글 게시판 이름 (인터넷 사진은 따로 정해 둔 이름)
+    function commentBoardOf(story) {
+      return story.web ? story.comments : commentBoard(story.sk);
     }
 
     // 종류 고르기 버튼 (목록 위)
@@ -936,11 +1025,12 @@
         const card = el("button", "card");
         card.type = "button";
         const words = el("div");
+        words.append(el("span", "tag", kindOf(story.kind).name));
+        if (story.web) words.append(document.createTextNode(" "), el("span", "tag web", "🌐 인터넷 사진"));
         words.append(
-          el("span", "tag", kindOf(story.kind).name),
           el("b", "", story.island),
           el("span", "", story.text.length > 40 ? story.text.slice(0, 40) + "…" : story.text),
-          el("span", "", story.author + " · " + dateText(story.sk))
+          el("span", "", story.web ? "사진: " + story.author + " · " + licenseName(story.license).split(" (")[0] : story.author + " · " + dateText(story.sk))
         );
         card.append(thumbOf(story.media), words);
         card.addEventListener("click", function () {
@@ -949,8 +1039,9 @@
         });
         box.append(card);
       });
-      $("storyCount").textContent = stories.length ? list.length + "개" : "";
+      $("storyCount").textContent = stories.length + webPhotos.length ? list.length + "개" : "";
       $("storyEmpty").hidden = list.length > 0;
+      drawSourceFilter(); // 사진 수가 바뀌었을 수 있어요
     }
     $("storyFilter").addEventListener("input", function () { drawStoryList(); drawStorySpots(); });
 
@@ -974,7 +1065,9 @@
       if (!map) return;
       shownStories().forEach(function (story) {
         const first = story.media[0];
-        const pin = makePin(first.kind === "image" ? first.url : null, Array.from(kindOf(story.kind).name)[0]);
+        const pin = story.web
+          ? makePin(first.url, "🌐", "web")
+          : makePin(first.kind === "image" ? first.url : null, Array.from(kindOf(story.kind).name)[0]);
         pin.title = story.island;
         pin.dataset.sk = story.sk;
         pin.addEventListener("click", function () { openStory(story); });
@@ -986,6 +1079,24 @@
     }
     function markStorySpot(sk) {
       document.querySelectorAll(".pin[data-sk]").forEach(function (pin) { pin.classList.toggle("now", pin.dataset.sk === sk); });
+    }
+
+    // 인터넷 사진은 찍은 사람, 허락 종류(라이선스), 원래 사진이 있는 곳을 꼭 보여 줘요
+    function drawCredit(story) {
+      const box = $("viewCredit");
+      box.textContent = "";
+      box.hidden = !story.web;
+      if (!story.web) return;
+      function link(text, url) {
+        const a = el("a", "", text);
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        return a;
+      }
+      box.append(document.createTextNode("사진: " + story.author + " · 허락: "));
+      box.append(story.licenseUrl ? link(licenseName(story.license), story.licenseUrl) : document.createTextNode(licenseName(story.license)));
+      box.append(document.createTextNode(" · "), link("원래 사진 보기", story.page));
     }
 
     // ── 크게 보기 창 ──
@@ -1000,8 +1111,9 @@
       $("viewKind").textContent = kindOf(story.kind).name;
       $("viewTitle").textContent = story.island;
       $("viewText").textContent = story.text;
-      $("viewMeta").textContent = story.author + " · " + dateText(story.sk);
-      $("deleteButton").hidden = story.author !== me;
+      $("viewMeta").textContent = story.web ? "🌐 인터넷 사진 (위키미디어 공용)" : story.author + " · " + dateText(story.sk);
+      drawCredit(story);
+      $("deleteButton").hidden = story.web || story.author !== me;
       $("viewError").textContent = "";
       $("askText").hidden = story.kind !== "ask";
       $("commentError").textContent = "";
@@ -1074,7 +1186,7 @@
       if (!story) return;
       let list;
       try {
-        list = await call("posts", { board: commentBoard(story.sk) });
+        list = await call("posts", { board: commentBoardOf(story) });
       } catch (error) {
         $("commentError").textContent = errorText(error);
         return;
@@ -1094,7 +1206,7 @@
           x.addEventListener("click", async function () {
             if (!confirm("이 댓글을 지울까요?")) return;
             try {
-              await call("remove", { board: commentBoard(story.sk), sk: item.sk });
+              await call("remove", { board: commentBoardOf(story), sk: item.sk });
               loadComments();
             } catch (error) {
               $("commentError").textContent = errorText(error);
@@ -1115,7 +1227,7 @@
       $("commentSend").disabled = true;
       $("commentError").textContent = "";
       try {
-        await call("post", { board: commentBoard(viewing.sk), text: text.slice(0, 200) });
+        await call("post", { board: commentBoardOf(viewing), text: text.slice(0, 200) });
         $("commentInput").value = "";
         await loadComments();
       } catch (error) {
@@ -1320,6 +1432,7 @@
       $("appBox").hidden = false;
       setupMap();
       loadStories();
+      if (!webPhotos.length) loadWebPhotos();
       clearInterval(refreshTimer);
       refreshTimer = setInterval(loadStories, 60000); // 1분마다 새 글이 있는지 보기
     }
@@ -1349,6 +1462,7 @@
     // ───────── 시작 ─────────
     async function start() {
       drawKindFilter();
+      drawSourceFilter();
       try {
         needsCode = (await call("info")).needsCode;
       } catch (error) {
