@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>새 서비스</title>
+  <!-- 카카오맵 불러오기 (appkey는 길찾기와 같은 JavaScript 키, services는 장소 검색 도구) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: #eef5f8;
+      color: #1f2430;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    [hidden] { display: none !important; }
+
+    /* 맨 위 줄 */
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 56px;
+      padding: 0 16px;
+      background: #0b6e8a;
+      color: #fff;
+    }
+    .top h1 { margin: 0; font-size: 20px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top a, .top button {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      text-decoration: none;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .top .me { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+    /* 기능 고르기 (탭) */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      height: 48px;
+      padding: 6px 8px 0;
+      background: #095a71;
+      overflow-x: auto;
+    }
+    .tabs button {
+      flex: 1;
+      min-width: 110px;
+      border: 0;
+      border-radius: 10px 10px 0 0;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 15px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .tabs button.on { background: #fff; color: #0b6e8a; }
+
+    /* 로그인 */
+    .login {
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 24px;
+      background: #fff;
+      border-radius: 16px;
+      border: 2px solid #d6e4ea;
+    }
+    .login h2 { margin: 0 0 6px; }
+    .login p { margin: 0 0 16px; color: #5b6272; font-size: 14px; }
+    .login input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    .login .link { background: none; border: 0; color: #0b6e8a; padding: 8px 0; text-decoration: underline; }
+
+    /* 지도 + 옆 칸 */
+    .app { display: flex; height: calc(100vh - 104px); }
+    .map-wrap { position: relative; flex: 1; min-width: 0; }
+    #map { width: 100%; height: 100%; background: #cfe3ea; }
+    .no-map {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: #3d5866;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .map-tools {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 60px;
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .map-tools form { display: flex; gap: 4px; }
+    .map-tools input { width: 220px; max-width: 50vw; padding: 7px 10px; border: 1px solid #b8c6cf; border-radius: 8px; }
+    .map-tools button {
+      padding: 7px 10px;
+      border: 1px solid #b8c6cf;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+    }
+    .map-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 5;
+      width: max-content;
+      max-width: calc(100% - 32px);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #ff8c00;
+      color: #fff;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .map-hint button { margin-left: 8px; border: 0; border-radius: 6px; padding: 3px 8px; background: rgba(255, 255, 255, 0.3); color: #fff; }
+
+    .side {
+      width: 400px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      padding: 16px;
+      background: #fff;
+      border-left: 1px solid #d6e4ea;
+    }
+    .side h2 { margin: 0 0 6px; font-size: 20px; }
+    .side h3 { margin: 16px 0 8px; font-size: 16px; }
+    .intro { margin: 0 0 12px; color: #5b6272; font-size: 14px; line-height: 1.5; }
+    .primary {
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      border-radius: 10px;
+      background: #0b6e8a;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .primary:disabled { opacity: 0.5; cursor: default; }
+    .side input[type=search] { width: 100%; margin: 12px 0 4px; padding: 9px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    .count { margin: 4px 0 10px; color: #5b6272; font-size: 14px; }
+    .empty { color: #5b6272; line-height: 1.6; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .soft {
+      padding: 8px 10px;
+      border: 1px solid #b8c6cf;
+      border-radius: 8px;
+      background: #f6f9fb;
+      font-size: 14px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .soft.on { background: #ff8c00; border-color: #ff8c00; color: #fff; }
+    .soft:disabled { opacity: 0.5; cursor: default; }
+    label.soft { display: inline-block; cursor: pointer; }
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
+    .chips .soft { padding: 5px 9px; font-size: 13px; border-radius: 999px; }
+    .note { margin: 8px 0 0; font-size: 14px; color: #3d5866; line-height: 1.5; }
+    .warn { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: #fff4e0; color: #8a5300; font-size: 14px; line-height: 1.5; }
+    .field { display: block; width: 100%; padding: 9px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    textarea.field { height: 90px; resize: vertical; }
+    .letters { margin: 2px 0 0; text-align: right; font-size: 12px; color: #8a93a3; }
+    .step { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #e8eef2; }
+    .step h3 { margin: 0 0 8px; }
+    .step h3 .ok { color: #1e9e6a; }
+    .buttons { display: flex; gap: 8px; }
+    .buttons .primary { flex: 1; }
+    .buttons .soft { padding: 12px 16px; }
+    .error { min-height: 20px; margin: 8px 0 0; color: #c0392b; font-size: 14px; }
+
+    /* 목록 카드 */
+    .card {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border: 2px solid #e1e8ee;
+      border-radius: 12px;
+      background: #fff;
+      text-align: left;
+      color: inherit;
+    }
+    .card:hover, .card:focus { border-color: #0b6e8a; }
+    .card .thumb {
+      position: relative;
+      width: 88px;
+      height: 88px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #dde7ec;
+    }
+    .card .thumb img, .card .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card .thumb small {
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      padding: 1px 5px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 11px;
+    }
+    .card .big-emoji { display: flex; align-items: center; justify-content: center; font-size: 34px; }
+    .card b { display: block; font-size: 17px; margin-bottom: 4px; }
+    .card span { display: block; font-size: 13px; color: #5b6272; }
+    .tag { display: inline-block; margin-bottom: 4px; padding: 1px 7px; border-radius: 999px; background: #e6f3f7; color: #0b6e8a; font-size: 12px; }
+
+    /* 고른 사진·영상 미리보기 */
+    .picked { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .picked div { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; background: #000; }
+    .picked img, .picked video { width: 100%; height: 100%; object-fit: cover; }
+    .picked button {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 12px;
+    }
+
+    /* 지도 위 표시들 */
+    .pin {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      background: #0b6e8a;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+    .pin img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+    .pin .badge {
+      position: absolute;
+      right: -6px;
+      bottom: -6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      font-size: 13px;
+      line-height: 22px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .pin.now { border-color: #ff8c00; }
+    .pin.draft { background: #ff8c00; border-color: #ff8c00; }
+    .alert-pin {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 3px solid #c0392b;
+      background: #fff;
+      font-size: 20px;
+      line-height: 32px;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+    .place-pin { font-size: 34px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+    .route-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: #ff8c00;
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 22px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+    .route-dot.end { background: #c0392b; }
+    .route-dot.start { background: #1e9e6a; }
+    .dock-pin {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #0b6e8a;
+      color: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+
+    /* 오늘의 바다 */
+    .signal {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: #e9f7ef;
+    }
+    .signal .light { font-size: 40px; line-height: 1; }
+    .signal b { display: block; font-size: 18px; }
+    .signal ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+    .signal.l1 { background: #fff6dc; }
+    .signal.l2 { background: #fde8e6; }
+    .numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+    .numbers div { padding: 8px 6px; border-radius: 10px; background: #f1f6f9; text-align: center; }
+    .numbers small { display: block; font-size: 12px; color: #5b6272; }
+    .numbers b { font-size: 17px; }
+    .tide svg { display: block; width: 100%; height: auto; margin-top: 6px; }
+    .links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+    /* 바다 길찾기 */
+    .legs { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
+    .legs li { padding: 6px 0; border-bottom: 1px solid #eef2f5; }
+    .total { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #e6f3f7; line-height: 1.6; }
+    .total b { font-size: 18px; }
+    .docks button { display: block; width: 100%; margin-bottom: 6px; padding: 8px 10px; border: 1px solid #d6e4ea; border-radius: 10px; background: #fff; text-align: left; }
+    .docks button span { display: block; font-size: 12px; color: #5b6272; }
+
+    /* 크게 보기 창 */
+    dialog {
+      width: min(640px, calc(100% - 24px));
+      max-height: calc(100% - 24px);
+      padding: 0;
+      border: 0;
+      border-radius: 16px;
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+    .media-box { position: relative; background: #000; }
+    .media-box img, .media-box video { display: block; width: 100%; max-height: 55vh; object-fit: contain; }
+    .media-box .prev, .media-box .next {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 40px;
+      height: 40px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.8);
+      font-size: 20px;
+    }
+    .media-box .prev { left: 8px; }
+    .media-box .next { right: 8px; }
+    .media-box .page { position: absolute; right: 10px; top: 10px; padding: 2px 8px; border-radius: 8px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 13px; }
+    .view-body { padding: 16px; }
+    .view-body h2 { margin: 0 0 6px; }
+    #viewText { margin: 0 0 12px; white-space: pre-wrap; line-height: 1.6; }
+    .meta { margin: 10px 0; color: #5b6272; font-size: 14px; }
+    .view-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+    .view-buttons .danger, .danger { color: #c0392b; }
+    .ask { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #fff4e0; font-size: 14px; }
+    .comments { margin-top: 12px; border-top: 1px solid #e8eef2; padding-top: 8px; }
+    .comments h3 { margin: 4px 0 8px; font-size: 16px; }
+    .comment { padding: 6px 0; border-bottom: 1px solid #f0f3f6; font-size: 14px; line-height: 1.5; }
+    .comment b { margin-right: 6px; }
+    .comment button { margin-left: 6px; border: 0; background: none; color: #c0392b; font-size: 12px; }
+    .comment-form { display: flex; gap: 6px; margin-top: 8px; }
+    .comment-form input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+
+    /* 좁은 화면(핸드폰): 지도 위, 옆 칸 아래 */
+    @media (max-width: 800px) {
+      .app { display: block; height: auto; }
+      .map-wrap { height: 55vh; min-height: 320px; }
+      .side { width: auto; border-left: 0; }
+      .top h1 { font-size: 17px; }
+      .tabs button { font-size: 14px; }
+    }
+    @media (max-width: 480px) {
+      #meName { display: none; } /* 아주 좁으면 제목이 보이게 아이디를 숨겨요 */
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>🌊 새 서비스</h1>
+    <div class="me" id="meBox" hidden>
+      <b id="meName"></b>
+      <button type="button" id="logoutButton">로그아웃</button>
+    </div>
+    <a href="../">🏠 처음 화면</a>
+  </header>
+
+  <!-- 로그인 -->
+  <section class="login" id="loginBox" hidden>
+    <h2 id="loginTitle">로그인</h2>
+    <p>섬과 바다 이야기, 오늘의 바다 상태, 바다 길찾기를 한곳에서 알려 줘요.</p>
+    <p id="loginHelp"></p>
+    <form id="loginForm">
+      <input id="idInput" placeholder="아이디" autocomplete="username" maxlength="12">
+      <input id="passwordInput" type="password" placeholder="비밀번호" autocomplete="current-password" maxlength="50">
+      <input id="codeInput" placeholder="가입 코드 (선생님께 물어보세요)" hidden>
+      <button type="submit" class="primary" id="loginButton">로그인</button>
+    </form>
+    <button type="button" class="link" id="modeButton"></button>
+    <p class="error" id="loginError"></p>
+  </section>
+
+  <div id="appBox" hidden>
+    <!-- 기능 3가지 -->
+    <nav class="tabs">
+      <button type="button" data-tab="story">🏝️ 섬과 바다 이야기</button>
+      <button type="button" data-tab="sea">🌊 오늘의 바다</button>
+      <button type="button" data-tab="route">⛵ 바다 길찾기</button>
+    </nav>
+
+    <main class="app">
+      <div class="map-wrap" id="mapWrap">
+        <div id="map"></div>
+        <div class="no-map" id="noMap" hidden>
+          지도를 불러오지 못했어요.<br>지도는 웹 주소(rudghch.github.io)에서 열어야 보여요.
+        </div>
+        <div class="map-tools">
+          <form id="placeForm">
+            <input id="placeInput" placeholder="섬·바닷가 이름으로 지도 옮기기" maxlength="30">
+            <button type="submit">찾기</button>
+          </form>
+          <button type="button" id="mapTypeButton">🛰️ 위성지도</button>
+        </div>
+        <div class="map-hint" id="mapHint" hidden>
+          <span id="mapHintText"></span>
+          <button type="button" id="stopPickButton">그만</button>
+        </div>
+      </div>
+
+      <aside class="side" id="side">
+        <!-- ① 섬과 바다 이야기 -->
+        <section id="storyPane">
+          <div id="storyListPane">
+            <h2>🏝️ 섬과 바다 이야기</h2>
+            <p class="intro">섬의 모습, 바다 생물, 어업 도구를 사진·영상으로 올리고 찍은 곳을 지도에 표시해요. 모르는 바다 생물은 "❓ 이게 뭐예요?"로 물어보세요.</p>
+            <button type="button" class="primary" id="newStoryButton">＋ 사진·영상 올리기</button>
+            <input type="search" id="storyFilter" placeholder="섬 이름이나 설명으로 찾기">
+            <div class="chips" id="storyKinds"></div>
+            <p class="count" id="storyCount"></p>
+            <div id="storyList"></div>
+            <p class="empty" id="storyEmpty" hidden>아직 올린 것이 없어요.<br>첫 번째 사진이나 영상을 올려 보세요!</p>
+          </div>
+
+          <form id="storyCompose" hidden>
+            <h2>사진·영상 올리기</h2>
+            <p class="warn">얼굴이 나온 사진, 진짜 이름, 전화번호는 올리지 마세요.</p>
+
+            <div class="step">
+              <h3>1. 사진·영상 (6개까지) <span class="ok" id="okFiles"></span></h3>
+              <div class="row">
+                <label class="soft">📁 고르기<input type="file" id="storyFiles" accept="image/*,video/*" multiple hidden></label>
+                <label class="soft">📷 사진 찍기<input type="file" id="storyPhotoCam" accept="image/*" capture="environment" hidden></label>
+                <label class="soft">🎥 영상 찍기<input type="file" id="storyVideoCam" accept="video/*" capture="environment" hidden></label>
+              </div>
+              <div class="picked" id="storyPicked"></div>
+              <p class="note" id="filesNote">영상은 한 개에 30MB까지 올릴 수 있어요. 짧게 찍어 주세요.</p>
+            </div>
+
+            <div class="step">
+              <h3>2. 무엇을 찍었나요?</h3>
+              <div class="chips" id="storyKindPick"></div>
+            </div>
+
+            <div class="step">
+              <h3>3. 찍은 곳 <span class="ok" id="okStorySpot"></span></h3>
+              <div class="row">
+                <button type="button" class="soft" id="storyMapButton">🗺️ 지도에서 누르기</button>
+                <button type="button" class="soft" id="storyHereButton">📍 지금 내 자리</button>
+              </div>
+              <p class="note" id="storySpotNote">아직 안 정했어요. (사진에 위치 정보가 있으면 저절로 정해져요)</p>
+            </div>
+
+            <div class="step">
+              <h3>4. 섬 이름과 설명</h3>
+              <input class="field" id="islandInput" placeholder="섬 이름 (예: 금오도)" maxlength="20">
+              <p></p>
+              <textarea class="field" id="storyText" placeholder="무엇을 찍었는지, 어떤 점이 궁금한지, 어떤 문제가 있는지 적어 주세요" maxlength="500"></textarea>
+              <p class="letters" id="storyLetters">0 / 500</p>
+            </div>
+
+            <div class="buttons">
+              <button type="button" class="soft" id="storyCancel">취소</button>
+              <button type="submit" class="primary" id="storySend">올리기</button>
+            </div>
+            <p class="error" id="storyError"></p>
+          </form>
+        </section>
+
+        <!-- ② 오늘의 바다 -->
+        <section id="seaPane" hidden>
+          <div id="seaInfoPane">
+            <h2>🌊 오늘의 바다</h2>
+            <p class="intro">지도에서 바닷가를 고르면 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 친구들이 알린 위험을 보여 줘요.</p>
+            <div class="row">
+              <button type="button" class="soft" id="seaMapButton">🗺️ 지도에서 바닷가 누르기</button>
+              <button type="button" class="soft" id="seaHereButton">📍 지금 내 자리</button>
+            </div>
+            <p class="note" id="seaPlaceNote"></p>
+
+            <div id="seaResult" hidden>
+              <h3>수영해도 될까요?</h3>
+              <div class="signal" id="seaSignal">
+                <div class="light" id="seaLight"></div>
+                <div><b id="seaSignalText"></b><ul id="seaReasons"></ul></div>
+              </div>
+              <div class="numbers" id="seaNumbers"></div>
+              <div class="tide">
+                <h3>🌊 물때 (오늘과 내일)</h3>
+                <p class="note" id="tideNote"></p>
+                <div id="tideChart"></div>
+              </div>
+            </div>
+            <p class="error" id="seaError"></p>
+            <p class="warn">이 숫자는 컴퓨터가 계산한 근처 바다의 <b>예상값</b>이에요. 해파리·상어·적조는 친구들이 알린 것만 보여요. 바닷가에서는 꼭 안전요원과 어른 말을 따르세요.</p>
+            <div class="links">
+              <a class="soft" href="https://www.khoa.go.kr" target="_blank" rel="noopener">국립해양조사원 (물때·바다 정보)</a>
+              <a class="soft" href="https://www.nifs.go.kr" target="_blank" rel="noopener">국립수산과학원 (적조·해파리)</a>
+            </div>
+
+            <h3>⚠️ 친구들이 알린 위험 (최근 3일)</h3>
+            <button type="button" class="primary" id="newReportButton">＋ 위험 알리기</button>
+            <p class="count" id="reportCount"></p>
+            <div id="reportList"></div>
+          </div>
+
+          <form id="reportCompose" hidden>
+            <h2>⚠️ 위험 알리기</h2>
+            <p class="warn">본 것만 사실대로 알려 주세요. 위험하면 먼저 물에서 나오고 어른께 알려요.</p>
+            <div class="step">
+              <h3>1. 무엇을 봤나요?</h3>
+              <div class="chips" id="reportKindPick"></div>
+            </div>
+            <div class="step">
+              <h3>2. 어디서 봤나요? <span class="ok" id="okReportSpot"></span></h3>
+              <div class="row">
+                <button type="button" class="soft" id="reportMapButton">🗺️ 지도에서 누르기</button>
+                <button type="button" class="soft" id="reportHereButton">📍 지금 내 자리</button>
+                <button type="button" class="soft" id="reportSeaButton">🌊 고른 바닷가</button>
+              </div>
+              <p class="note" id="reportSpotNote">아직 안 정했어요.</p>
+            </div>
+            <div class="step">
+              <h3>3. 설명과 사진 (사진은 없어도 돼요)</h3>
+              <textarea class="field" id="reportText" placeholder="예: 해수욕장 오른쪽 바위 근처에 해파리가 5마리 있어요" maxlength="200"></textarea>
+              <p class="letters" id="reportLetters">0 / 200</p>
+              <div class="row">
+                <label class="soft">📷 사진 한 장<input type="file" id="reportFile" accept="image/*" hidden></label>
+              </div>
+              <div class="picked" id="reportPicked"></div>
+            </div>
+            <div class="buttons">
+              <button type="button" class="soft" id="reportCancel">취소</button>
+              <button type="submit" class="primary" id="reportSend">알리기</button>
+            </div>
+            <p class="error" id="reportError"></p>
+          </form>
+        </section>
+
+        <!-- ③ 바다 길찾기 -->
+        <section id="routePane" hidden>
+          <h2>⛵ 바다 길찾기</h2>
+          <p class="intro">지도에서 출발하는 곳, 들르는 곳, 도착하는 곳을 차례로 누르면 거리와 걸리는 시간, 가는 방향을 알려 주고, 도착지 근처에 배를 댈 곳(정박할 곳)을 찾아 줘요.</p>
+
+          <h3>1. 무엇을 타나요?</h3>
+          <div class="chips" id="boatPick"></div>
+          <p class="note">빠르기: <input type="number" id="speedInput" min="1" max="60" step="1" style="width: 64px;"> 노트 (1노트 = 한 시간에 1.85km)</p>
+
+          <h3>2. 바닷길 찍기</h3>
+          <div class="row">
+            <button type="button" class="soft" id="routeDrawButton">🗺️ 지도에 길 찍기</button>
+            <button type="button" class="soft" id="routeUndoButton">↩ 하나 지우기</button>
+            <button type="button" class="soft" id="routeClearButton">모두 지우기</button>
+          </div>
+          <p class="note" id="routeNote">아직 찍은 곳이 없어요.</p>
+          <ol class="legs" id="routeLegs"></ol>
+          <div class="total" id="routeTotal" hidden></div>
+
+          <div id="routeEndBox" hidden>
+            <h3>3. 도착지 바다 상태</h3>
+            <p class="note" id="routeSea">알아보는 중…</p>
+            <button type="button" class="soft" id="routeSeaButton">🌊 도착지 바다 자세히 보기</button>
+
+            <h3>4. 배를 댈 곳 (도착지 근처 20km)</h3>
+            <div class="docks" id="dockList"></div>
+          </div>
+
+          <p class="warn">이 길은 곧은 선이라 섬, 바위, 얕은 곳을 피하지 않아요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <!-- 크게 보기 -->
+  <dialog id="viewDialog">
+    <div class="media-box" id="mediaBox">
+      <div id="mediaSlot"></div>
+      <button type="button" class="prev" id="prevMedia" aria-label="앞 사진">‹</button>
+      <button type="button" class="next" id="nextMedia" aria-label="다음 사진">›</button>
+      <span class="page" id="mediaPage"></span>
+    </div>
+    <div class="view-body">
+      <span class="tag" id="viewKind"></span>
+      <h2 id="viewTitle"></h2>
+      <p id="viewText"></p>
+      <p class="meta" id="viewMeta"></p>
+      <div class="view-buttons">
+        <button type="button" class="soft" id="showOnMapButton">🗺️ 지도에서 보기</button>
+        <button type="button" class="soft danger" id="deleteButton" hidden>지우기</button>
+        <button type="button" class="soft" id="closeViewButton">닫기</button>
+      </div>
+      <p class="error" id="viewError"></p>
+
+      <div class="comments" id="commentBox">
+        <p class="ask" id="askText" hidden>❓ 이게 무엇인지 아는 친구는 아래에 답을 달아 주세요!</p>
+        <h3>💬 댓글</h3>
+        <div id="commentList"></div>
+        <form class="comment-form" id="commentForm">
+          <input id="commentInput" placeholder="댓글 쓰기 (200글자까지)" maxlength="200">
+          <button type="submit" class="soft" id="commentSend">쓰기</button>
+        </form>
+        <p class="error" id="commentError"></p>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    const $ = function (id) { return document.getElementById(id); };
+
+    // ───────── 서버 ─────────
+    // 계정과 글·사진은 메신저·잉스타·섬지도와 같은 서버에 저장해요. 그래서 그 계정으로 바로 들어올 수 있어요.
+    const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
+    // 게시판 이름 (영어 소문자 20글자까지). 서버는 고치지 않고 게시판만 나눠 써요.
+    const STORY_BOARD = "seapost";    // ① 섬과 바다 이야기
+    const REPORT_BOARD = "seareport"; // ② 위험 알리기
+    // 댓글은 "q" + 게시물 번호를 글자로 바꾼 게시판에 따로 모아요 (잉스타 댓글과 같은 방법)
+    const TOKEN_KEY = "messenger.token"; // 메신저·잉스타와 같은 이름이라 한 번 로그인하면 다 들어가져요
+    const MAX_SIZE = 1280;           // 사진이 너무 크면 이 크기로 줄여서 올려요
+    const MAX_FILES = 6;             // 서버가 글 하나에 받아 주는 사진·영상 수
+    const MAX_VIDEO = 30 * 1024 * 1024; // 영상 하나 크기 (30MB)
+    const MAX_TEXT = 500;            // 설명 글자 수
+    const REPORT_DAYS = 3;           // 위험 알림을 며칠 동안 보여 줄지
+
+    // 지도가 처음 보여 줄 곳 (여수 바다)
+    const FIRST_PLACE = { lat: 34.62, lng: 127.74, level: 9 };
+
+    let token = localStorage.getItem(TOKEN_KEY);
+    let me = null; // 지금 로그인한 아이디
+
+    const ERROR_TEXT = {
+      BAD_ID: "아이디는 띄어쓰기 없이 2~12글자로 적어 주세요.",
+      BAD_PASSWORD: "비밀번호는 4글자부터 적을 수 있어요.",
+      BAD_CODE: "가입 코드가 맞지 않아요. 선생님께 물어보세요.",
+      ID_TAKEN: "이미 누가 쓰고 있는 아이디예요. 다른 아이디를 적어 주세요.",
+      WRONG_LOGIN: "아이디나 비밀번호가 맞지 않아요.",
+      NOT_LOGGED_IN: "다시 로그인해 주세요.",
+      BAD_FILE: "사진이나 영상만 올릴 수 있어요.",
+      BIG_VIDEO: "영상이 너무 커요. 30MB보다 작게, 짧게 찍어 주세요.",
+      BAD_POST: "글이 너무 길어요.",
+      BAD_WORD: "나쁜 말이 들어 있어서 올릴 수 없어요. 고운 말로 바꿔 주세요.",
+      NOT_YOURS: "내가 올린 것만 지울 수 있어요.",
+      NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
+    };
+    function errorText(error) {
+      return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
+    }
+
+    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용)
+    // 쓸 수 있는 일: post(글 올리기), posts(최근 글 100개 받기), remove(내 글 지우기), upload(사진 올릴 자리 받기)
+    async function call(action, data) {
+      let response;
+      try {
+        response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(Object.assign({ action: action, token: token }, data))
+        });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      const result = await response.json().catch(function () { return null; });
+      if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
+      return result;
+    }
+
+    // 게시물 번호(숫자)를 게시판 이름에 쓸 수 있게 글자로 바꾸기 (0→a … 9→j)
+    function lettersOf(sk) {
+      return String(sk).replace(/\d/g, function (d) { return "abcdefghij"[d]; }).replace(/[^a-j]/g, "");
+    }
+    function commentBoard(sk) { return ("q" + lettersOf(sk)).slice(0, 20); }
+
+    // ───────── 나쁜 말 막기 (잉스타·섬지도와 같은 목록) ─────────
+    const BAD_WORDS = [
+      "시발", "씨발", "씨빨", "씨바", "씨팔", "시팔",
+      "병신", "븅신", "지랄", "존나", "좆나", "좆까", "좆", "썅",
+      "개새끼", "개새", "새끼야", "미친놈", "미친년", "미친새끼", "또라이", "등신",
+      "니애미", "니어미", "느금마",
+      "닥쳐", "엿먹어", "꺼져라", "죽어라", "뒤져라",
+      "ㅅㅂ", "ㅆㅂ", "ㅂㅅ", "ㅄ", "ㅈㄹ", "ㅈㄴ", "ㅈㄲ", "ㄴㅇㅁ", "ㄴㄱㅁ",
+      "ㄳㄲ", "ㄱㅅㄲ", "ㅅㄲ", "ㅁㅊㄴ", "ㄲㅈ", "ㄷㅊ",
+      "fuck", "shit", "bitch"
+    ];
+    const BAD_WORD_PATTERN = new RegExp(
+      BAD_WORDS.slice().sort(function (a, b) { return b.length - a.length; }).map(function (word) {
+        return Array.from(word).join("[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\\s]*");
+      }).join("|"),
+      "gi"
+    );
+    function hasBadWords(text) {
+      BAD_WORD_PATTERN.lastIndex = 0;
+      return BAD_WORD_PATTERN.test(text);
+    }
+    function hideBadWords(text) {
+      return text.replace(BAD_WORD_PATTERN, "###");
+    }
+
+    // ───────── 작은 도구들 ─────────
+    // 화면 조각 만들기 (글은 textContent로 넣어서 안전해요)
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function dateText(sk) {
+      return new Date(Number(String(sk).slice(0, -6))).toLocaleDateString("ko-KR");
+    }
+    function timeOf(sk) { return Number(String(sk).slice(0, -6)); } // 올린 시각 (밀리초)
+
+    const DIRECTION_NAMES = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
+    function directionName(dir) {
+      return DIRECTION_NAMES[Math.round(dir / 45) % 8] + "쪽";
+    }
+
+    // 두 곳(a에서 b)을 이었을 때 b가 어느 방향에 있는지 각도로 구하기 (북 0도, 동 90도)
+    function bearing(a, b) {
+      const r = Math.PI / 180;
+      const y = Math.sin((b.lng - a.lng) * r) * Math.cos(b.lat * r);
+      const x = Math.cos(a.lat * r) * Math.sin(b.lat * r) -
+        Math.sin(a.lat * r) * Math.cos(b.lat * r) * Math.cos((b.lng - a.lng) * r);
+      return (Math.round(Math.atan2(y, x) / r) + 360) % 360;
+    }
+
+    // 두 곳 사이의 거리 (km)
+    function distanceKm(a, b) {
+      const r = Math.PI / 180;
+      const h = Math.pow(Math.sin((b.lat - a.lat) * r / 2), 2) +
+        Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin((b.lng - a.lng) * r / 2), 2);
+      return 12742 * Math.asin(Math.sqrt(h));
+    }
+
+    function placeText(place) {
+      return "위도 " + place.lat.toFixed(4) + ", 경도 " + place.lng.toFixed(4);
+    }
+
+    // 지금 내 자리 (핸드폰·컴퓨터의 위치 기능)
+    function findMe() {
+      return new Promise(function (resolve, reject) {
+        if (!navigator.geolocation) { reject(new Error("NO_GPS")); return; }
+        navigator.geolocation.getCurrentPosition(
+          function (pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+          function () { reject(new Error("NO_GPS")); },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    }
+    ERROR_TEXT.NO_GPS = "내 자리를 알 수 없어요. 위치 허용을 눌렀는지 확인하거나 지도에서 눌러 주세요.";
+
+    // ───────── 사진 속 위치 정보 읽기 (섬지도와 같은 방법) ─────────
+    // 핸드폰으로 찍은 사진에는 찍은 곳(위도·경도)이 숨어 있을 때가 있어요 (EXIF라는 정보).
+    async function readPhotoPlace(file) {
+      try {
+        const view = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+        if (view.getUint16(0) !== 0xFFD8) return null; // JPEG 사진만 읽어요
+        let offset = 2;
+        while (offset + 10 < view.byteLength) {
+          const marker = view.getUint16(offset);
+          if ((marker & 0xFF00) !== 0xFF00 || marker === 0xFFDA) break;
+          if (marker === 0xFFE1 && view.getUint32(offset + 4) === 0x45786966) return readExif(view, offset + 10);
+          offset += 2 + view.getUint16(offset + 2);
+        }
+      } catch (error) {
+        // 읽다가 문제가 생기면 위치 정보가 없는 것으로 해요
+      }
+      return null;
+    }
+    function readExif(view, start) {
+      const little = view.getUint16(start) === 0x4949;
+      const u16 = function (at) { return view.getUint16(start + at, little); };
+      const u32 = function (at) { return view.getUint32(start + at, little); };
+      function tags(at) {
+        const list = {};
+        for (let i = 0; i < u16(at); i++) {
+          const entry = at + 2 + i * 12;
+          list[u16(entry)] = { count: u32(entry + 4), at: entry + 8 };
+        }
+        return list;
+      }
+      function rational(at) { const bottom = u32(at + 4); return bottom ? u32(at) / bottom : 0; }
+      function numbers(tag) {
+        const first = u32(tag.at);
+        const list = [];
+        for (let i = 0; i < tag.count; i++) list.push(rational(first + i * 8));
+        return list;
+      }
+      function letter(tag) { return String.fromCharCode(view.getUint8(start + tag.at)); }
+      function degrees(list) { return list[0] + (list[1] || 0) / 60 + (list[2] || 0) / 3600; }
+
+      const main = tags(u32(4));
+      if (!main[0x8825]) return null; // 위치 정보 칸이 없어요
+      const gps = tags(u32(main[0x8825].at));
+      if (!gps[2] || !gps[4]) return null;
+      let lat = degrees(numbers(gps[2]));
+      let lng = degrees(numbers(gps[4]));
+      if (gps[1] && letter(gps[1]) === "S") lat = -lat;
+      if (gps[3] && letter(gps[3]) === "W") lng = -lng;
+      return lat && lng ? { lat: lat, lng: lng } : null;
+    }
+
+    // ───────── 사진·영상 올리기 ─────────
+    // 사진 파일을 작게 줄이기 (가장 긴 쪽을 maxSize로)
+    function shrinkPhoto(file, maxSize) {
+      return new Promise(function (resolve, reject) {
+        const image = new Image();
+        image.onload = function () {
+          const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(image.width * scale);
+          canvas.height = Math.round(image.height * scale);
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(image.src);
+          canvas.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error("SERVER_ERROR")); }, "image/jpeg", 0.85);
+        };
+        image.onerror = function () { reject(new Error("BAD_FILE")); };
+        image.src = URL.createObjectURL(file);
+      });
+    }
+
+    // 파일 하나를 서버 보관함에 올리고, 보관함 안의 이름(key)을 돌려받기
+    async function uploadFile(blob) {
+      const place = await call("upload", { type: blob.type });
+      let response;
+      try {
+        response = await fetch(place.url, { method: "PUT", headers: { "Content-Type": blob.type }, body: blob });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      if (!response.ok) throw new Error("SERVER_ERROR");
+      return place.key;
+    }
+
+    // 사진은 줄여서, 영상은 그대로 올리고 서버에 보낼 모양({kind, key})으로 돌려주기
+    async function uploadMedia(file) {
+      if (file.type.startsWith("video/")) {
+        if (file.size > MAX_VIDEO) throw new Error("BIG_VIDEO");
+        return { kind: "video", key: await uploadFile(file) };
+      }
+      return { kind: "image", key: await uploadFile(await shrinkPhoto(file, MAX_SIZE)) };
+    }
+
+    // 고른 파일들을 작은 그림으로 보여 주기 (✕를 누르면 onRemove(번호))
+    function drawPicked(box, files, onRemove) {
+      box.textContent = "";
+      files.forEach(function (file, i) {
+        const item = el("div");
+        const media = el(file.type.startsWith("video/") ? "video" : "img");
+        media.src = URL.createObjectURL(file);
+        if (media.tagName === "VIDEO") { media.muted = true; media.preload = "metadata"; }
+        const x = el("button", "", "✕");
+        x.type = "button";
+        x.setAttribute("aria-label", "빼기");
+        x.addEventListener("click", function () { onRemove(i); });
+        item.append(media, x);
+        box.append(item);
+      });
+    }
+
+    // ───────── 지도 ─────────
+    const hasMap = Boolean(window.kakao && kakao.maps && kakao.maps.Map);
+    let map = null;
+    let placeSearch = null;
+    let satellite = false;
+    let picking = null; // 지도를 누르면 정할 것: "story", "sea", "report", "route", null(안 정함)
+
+    // 지도 위 표시를 기능(탭)마다 따로 모아 둬요. 그 탭을 볼 때만 지도에 보여요.
+    const layers = { story: [], sea: [], route: [] };
+
+    function setupMap() {
+      if (!hasMap) { $("noMap").hidden = false; return; }
+      if (map) { map.relayout(); return; }
+      map = new kakao.maps.Map($("map"), {
+        center: new kakao.maps.LatLng(FIRST_PLACE.lat, FIRST_PLACE.lng),
+        level: FIRST_PLACE.level
+      });
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      if (kakao.maps.services) placeSearch = new kakao.maps.services.Places();
+      kakao.maps.event.addListener(map, "click", function (mouseEvent) {
+        mapClicked({ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() });
+      });
+      drawStorySpots();
+      drawSeaLayer();
+      drawRoute();
+    }
+
+    function moveMap(lat, lng, level) {
+      if (!map) return;
+      if (level) map.setLevel(level);
+      map.setCenter(new kakao.maps.LatLng(lat, lng));
+    }
+
+    // 지도 위에 내 모양(content)을 올리고, 그 탭의 묶음에 넣기
+    function addOverlay(layer, place, content, zIndex) {
+      if (!map) return null;
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(place.lat, place.lng),
+        content: content, xAnchor: 0.5, yAnchor: 0.5, clickable: true, zIndex: zIndex || 3,
+        map: currentTab === layer ? map : null
+      });
+      layers[layer].push(overlay);
+      return overlay;
+    }
+    function clearLayer(layer) {
+      layers[layer].forEach(function (overlay) { overlay.setMap(null); });
+      layers[layer] = [];
+    }
+    function showLayers() {
+      if (!map) return;
+      Object.keys(layers).forEach(function (layer) {
+        layers[layer].forEach(function (overlay) { overlay.setMap(layer === currentTab ? map : null); });
+      });
+    }
+
+    // 핸드폰처럼 지도가 위에 있는 화면에서는 지도가 보이게 올려 주기
+    function bringIntoView(element) {
+      if (window.innerWidth <= 800) element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // 그림지도 ↔ 위성지도
+    $("mapTypeButton").addEventListener("click", function () {
+      if (!map) return;
+      satellite = !satellite;
+      map.setMapTypeId(satellite ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP);
+      this.textContent = satellite ? "🗺️ 그림지도" : "🛰️ 위성지도";
+    });
+
+    // 이름으로 지도 옮기기
+    $("placeForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const words = $("placeInput").value.trim();
+      if (!words || !placeSearch) return;
+      placeSearch.keywordSearch(words, function (results, status) {
+        if (status === kakao.maps.services.Status.OK && results[0]) {
+          moveMap(Number(results[0].y), Number(results[0].x), 7);
+        } else {
+          showHint("'" + words + "'을(를) 찾지 못했어요. 이름을 다시 확인해 주세요.", 3000);
+        }
+      });
+    });
+
+    // 지도 아래 주황색 안내
+    let hintTimer = null;
+    function showHint(text, hideAfter) {
+      clearTimeout(hintTimer);
+      $("mapHintText").textContent = text;
+      $("stopPickButton").hidden = Boolean(hideAfter);
+      $("mapHint").hidden = false;
+      if (hideAfter) hintTimer = setTimeout(function () { $("mapHint").hidden = true; }, hideAfter);
+    }
+    function hideHint() {
+      clearTimeout(hintTimer);
+      $("mapHint").hidden = true;
+    }
+
+    // 지도 누르기 시작 (what: 무엇을 정할지, text: 안내 글)
+    function startPicking(what, text) {
+      if (!map) { showHint("지도가 없어서 누를 수 없어요. '📍 지금 내 자리'를 써 주세요.", 3000); return; }
+      picking = what;
+      showHint(text);
+      bringIntoView($("mapWrap"));
+    }
+    function stopPicking() {
+      picking = null;
+      hideHint();
+      $("routeDrawButton").classList.remove("on");
+    }
+    $("stopPickButton").addEventListener("click", stopPicking);
+
+    function mapClicked(place) {
+      if (picking === "story") { setStorySpot(place, "지도에서 고른 곳"); stopPicking(); }
+      else if (picking === "sea") { stopPicking(); chooseSeaPlace(place, "지도에서 고른 바닷가"); }
+      else if (picking === "report") { setReportSpot(place, "지도에서 고른 곳"); stopPicking(); }
+      else if (picking === "route") { addRoutePoint(place); }
+    }
+
+    // ───────── 기능(탭) 바꾸기 ─────────
+    const TABS = ["story", "sea", "route"];
+    let currentTab = "story";
+
+    function setTab(tab) {
+      if (!TABS.includes(tab)) tab = "story";
+      currentTab = tab;
+      stopPicking();
+      document.querySelectorAll(".tabs button").forEach(function (button) {
+        button.classList.toggle("on", button.dataset.tab === tab);
+      });
+      $("storyPane").hidden = tab !== "story";
+      $("seaPane").hidden = tab !== "sea";
+      $("routePane").hidden = tab !== "route";
+      $("side").scrollTop = 0;
+      showLayers();
+      if (location.hash.slice(1) !== tab) history.replaceState(null, "", "#" + tab); // 새로고침해도 이 탭이 나와요
+      if (tab === "sea" && !seaPlace) chooseSeaPlace({ lat: FIRST_PLACE.lat, lng: FIRST_PLACE.lng }, "여수 앞바다");
+    }
+    document.querySelectorAll(".tabs button").forEach(function (button) {
+      button.addEventListener("click", function () { setTab(button.dataset.tab); });
+    });
+
+    // ═════════ ① 섬과 바다 이야기 ═════════
+    // 무엇을 찍었는지 고르는 칸 (더하거나 빼도 돼요)
+    const STORY_KINDS = [
+      { id: "view", name: "🏞️ 섬 풍경" },
+      { id: "life", name: "🐙 바다 생물" },
+      { id: "gear", name: "🎣 어업 도구" },
+      { id: "ask", name: "❓ 이게 뭐예요?" },
+      { id: "etc", name: "📝 기타" }
+    ];
+    function kindOf(id) {
+      return STORY_KINDS.find(function (kind) { return kind.id === id; }) || STORY_KINDS[STORY_KINDS.length - 1];
+    }
+
+    let stories = [];      // 서버에서 받은 게시물 (새것부터)
+    let storiesKey = null; // 목록이 바뀌었는지 알아보는 표시
+    let storyKindFilter = "all";
+
+    // 서버의 글 칸에는 섬 이름, 종류, 설명, 찍은 곳이 JSON으로 함께 들어 있어요
+    function readStory(item) {
+      try {
+        const data = JSON.parse(item.text);
+        const lat = Number(data.lat);
+        const lng = Number(data.lng);
+        if (!isFinite(lat) || !isFinite(lng) || !item.media || !item.media[0]) return null;
+        return {
+          sk: item.sk,
+          author: item.author,
+          island: hideBadWords(String(data.island || "").slice(0, 20)) || "이름 없는 섬",
+          kind: kindOf(data.kind).id,
+          text: hideBadWords(String(data.text || "").slice(0, MAX_TEXT)),
+          lat: lat,
+          lng: lng,
+          media: item.media
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+
+    async function loadStories() {
+      let list;
+      try {
+        list = await call("posts", { board: STORY_BOARD });
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        else $("storyCount").textContent = errorText(error);
+        return;
+      }
+      if (!me) return;
+      const key = list.map(function (item) { return item.sk; }).join(",");
+      if (key === storiesKey) return; // 바뀐 게 없으면 다시 그리지 않아요
+      storiesKey = key;
+      stories = list.map(readStory).filter(Boolean);
+      drawStoryList();
+      drawStorySpots();
+    }
+
+    // 고른 종류와 찾는 말에 맞는 게시물만
+    function shownStories() {
+      const words = $("storyFilter").value.trim().toLowerCase();
+      return stories.filter(function (story) {
+        if (storyKindFilter !== "all" && story.kind !== storyKindFilter) return false;
+        return !words || (story.island + " " + story.text).toLowerCase().includes(words);
+      });
+    }
+
+    // 종류 고르기 버튼 (목록 위)
+    function drawKindFilter() {
+      const box = $("storyKinds");
+      box.textContent = "";
+      [{ id: "all", name: "전체" }].concat(STORY_KINDS).forEach(function (kind) {
+        const button = el("button", "soft" + (storyKindFilter === kind.id ? " on" : ""), kind.name);
+        button.type = "button";
+        button.addEventListener("click", function () {
+          storyKindFilter = kind.id;
+          drawKindFilter();
+          drawStoryList();
+          drawStorySpots();
+        });
+        box.append(button);
+      });
+    }
+
+    // 사진이나 영상의 작은 그림
+    function thumbOf(media) {
+      const box = el("div", "thumb");
+      const first = media[0];
+      if (first.kind === "video") {
+        const video = el("video");
+        video.src = first.url + "#t=0.5";
+        video.muted = true;
+        video.preload = "metadata";
+        box.append(video, el("small", "", "▶ 영상"));
+      } else {
+        const img = el("img");
+        img.src = first.url;
+        img.alt = "";
+        img.loading = "lazy";
+        box.append(img);
+      }
+      if (media.length > 1) box.append(el("small", "", media.length + "개"));
+      return box;
+    }
+
+    function drawStoryList() {
+      const list = shownStories();
+      const box = $("storyList");
+      box.textContent = "";
+      list.forEach(function (story) {
+        const card = el("button", "card");
+        card.type = "button";
+        const words = el("div");
+        words.append(
+          el("span", "tag", kindOf(story.kind).name),
+          el("b", "", story.island),
+          el("span", "", story.text.length > 40 ? story.text.slice(0, 40) + "…" : story.text),
+          el("span", "", story.author + " · " + dateText(story.sk))
+        );
+        card.append(thumbOf(story.media), words);
+        card.addEventListener("click", function () {
+          moveMap(story.lat, story.lng, 5);
+          openStory(story);
+        });
+        box.append(card);
+      });
+      $("storyCount").textContent = stories.length ? list.length + "개" : "";
+      $("storyEmpty").hidden = list.length > 0;
+    }
+    $("storyFilter").addEventListener("input", function () { drawStoryList(); drawStorySpots(); });
+
+    // 지도 위 동그란 사진 + 종류 표시
+    function makePin(photoUrl, badge, extraClass) {
+      const pin = el("div", "pin" + (extraClass ? " " + extraClass : ""));
+      if (photoUrl) {
+        const img = el("img");
+        img.src = photoUrl;
+        img.alt = "";
+        pin.append(img);
+      }
+      if (badge) pin.append(el("span", "badge", badge));
+      return pin;
+    }
+
+    let storyDraftOverlay = null;
+    function drawStorySpots() {
+      clearLayer("story");
+      storyDraftOverlay = null;
+      if (!map) return;
+      shownStories().forEach(function (story) {
+        const first = story.media[0];
+        const pin = makePin(first.kind === "image" ? first.url : null, Array.from(kindOf(story.kind).name)[0]);
+        pin.title = story.island;
+        pin.dataset.sk = story.sk;
+        pin.addEventListener("click", function () { openStory(story); });
+        addOverlay("story", story, pin, 3);
+      });
+      if (storyDraft && storyDraft.place) {
+        storyDraftOverlay = addOverlay("story", storyDraft.place, makePin(null, "📷", "draft"), 4);
+      }
+    }
+    function markStorySpot(sk) {
+      document.querySelectorAll(".pin[data-sk]").forEach(function (pin) { pin.classList.toggle("now", pin.dataset.sk === sk); });
+    }
+
+    // ── 크게 보기 창 ──
+    let viewing = null;    // 보고 있는 게시물
+    let mediaIndex = 0;
+    let commentTimer = null;
+
+    function openStory(story) {
+      viewing = story;
+      mediaIndex = 0;
+      drawMedia();
+      $("viewKind").textContent = kindOf(story.kind).name;
+      $("viewTitle").textContent = story.island;
+      $("viewText").textContent = story.text;
+      $("viewMeta").textContent = story.author + " · " + dateText(story.sk);
+      $("deleteButton").hidden = story.author !== me;
+      $("viewError").textContent = "";
+      $("askText").hidden = story.kind !== "ask";
+      $("commentError").textContent = "";
+      $("commentList").textContent = "";
+      markStorySpot(story.sk);
+      if (!$("viewDialog").open) $("viewDialog").showModal();
+      loadComments();
+      clearInterval(commentTimer);
+      commentTimer = setInterval(loadComments, 5000); // 창이 열려 있는 동안 5초마다 새 댓글 보기
+    }
+
+    function drawMedia() {
+      const media = viewing.media;
+      const item = media[mediaIndex];
+      const slot = $("mediaSlot");
+      slot.textContent = "";
+      const node = el(item.kind === "video" ? "video" : "img");
+      node.src = item.url;
+      if (item.kind === "video") { node.controls = true; node.playsInline = true; } else node.alt = viewing.island;
+      slot.append(node);
+      const many = media.length > 1;
+      $("prevMedia").hidden = !many;
+      $("nextMedia").hidden = !many;
+      $("mediaPage").hidden = !many;
+      $("mediaPage").textContent = (mediaIndex + 1) + " / " + media.length;
+    }
+    $("prevMedia").addEventListener("click", function () {
+      mediaIndex = (mediaIndex - 1 + viewing.media.length) % viewing.media.length;
+      drawMedia();
+    });
+    $("nextMedia").addEventListener("click", function () {
+      mediaIndex = (mediaIndex + 1) % viewing.media.length;
+      drawMedia();
+    });
+
+    $("viewDialog").addEventListener("close", function () {
+      clearInterval(commentTimer);
+      $("mediaSlot").textContent = ""; // 영상이 계속 소리 나지 않게 비워요
+      viewing = null;
+      markStorySpot(null);
+    });
+    $("closeViewButton").addEventListener("click", function () { $("viewDialog").close(); });
+    $("viewDialog").addEventListener("click", function (event) {
+      if (event.target === this) this.close(); // 창 바깥을 누르면 닫혀요
+    });
+    $("showOnMapButton").addEventListener("click", function () {
+      const story = viewing;
+      $("viewDialog").close();
+      moveMap(story.lat, story.lng, 4);
+      markStorySpot(story.sk);
+      bringIntoView($("mapWrap"));
+    });
+    $("deleteButton").addEventListener("click", async function () {
+      if (!viewing || !confirm("이 게시물을 지울까요? 지우면 되돌릴 수 없어요.")) return;
+      this.disabled = true;
+      try {
+        await call("remove", { board: STORY_BOARD, sk: viewing.sk });
+        $("viewDialog").close();
+        await loadStories();
+      } catch (error) {
+        $("viewError").textContent = errorText(error);
+      }
+      this.disabled = false;
+    });
+
+    // ── 댓글 (❓ 이게 뭐예요?의 답도 여기에 달아요) ──
+    let commentsKey = null;
+    async function loadComments() {
+      const story = viewing;
+      if (!story) return;
+      let list;
+      try {
+        list = await call("posts", { board: commentBoard(story.sk) });
+      } catch (error) {
+        $("commentError").textContent = errorText(error);
+        return;
+      }
+      if (viewing !== story) return;
+      const key = story.sk + ":" + list.map(function (item) { return item.sk; }).join(",");
+      if (key === commentsKey && $("commentList").childElementCount) return;
+      commentsKey = key;
+      const box = $("commentList");
+      box.textContent = "";
+      list.slice().reverse().forEach(function (item) { // 오래된 것부터
+        const line = el("div", "comment");
+        line.append(el("b", "", item.author), document.createTextNode(hideBadWords(String(item.text || ""))));
+        if (item.author === me) {
+          const x = el("button", "", "삭제");
+          x.type = "button";
+          x.addEventListener("click", async function () {
+            if (!confirm("이 댓글을 지울까요?")) return;
+            try {
+              await call("remove", { board: commentBoard(story.sk), sk: item.sk });
+              loadComments();
+            } catch (error) {
+              $("commentError").textContent = errorText(error);
+            }
+          });
+          line.append(x);
+        }
+        box.append(line);
+      });
+      if (!list.length) box.append(el("p", "note", story.kind === "ask" ? "아직 답이 없어요." : "아직 댓글이 없어요."));
+    }
+
+    $("commentForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const text = $("commentInput").value.trim();
+      if (!text || !viewing) return;
+      if (hasBadWords(text)) { $("commentError").textContent = ERROR_TEXT.BAD_WORD; return; }
+      $("commentSend").disabled = true;
+      $("commentError").textContent = "";
+      try {
+        await call("post", { board: commentBoard(viewing.sk), text: text.slice(0, 200) });
+        $("commentInput").value = "";
+        await loadComments();
+      } catch (error) {
+        $("commentError").textContent = errorText(error);
+      }
+      $("commentSend").disabled = false;
+    });
+
+    // ── 올리기 ──
+    // storyDraft: 올리는 중인 것 (files: 사진·영상, kind: 종류, place: 찍은 곳)
+    let storyDraft = null;
+    let sendingStory = false;
+
+    function drawStoryKindPick() {
+      const box = $("storyKindPick");
+      box.textContent = "";
+      STORY_KINDS.forEach(function (kind) {
+        const button = el("button", "soft" + (storyDraft && storyDraft.kind === kind.id ? " on" : ""), kind.name);
+        button.type = "button";
+        button.addEventListener("click", function () { storyDraft.kind = kind.id; drawStoryKindPick(); });
+        box.append(button);
+      });
+    }
+
+    function openStoryCompose() {
+      storyDraft = { files: [], kind: "view", place: null };
+      $("storyCompose").reset();
+      $("storyLetters").textContent = "0 / " + MAX_TEXT;
+      $("storyError").textContent = "";
+      $("okFiles").textContent = "";
+      $("okStorySpot").textContent = "";
+      $("storySpotNote").textContent = "아직 안 정했어요. (사진에 위치 정보가 있으면 저절로 정해져요)";
+      $("storyPicked").textContent = "";
+      drawStoryKindPick();
+      $("storyListPane").hidden = true;
+      $("storyCompose").hidden = false;
+      $("side").scrollTop = 0;
+    }
+    function closeStoryCompose() {
+      storyDraft = null;
+      stopPicking();
+      $("storyCompose").hidden = true;
+      $("storyListPane").hidden = false;
+      drawStorySpots();
+    }
+    $("newStoryButton").addEventListener("click", openStoryCompose);
+    $("storyCancel").addEventListener("click", function () {
+      if (sendingStory) return;
+      if (storyDraft.files.length && !confirm("올리지 않고 그만둘까요?")) return;
+      closeStoryCompose();
+    });
+
+    async function addStoryFiles(fileList) {
+      const files = Array.from(fileList).filter(function (file) {
+        return file.type.startsWith("image/") || file.type.startsWith("video/");
+      });
+      let note = "";
+      files.forEach(function (file) {
+        if (storyDraft.files.length >= MAX_FILES) { note = "사진·영상은 " + MAX_FILES + "개까지예요."; return; }
+        if (file.type.startsWith("video/") && file.size > MAX_VIDEO) { note = ERROR_TEXT.BIG_VIDEO; return; }
+        storyDraft.files.push(file);
+      });
+      drawStoryPicked();
+      $("filesNote").textContent = note || "영상은 한 개에 30MB까지 올릴 수 있어요. 짧게 찍어 주세요.";
+      // 찍은 곳을 아직 안 정했으면 사진 속 위치 정보로 정해 봐요
+      if (!storyDraft.place) {
+        for (const file of files) {
+          const place = file.type.startsWith("image/") ? await readPhotoPlace(file) : null;
+          if (place && storyDraft && !storyDraft.place) { setStorySpot(place, "사진 속 위치 정보"); moveMap(place.lat, place.lng, 5); break; }
+        }
+      }
+    }
+    function drawStoryPicked() {
+      drawPicked($("storyPicked"), storyDraft.files, function (i) {
+        storyDraft.files.splice(i, 1);
+        drawStoryPicked();
+      });
+      $("okFiles").textContent = storyDraft.files.length ? "✔ " + storyDraft.files.length + "개" : "";
+    }
+    ["storyFiles", "storyPhotoCam", "storyVideoCam"].forEach(function (id) {
+      $(id).addEventListener("change", function () { addStoryFiles(this.files); this.value = ""; });
+    });
+
+    function setStorySpot(place, how) {
+      if (!storyDraft) return;
+      storyDraft.place = place;
+      $("okStorySpot").textContent = "✔";
+      $("storySpotNote").textContent = how + " (" + placeText(place) + ")";
+      drawStorySpots();
+    }
+    $("storyMapButton").addEventListener("click", function () { startPicking("story", "사진·영상을 찍은 곳을 지도에서 눌러 주세요"); });
+    $("storyHereButton").addEventListener("click", async function () {
+      $("storySpotNote").textContent = "내 자리를 찾는 중…";
+      try {
+        const place = await findMe();
+        setStorySpot(place, "지금 내 자리");
+        moveMap(place.lat, place.lng, 5);
+      } catch (error) {
+        $("storySpotNote").textContent = errorText(error);
+      }
+    });
+    $("storyText").addEventListener("input", function () {
+      $("storyLetters").textContent = this.value.length + " / " + MAX_TEXT;
+    });
+
+    $("storyCompose").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      if (sendingStory) return;
+      const island = $("islandInput").value.trim();
+      const text = $("storyText").value.trim();
+      const problem =
+        !storyDraft.files.length ? "1. 사진이나 영상을 골라 주세요." :
+        !storyDraft.place ? "3. 찍은 곳을 정해 주세요." :
+        !island ? "4. 섬 이름을 적어 주세요." :
+        hasBadWords(island + " " + text) ? ERROR_TEXT.BAD_WORD : "";
+      $("storyError").textContent = problem;
+      if (problem) return;
+
+      sendingStory = true;
+      $("storySend").disabled = true;
+      try {
+        const media = [];
+        for (let i = 0; i < storyDraft.files.length; i++) {
+          $("storySend").textContent = "올리는 중… (" + (i + 1) + "/" + storyDraft.files.length + ")";
+          media.push(await uploadMedia(storyDraft.files[i]));
+        }
+        const place = storyDraft.place;
+        await call("post", {
+          board: STORY_BOARD,
+          text: JSON.stringify({
+            island: island,
+            kind: storyDraft.kind,
+            text: text,
+            lat: Number(place.lat.toFixed(6)),
+            lng: Number(place.lng.toFixed(6))
+          }),
+          media: media
+        });
+        closeStoryCompose();
+        $("storyFilter").value = "";
+        await loadStories();
+        moveMap(place.lat, place.lng, 5);
+      } catch (error) {
+        $("storyError").textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      sendingStory = false;
+      $("storySend").disabled = false;
+      $("storySend").textContent = "올리기";
+    });
+
+    // ═════════ ② 오늘의 바다 ═════════
+    // 바다 정보는 무료 서버 Open-Meteo에서 받아요 (키가 필요 없어요). 약 5km 칸마다 계산한 예상값이에요.
+    const MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
+    const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
+
+    // 수영 신호등 기준 (숫자를 바꾸면 신호등이 바뀌어요)
+    const SWIM_RULES = {
+      warmWater: 23,  // 수온이 이것보다 낮으면 🟡 조금 차가워요
+      coldWater: 20,  // 수온이 이것보다 낮으면 🔴 너무 차가워요
+      bigWave: 0.5,   // 파도(m)가 이것보다 높으면 🟡
+      hugeWave: 1.0,  // 파도(m)가 이것보다 높으면 🔴
+      wind: 7,        // 바람(m/s)이 이것보다 세면 🟡
+      strongWind: 10, // 바람(m/s)이 이것보다 세면 🔴
+      nearKm: 5       // 이 거리(km) 안의 위험 알림을 신호등에 넣어요
+    };
+
+    const WEATHER_NAMES = [
+      [0, "☀️ 맑음"], [3, "⛅ 구름"], [48, "🌫️ 안개"], [67, "🌧️ 비"], [77, "❄️ 눈"], [82, "🌦️ 소나기"], [99, "⛈️ 천둥번개"]
+    ];
+    function weatherName(code) {
+      const found = WEATHER_NAMES.find(function (pair) { return code <= pair[0]; });
+      return found ? found[1] : "";
+    }
+
+    // 위험 알림 종류 (더하거나 빼도 돼요). level 2는 🔴, 1은 🟡
+    const REPORT_KINDS = [
+      { id: "jelly", name: "🪼 해파리", level: 1 },
+      { id: "shark", name: "🦈 상어", level: 2 },
+      { id: "redtide", name: "🟤 적조", level: 1 },
+      { id: "current", name: "🌀 물살이 셈", level: 2 },
+      { id: "trash", name: "🗑️ 쓰레기·유리", level: 1 },
+      { id: "etc", name: "⚠️ 기타", level: 1 }
+    ];
+    function reportKindOf(id) {
+      return REPORT_KINDS.find(function (kind) { return kind.id === id; }) || REPORT_KINDS[REPORT_KINDS.length - 1];
+    }
+
+    let seaPlace = null; // 고른 바닷가 { lat, lng, name }
+    let seaData = null;  // 받아 온 바다 정보
+    let seaAsk = 0;      // 마지막으로 물어본 번호 (늦게 온 대답은 버려요)
+
+    async function getJson(url) {
+      for (let tryCount = 0; tryCount < 2; tryCount++) { // 가끔 대답을 못 하면 한 번 더 물어봐요
+        try {
+          const response = await fetch(url);
+          if (response.ok) return await response.json();
+        } catch (error) {
+          // 다시 해 봐요
+        }
+      }
+      throw new Error("NO_SEA_DATA");
+    }
+    ERROR_TEXT.NO_SEA_DATA = "바다 정보를 받지 못했어요. 잠시 뒤에 다시 해 주세요.";
+
+    // 한 곳의 바다 정보 받기 (수온·파도·물높이 + 바람·기온·날씨)
+    async function fetchSea(place) {
+      const where = "latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lng.toFixed(4) + "&timezone=Asia%2FSeoul";
+      const both = await Promise.all([
+        getJson(MARINE_URL + "?" + where + "&cell_selection=sea&forecast_days=2" +
+          "&current=wave_height,sea_surface_temperature&hourly=sea_level_height_msl"),
+        getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms" +
+          "&current=temperature_2m,wind_speed_10m,wind_gusts_10m,weather_code,uv_index")
+      ]);
+      const sea = both[0].current || {};
+      const air = both[1].current || {};
+      return {
+        water: sea.sea_surface_temperature,
+        wave: sea.wave_height,
+        wind: air.wind_speed_10m,
+        gust: air.wind_gusts_10m,
+        air: air.temperature_2m,
+        weather: air.weather_code,
+        uv: air.uv_index,
+        tideTimes: (both[0].hourly && both[0].hourly.time) || [],
+        tide: (both[0].hourly && both[0].hourly.sea_level_height_msl) || []
+      };
+    }
+
+    async function chooseSeaPlace(place, name) {
+      seaPlace = { lat: place.lat, lng: place.lng, name: name };
+      $("seaPlaceNote").textContent = "📍 " + name + " (" + placeText(place) + ") · 알아보는 중…";
+      $("seaError").textContent = "";
+      drawSeaLayer();
+      const ask = ++seaAsk;
+      try {
+        const data = await fetchSea(place);
+        if (ask !== seaAsk) return;
+        seaData = data;
+        $("seaPlaceNote").textContent = "📍 " + name + " (" + placeText(place) + ")";
+        drawSea();
+      } catch (error) {
+        if (ask !== seaAsk) return;
+        $("seaPlaceNote").textContent = "📍 " + name + " (" + placeText(place) + ")";
+        $("seaError").textContent = errorText(error);
+        $("seaResult").hidden = true;
+      }
+    }
+    $("seaMapButton").addEventListener("click", function () { startPicking("sea", "바다 상태가 궁금한 바닷가를 지도에서 눌러 주세요"); });
+    $("seaHereButton").addEventListener("click", async function () {
+      $("seaPlaceNote").textContent = "내 자리를 찾는 중…";
+      try {
+        const place = await findMe();
+        moveMap(place.lat, place.lng, 6);
+        chooseSeaPlace(place, "지금 내 자리");
+      } catch (error) {
+        $("seaPlaceNote").textContent = errorText(error);
+      }
+    });
+
+    // 수영 신호등 정하기: level 0 🟢, 1 🟡, 2 🔴 와 그 까닭들
+    function swimSignal(data, place) {
+      let level = 0;
+      const reasons = [];
+      function add(newLevel, text) { level = Math.max(level, newLevel); reasons.push(text); }
+      const r = SWIM_RULES;
+      if (typeof data.water === "number") {
+        if (data.water < r.coldWater) add(2, "물이 차가워요 (" + data.water.toFixed(1) + "°C)");
+        else if (data.water < r.warmWater) add(1, "물이 조금 차가워요 (" + data.water.toFixed(1) + "°C)");
+      }
+      if (typeof data.wave === "number") {
+        if (data.wave > r.hugeWave) add(2, "파도가 높아요 (" + data.wave.toFixed(1) + "m)");
+        else if (data.wave > r.bigWave) add(1, "파도가 조금 있어요 (" + data.wave.toFixed(1) + "m)");
+      }
+      if (typeof data.wind === "number") {
+        if (data.wind > r.strongWind) add(2, "바람이 아주 세요 (" + data.wind.toFixed(1) + "m/s)");
+        else if (data.wind > r.wind) add(1, "바람이 세요 (" + data.wind.toFixed(1) + "m/s)");
+      }
+      if (data.weather >= 95) add(2, "천둥번개가 쳐요");
+      else if (data.weather >= 51) add(1, "비가 와요");
+      // 친구들이 알린 위험 중 가까운 것
+      recentReports().forEach(function (report) {
+        const km = distanceKm(place, report);
+        if (km <= r.nearKm) {
+          const kind = reportKindOf(report.kind);
+          add(kind.level, kind.name + " 알림이 " + (km < 1 ? "1km 안" : Math.round(km) + "km 거리") + "에 있어요");
+        }
+      });
+      if (!reasons.length) reasons.push("파도와 바람이 잔잔하고 물이 따뜻해요");
+      return { level: level, reasons: reasons };
+    }
+
+    const SIGNAL_LOOK = [
+      { light: "🟢", text: "수영하기 괜찮아요" },
+      { light: "🟡", text: "조심해요" },
+      { light: "🔴", text: "오늘은 물에 들어가지 마세요" }
+    ];
+
+    function drawSea() {
+      if (!seaData) return;
+      const data = seaData;
+      $("seaResult").hidden = false;
+      const signal = swimSignal(data, seaPlace);
+      $("seaSignal").className = "signal l" + signal.level;
+      $("seaLight").textContent = SIGNAL_LOOK[signal.level].light;
+      $("seaSignalText").textContent = SIGNAL_LOOK[signal.level].text;
+      const reasons = $("seaReasons");
+      reasons.textContent = "";
+      signal.reasons.forEach(function (text) { reasons.append(el("li", "", text)); });
+
+      function number(value, digits, unit) { return typeof value === "number" ? value.toFixed(digits) + unit : "모름"; }
+      const boxes = [
+        ["🌡️ 수온", number(data.water, 1, "°C")],
+        ["🌊 파도", number(data.wave, 1, "m")],
+        ["💨 바람", number(data.wind, 1, "m/s")],
+        ["☀️ 기온", number(data.air, 0, "°C")],
+        ["날씨", weatherName(data.weather) || "모름"],
+        ["🧴 자외선", number(data.uv, 0, "")]
+      ];
+      const grid = $("seaNumbers");
+      grid.textContent = "";
+      boxes.forEach(function (pair) {
+        const box = el("div");
+        box.append(el("small", "", pair[0]), el("b", "", pair[1]));
+        grid.append(box);
+      });
+      drawTide(data);
+    }
+
+    // 물때 그래프: 물높이가 가장 높을 때(만조, 물이 가득) / 가장 낮을 때(간조, 물이 빠짐)
+    function drawTide(data) {
+      const heights = data.tide;
+      const times = data.tideTimes.map(function (text) { return new Date(text + ":00+09:00"); });
+      const box = $("tideChart");
+      box.textContent = "";
+      if (heights.length < 3) { $("tideNote").textContent = "이곳은 물때 정보가 없어요."; return; }
+
+      const marks = [];
+      for (let i = 1; i < heights.length - 1; i++) {
+        if (heights[i] > heights[i - 1] && heights[i] >= heights[i + 1]) marks.push({ i: i, high: true });
+        if (heights[i] < heights[i - 1] && heights[i] <= heights[i + 1]) marks.push({ i: i, high: false });
+      }
+      const now = Date.now();
+      const hourNow = Math.max(0, Math.min(heights.length - 2, Math.floor((now - times[0]) / 3600000)));
+      const rising = heights[hourNow + 1] > heights[hourNow];
+      const nextHigh = marks.find(function (m) { return m.high && times[m.i] > now; });
+      const nextLow = marks.find(function (m) { return !m.high && times[m.i] > now; });
+      function clock(date) { return date.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" }); }
+      $("tideNote").textContent = (rising ? "⬆️ 지금은 물이 들어오고 있어요 (밀물). 갯벌·바위에 오래 있지 마세요." : "⬇️ 지금은 물이 빠지고 있어요 (썰물).") +
+        (nextHigh ? " 다음 만조(물이 가득): " + clock(times[nextHigh.i]) + "." : "") +
+        (nextLow ? " 다음 간조(물이 빠짐): " + clock(times[nextLow.i]) + "." : "");
+
+      // 그래프 그리기 (SVG)
+      const W = 360, H = 130, top = 18, bottom = 22;
+      const min = Math.min.apply(null, heights), max = Math.max.apply(null, heights);
+      const x = function (i) { return (i / (heights.length - 1)) * W; };
+      const y = function (h) { return top + (1 - (h - min) / ((max - min) || 1)) * (H - top - bottom); };
+      const ns = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", "오늘과 내일의 물높이 그래프");
+      function shape(tag, attrs, text) {
+        const node = document.createElementNS(ns, tag);
+        Object.keys(attrs).forEach(function (key) { node.setAttribute(key, attrs[key]); });
+        if (text !== undefined) node.textContent = text;
+        svg.append(node);
+        return node;
+      }
+      const line = heights.map(function (h, i) { return x(i).toFixed(1) + "," + y(h).toFixed(1); }).join(" ");
+      shape("polygon", { points: "0," + (H - bottom) + " " + line + " " + W + "," + (H - bottom), fill: "#cfe8f1" });
+      shape("polyline", { points: line, fill: "none", stroke: "#0b6e8a", "stroke-width": 2 });
+      // 날짜가 바뀌는 곳(자정)과 시간 눈금
+      times.forEach(function (time, i) {
+        if (time.getHours() % 6 === 0) {
+          shape("text", { x: x(i), y: H - 6, "font-size": 10, fill: "#5b6272", "text-anchor": "middle" },
+            time.getHours() === 0 ? (time.getMonth() + 1) + "/" + time.getDate() : time.getHours() + "시");
+          if (time.getHours() === 0 && i > 0) shape("line", { x1: x(i), x2: x(i), y1: top, y2: H - bottom, stroke: "#b8c6cf", "stroke-dasharray": "3 3" });
+        }
+      });
+      marks.forEach(function (m) {
+        shape("circle", { cx: x(m.i), cy: y(heights[m.i]), r: 3, fill: m.high ? "#0b6e8a" : "#ff8c00" });
+        shape("text", { x: x(m.i), y: m.high ? y(heights[m.i]) - 6 : y(heights[m.i]) + 13, "font-size": 9, fill: "#1f2430", "text-anchor": "middle" },
+          (m.high ? "만조 " : "간조 ") + times[m.i].getHours() + "시");
+      });
+      // 지금
+      const nowX = ((now - times[0]) / 3600000 / (heights.length - 1)) * W;
+      if (nowX >= 0 && nowX <= W) {
+        shape("line", { x1: nowX, x2: nowX, y1: top - 6, y2: H - bottom, stroke: "#c0392b", "stroke-width": 1.5 });
+        shape("text", { x: nowX, y: 10, "font-size": 10, fill: "#c0392b", "text-anchor": "middle" }, "지금");
+      }
+      box.append(svg);
+    }
+
+    // ── 위험 알림 ──
+    let reports = [];
+    let reportsKey = null;
+
+    function readReport(item) {
+      try {
+        const data = JSON.parse(item.text);
+        const lat = Number(data.lat);
+        const lng = Number(data.lng);
+        if (!isFinite(lat) || !isFinite(lng)) return null;
+        return {
+          sk: item.sk,
+          author: item.author,
+          kind: reportKindOf(data.kind).id,
+          text: hideBadWords(String(data.text || "").slice(0, 200)),
+          lat: lat,
+          lng: lng,
+          photo: item.media && item.media[0] ? item.media[0].url : null
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+    function recentReports() {
+      const from = Date.now() - REPORT_DAYS * 24 * 3600000;
+      return reports.filter(function (report) { return timeOf(report.sk) >= from; });
+    }
+
+    async function loadReports() {
+      let list;
+      try {
+        list = await call("posts", { board: REPORT_BOARD });
+      } catch (error) {
+        if (error.message === "NOT_LOGGED_IN") leave();
+        else $("reportCount").textContent = errorText(error);
+        return;
+      }
+      if (!me) return;
+      const key = list.map(function (item) { return item.sk; }).join(",");
+      if (key === reportsKey) return;
+      reportsKey = key;
+      reports = list.map(readReport).filter(Boolean);
+      drawReports();
+      drawSeaLayer();
+      drawSea(); // 신호등에 새 알림을 넣어요
+    }
+
+    function timeAgo(sk) {
+      const minutes = Math.round((Date.now() - timeOf(sk)) / 60000);
+      if (minutes < 60) return Math.max(1, minutes) + "분 전";
+      if (minutes < 60 * 24) return Math.round(minutes / 60) + "시간 전";
+      return Math.round(minutes / 60 / 24) + "일 전";
+    }
+
+    function drawReports() {
+      const list = recentReports();
+      const box = $("reportList");
+      box.textContent = "";
+      list.forEach(function (report) {
+        const card = el("div", "card");
+        const thumb = el("div", "thumb big-emoji");
+        if (report.photo) {
+          thumb.className = "thumb";
+          const img = el("img");
+          img.src = report.photo;
+          img.alt = "";
+          thumb.append(img);
+        } else thumb.textContent = Array.from(reportKindOf(report.kind).name)[0];
+        const words = el("div");
+        words.style.flex = "1";
+        const where = seaPlace ? " · 고른 바닷가에서 " + distanceKm(seaPlace, report).toFixed(1) + "km" : "";
+        words.append(
+          el("b", "", reportKindOf(report.kind).name),
+          el("span", "", report.text || "(설명 없음)"),
+          el("span", "", report.author + " · " + timeAgo(report.sk) + where)
+        );
+        const tools = el("div", "row");
+        const look = el("button", "soft", "🗺️ 지도");
+        look.type = "button";
+        look.addEventListener("click", function () { moveMap(report.lat, report.lng, 5); bringIntoView($("mapWrap")); });
+        tools.append(look);
+        if (report.author === me) {
+          const x = el("button", "soft danger", "지우기");
+          x.type = "button";
+          x.addEventListener("click", async function () {
+            if (!confirm("이 알림을 지울까요?")) return;
+            try {
+              await call("remove", { board: REPORT_BOARD, sk: report.sk });
+              await loadReports();
+            } catch (error) {
+              $("reportCount").textContent = errorText(error);
+            }
+          });
+          tools.append(x);
+        }
+        tools.style.marginTop = "6px";
+        words.append(tools);
+        card.append(thumb, words);
+        box.append(card);
+      });
+      $("reportCount").textContent = list.length ? list.length + "개" : "최근 " + REPORT_DAYS + "일 동안 알린 위험이 없어요.";
+    }
+
+    // 지도: 고른 바닷가 📍 + 위험 알림 + 알리는 중인 자리
+    function drawSeaLayer() {
+      clearLayer("sea");
+      if (!map) return;
+      if (seaPlace) addOverlay("sea", seaPlace, el("div", "place-pin", "📍"), 5);
+      recentReports().forEach(function (report) {
+        const pin = el("div", "alert-pin", Array.from(reportKindOf(report.kind).name)[0]);
+        pin.title = reportKindOf(report.kind).name + " " + report.text;
+        pin.addEventListener("click", function () {
+          showHint(reportKindOf(report.kind).name + ": " + (report.text || "설명 없음") + " (" + timeAgo(report.sk) + ")", 5000);
+        });
+        addOverlay("sea", report, pin, 4);
+      });
+      if (reportDraft && reportDraft.place) addOverlay("sea", reportDraft.place, makePin(null, "⚠️", "draft"), 6);
+    }
+
+    // ── 위험 알리기 ──
+    let reportDraft = null;
+    let sendingReport = false;
+
+    function drawReportKindPick() {
+      const box = $("reportKindPick");
+      box.textContent = "";
+      REPORT_KINDS.forEach(function (kind) {
+        const button = el("button", "soft" + (reportDraft && reportDraft.kind === kind.id ? " on" : ""), kind.name);
+        button.type = "button";
+        button.addEventListener("click", function () { reportDraft.kind = kind.id; drawReportKindPick(); });
+        box.append(button);
+      });
+    }
+    function openReportCompose() {
+      reportDraft = { kind: null, place: null, file: null };
+      $("reportCompose").reset();
+      $("reportLetters").textContent = "0 / 200";
+      $("reportError").textContent = "";
+      $("okReportSpot").textContent = "";
+      $("reportSpotNote").textContent = "아직 안 정했어요.";
+      $("reportPicked").textContent = "";
+      $("reportSeaButton").hidden = !seaPlace;
+      drawReportKindPick();
+      $("seaInfoPane").hidden = true;
+      $("reportCompose").hidden = false;
+      $("side").scrollTop = 0;
+    }
+    function closeReportCompose() {
+      reportDraft = null;
+      stopPicking();
+      $("reportCompose").hidden = true;
+      $("seaInfoPane").hidden = false;
+      drawSeaLayer();
+    }
+    $("newReportButton").addEventListener("click", openReportCompose);
+    $("reportCancel").addEventListener("click", function () { if (!sendingReport) closeReportCompose(); });
+
+    function setReportSpot(place, how) {
+      if (!reportDraft) return;
+      reportDraft.place = place;
+      $("okReportSpot").textContent = "✔";
+      $("reportSpotNote").textContent = how + " (" + placeText(place) + ")";
+      drawSeaLayer();
+    }
+    $("reportMapButton").addEventListener("click", function () { startPicking("report", "위험한 것을 본 곳을 지도에서 눌러 주세요"); });
+    $("reportHereButton").addEventListener("click", async function () {
+      $("reportSpotNote").textContent = "내 자리를 찾는 중…";
+      try {
+        setReportSpot(await findMe(), "지금 내 자리");
+      } catch (error) {
+        $("reportSpotNote").textContent = errorText(error);
+      }
+    });
+    $("reportSeaButton").addEventListener("click", function () { if (seaPlace) setReportSpot(seaPlace, seaPlace.name); });
+    $("reportText").addEventListener("input", function () { $("reportLetters").textContent = this.value.length + " / 200"; });
+    function drawReportPicked() {
+      drawPicked($("reportPicked"), reportDraft.file ? [reportDraft.file] : [], function () {
+        reportDraft.file = null;
+        drawReportPicked();
+      });
+    }
+    $("reportFile").addEventListener("change", function () {
+      if (this.files[0] && this.files[0].type.startsWith("image/")) { reportDraft.file = this.files[0]; drawReportPicked(); }
+      this.value = "";
+    });
+
+    $("reportCompose").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      if (sendingReport) return;
+      const text = $("reportText").value.trim();
+      const problem =
+        !reportDraft.kind ? "1. 무엇을 봤는지 골라 주세요." :
+        !reportDraft.place ? "2. 어디서 봤는지 정해 주세요." :
+        hasBadWords(text) ? ERROR_TEXT.BAD_WORD : "";
+      $("reportError").textContent = problem;
+      if (problem) return;
+
+      sendingReport = true;
+      $("reportSend").disabled = true;
+      $("reportSend").textContent = "알리는 중…";
+      try {
+        const media = reportDraft.file ? [await uploadMedia(reportDraft.file)] : [];
+        const place = reportDraft.place;
+        await call("post", {
+          board: REPORT_BOARD,
+          text: JSON.stringify({
+            kind: reportDraft.kind,
+            text: text,
+            lat: Number(place.lat.toFixed(6)),
+            lng: Number(place.lng.toFixed(6))
+          }),
+          media: media
+        });
+        closeReportCompose();
+        await loadReports();
+      } catch (error) {
+        $("reportError").textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      sendingReport = false;
+      $("reportSend").disabled = false;
+      $("reportSend").textContent = "알리기";
+    });
+
+    // ═════════ ③ 바다 길찾기 ═════════
+    // 탈것과 빠르기 (노트 = 한 시간에 갈 수 있는 해리. 1해리 = 1.852km)
+    const BOATS = [
+      { id: "kayak", name: "🛶 카약", knots: 3 },
+      { id: "yacht", name: "⛵ 요트", knots: 6 },
+      { id: "ferry", name: "🛳️ 여객선", knots: 15 },
+      { id: "speed", name: "🚤 모터보트", knots: 25 }
+    ];
+    // 배를 댈 곳을 찾을 때 카카오맵에 물어볼 말
+    const DOCK_WORDS = ["마리나", "요트", "선착장", "여객선터미널", "항구"];
+    const DOCK_RADIUS = 20000; // 도착지에서 몇 m 안을 찾을지 (카카오는 20000까지)
+
+    let boat = BOATS[1];
+    let routePoints = []; // 지도에서 찍은 곳들 (첫째는 출발, 마지막은 도착)
+    let routeLine = null;
+    let routeAsk = 0;
+
+    function drawBoatPick() {
+      const box = $("boatPick");
+      box.textContent = "";
+      BOATS.forEach(function (item) {
+        const button = el("button", "soft" + (boat === item ? " on" : ""), item.name);
+        button.type = "button";
+        button.addEventListener("click", function () {
+          boat = item;
+          $("speedInput").value = item.knots;
+          drawBoatPick();
+          drawRouteText();
+        });
+        box.append(button);
+      });
+    }
+    $("speedInput").addEventListener("input", drawRouteText);
+
+    $("routeDrawButton").addEventListener("click", function () {
+      if (picking === "route") { stopPicking(); return; }
+      startPicking("route", routePoints.length ? "다음에 갈 곳을 차례로 눌러 주세요" : "출발하는 곳을 지도에서 눌러 주세요");
+      if (picking === "route") this.classList.add("on");
+    });
+    $("routeUndoButton").addEventListener("click", function () {
+      routePoints.pop();
+      routeChanged();
+    });
+    $("routeClearButton").addEventListener("click", function () {
+      routePoints = [];
+      routeChanged();
+    });
+
+    function addRoutePoint(place) {
+      routePoints.push(place);
+      showHint(routePoints.length === 1 ? "좋아요! 이제 들를 곳이나 도착하는 곳을 눌러 주세요" : "더 가려면 계속 누르고, 다 찍었으면 '그만'을 눌러요");
+      routeChanged();
+    }
+
+    function routeChanged() {
+      drawRoute();
+      drawRouteText();
+      const end = routePoints[routePoints.length - 1];
+      $("routeEndBox").hidden = routePoints.length < 2;
+      if (routePoints.length >= 2) checkRouteEnd(end);
+    }
+
+    function drawRoute() {
+      clearLayer("route");
+      if (routeLine) { routeLine.setMap(null); routeLine = null; }
+      if (!map) return;
+      if (routePoints.length >= 2) {
+        routeLine = new kakao.maps.Polyline({
+          path: routePoints.map(function (p) { return new kakao.maps.LatLng(p.lat, p.lng); }),
+          strokeWeight: 4, strokeColor: "#ff8c00", strokeOpacity: 0.9, strokeStyle: "shortdash"
+        });
+        layers.route.push(routeLine);
+        if (currentTab === "route") routeLine.setMap(map);
+      }
+      routePoints.forEach(function (point, i) {
+        const last = i === routePoints.length - 1 && i > 0;
+        const dot = el("div", "route-dot" + (i === 0 ? " start" : last ? " end" : ""), i === 0 ? "출" : last ? "도" : String(i));
+        addOverlay("route", point, dot, 6);
+      });
+      docks.forEach(function (dock) {
+        const pin = el("div", "dock-pin", "⚓ " + dock.name);
+        addOverlay("route", dock, pin, 5);
+      });
+    }
+
+    function hoursText(hours) {
+      const minutes = Math.round(hours * 60);
+      if (minutes < 60) return minutes + "분";
+      return Math.floor(minutes / 60) + "시간" + (minutes % 60 ? " " + (minutes % 60) + "분" : "");
+    }
+
+    function drawRouteText() {
+      const knots = Math.max(1, Number($("speedInput").value) || boat.knots);
+      const kmPerHour = knots * 1.852;
+      const legs = $("routeLegs");
+      legs.textContent = "";
+      let total = 0;
+      for (let i = 1; i < routePoints.length; i++) {
+        const a = routePoints[i - 1], b = routePoints[i];
+        const km = distanceKm(a, b);
+        const dir = bearing(a, b);
+        total += km;
+        const from = i === 1 ? "출발" : (i - 1) + "번";
+        const to = i === routePoints.length - 1 ? "도착" : i + "번";
+        legs.append(el("li", "", from + " → " + to + ": " + directionName(dir) + "(" + dir + "°)으로 " +
+          km.toFixed(1) + "km · " + hoursText(km / kmPerHour)));
+      }
+      $("routeNote").textContent =
+        routePoints.length === 0 ? "아직 찍은 곳이 없어요." :
+        routePoints.length === 1 ? "출발하는 곳을 찍었어요. 도착하는 곳도 찍어 주세요." :
+        routePoints.length + "곳을 찍었어요.";
+      $("routeTotal").hidden = routePoints.length < 2;
+      $("routeTotal").textContent = "";
+      if (routePoints.length >= 2) {
+        $("routeTotal").append(
+          el("b", "", "모두 " + total.toFixed(1) + "km (" + (total / 1.852).toFixed(1) + "해리)"),
+          el("br"),
+          document.createTextNode(boat.name + " " + knots + "노트로 약 " + hoursText(total / kmPerHour) + " 걸려요")
+        );
+      }
+    }
+
+    // 도착지의 바다 상태와 배를 댈 곳
+    let docks = [];
+    async function checkRouteEnd(end) {
+      const ask = ++routeAsk;
+      $("routeSea").textContent = "알아보는 중…";
+      try {
+        const data = await fetchSea(end);
+        if (ask !== routeAsk) return;
+        const level = (data.wave > 1.5 || data.wind > 10) ? 2 : (data.wave > 1 || data.wind > 7) ? 1 : 0;
+        const look = ["🟢 잔잔해요", "🟡 조심해요", "🔴 배를 띄우기 위험해요"][level];
+        $("routeSea").textContent = look + " · 파도 " + (typeof data.wave === "number" ? data.wave.toFixed(1) + "m" : "모름") +
+          " · 바람 " + (typeof data.wind === "number" ? data.wind.toFixed(1) + "m/s" : "모름") + " · " + weatherName(data.weather);
+      } catch (error) {
+        if (ask === routeAsk) $("routeSea").textContent = errorText(error);
+      }
+      findDocks(end, ask);
+    }
+    $("routeSeaButton").addEventListener("click", function () {
+      const end = routePoints[routePoints.length - 1];
+      if (!end) return;
+      setTab("sea");
+      chooseSeaPlace(end, "바다 길 도착지");
+    });
+
+    function findDocks(end, ask) {
+      const box = $("dockList");
+      box.textContent = "";
+      docks = [];
+      if (!placeSearch) {
+        box.append(el("p", "note", "배를 댈 곳은 지도가 보이는 웹 주소에서 찾을 수 있어요."));
+        drawRoute();
+        return;
+      }
+      box.append(el("p", "note", "찾는 중…"));
+      const found = {};
+      let left = DOCK_WORDS.length;
+      DOCK_WORDS.forEach(function (word) {
+        placeSearch.keywordSearch(word, function (results, status) {
+          if (ask !== routeAsk) return;
+          if (status === kakao.maps.services.Status.OK) {
+            results.forEach(function (item) {
+              found[item.id] = { name: item.place_name, address: item.road_address_name || item.address_name, lat: Number(item.y), lng: Number(item.x), km: Number(item.distance) / 1000 };
+            });
+          }
+          if (--left === 0) showDocks(Object.values(found));
+        }, { location: new kakao.maps.LatLng(end.lat, end.lng), radius: DOCK_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE });
+      });
+    }
+    function showDocks(list) {
+      docks = list.sort(function (a, b) { return a.km - b.km; }).slice(0, 8);
+      const box = $("dockList");
+      box.textContent = "";
+      docks.forEach(function (dock) {
+        const button = el("button", "", "⚓ " + dock.name + " · " + dock.km.toFixed(1) + "km");
+        button.type = "button";
+        button.append(el("span", "", dock.address));
+        button.addEventListener("click", function () { moveMap(dock.lat, dock.lng, 4); bringIntoView($("mapWrap")); });
+        box.append(button);
+      });
+      if (!docks.length) box.append(el("p", "note", "도착지 근처 20km 안에서 배를 댈 곳을 찾지 못했어요."));
+      drawRoute();
+    }
+
+    // ───────── 로그인 ─────────
+    let signupMode = false;
+    let needsCode = true;
+
+    function setMode(signup) {
+      signupMode = signup;
+      $("loginTitle").textContent = signup ? "계정 만들기" : "로그인";
+      $("loginHelp").textContent = signup
+        ? "진짜 이름 말고 별명으로 아이디를 지어 주세요. 비밀번호는 다른 곳에서 쓰는 것 말고 새로 지어 주세요."
+        : "message나 잉스타 계정이 있으면 그 아이디와 비밀번호로 들어올 수 있어요.";
+      $("loginButton").textContent = signup ? "가입하기" : "로그인";
+      $("modeButton").textContent = signup ? "이미 계정이 있어요. 로그인하기" : "처음이에요. 계정 만들기";
+      $("passwordInput").autocomplete = signup ? "new-password" : "current-password";
+      $("codeInput").hidden = !(signup && needsCode);
+      $("loginError").textContent = "";
+    }
+    $("modeButton").addEventListener("click", function () { setMode(!signupMode); });
+
+    $("loginForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const id = $("idInput").value.trim();
+      const password = $("passwordInput").value;
+      if (Array.from(id).length < 2 || /\s/.test(id)) { $("loginError").textContent = ERROR_TEXT.BAD_ID; return; }
+      if (password.length < 4) { $("loginError").textContent = ERROR_TEXT.BAD_PASSWORD; return; }
+
+      $("loginButton").disabled = true;
+      $("loginError").textContent = "";
+      try {
+        const result = signupMode
+          ? await call("signup", { id: id, password: password, code: $("codeInput").value.trim() })
+          : await call("login", { id: id, password: password });
+        token = result.token;
+        localStorage.setItem(TOKEN_KEY, token);
+        $("loginForm").reset();
+        enter(result.id);
+      } catch (error) {
+        $("loginError").textContent = errorText(error);
+      }
+      $("loginButton").disabled = false;
+    });
+
+    let refreshTimer = null;
+
+    function enter(id) {
+      me = id;
+      $("meName").textContent = id;
+      $("meBox").hidden = false;
+      $("loginBox").hidden = true;
+      $("appBox").hidden = false;
+      setupMap();
+      setTab(location.hash.slice(1));
+      loadStories();
+      loadReports();
+      clearInterval(refreshTimer);
+      refreshTimer = setInterval(function () { loadStories(); loadReports(); }, 60000); // 1분마다 새 글이 있는지 보기
+    }
+
+    function leave() {
+      me = null;
+      token = null;
+      localStorage.removeItem(TOKEN_KEY);
+      clearInterval(refreshTimer);
+      stories = [];
+      storiesKey = null;
+      reports = [];
+      reportsKey = null;
+      if ($("viewDialog").open) $("viewDialog").close();
+      if (storyDraft) closeStoryCompose();
+      if (reportDraft) closeReportCompose();
+      drawStoryList();
+      drawStorySpots();
+      drawReports();
+      drawSeaLayer();
+      $("meBox").hidden = true;
+      $("appBox").hidden = true;
+      $("loginBox").hidden = false;
+      setMode(false);
+    }
+
+    $("logoutButton").addEventListener("click", function () {
+      call("logout").catch(function () {});
+      leave();
+    });
+
+    // ───────── 시작 ─────────
+    async function start() {
+      drawKindFilter();
+      drawBoatPick();
+      $("speedInput").value = boat.knots;
+      drawRouteText();
+      try {
+        needsCode = (await call("info")).needsCode;
+      } catch (error) {
+        // 서버에 물어보지 못하면 가입 코드 칸을 보여 줘요
+      }
+      setMode(false);
+      if (token) {
+        try {
+          const result = await call("whoami");
+          enter(result.id);
+          return;
+        } catch (error) {
+          if (error.message === "NOT_LOGGED_IN") { token = null; localStorage.removeItem(TOKEN_KEY); }
+        }
+      }
+      $("loginBox").hidden = false;
+    }
+    start();
+  </script>
+</body>
+</html>
