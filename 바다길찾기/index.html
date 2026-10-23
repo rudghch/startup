@@ -58,7 +58,7 @@
     /* 지도 + 옆 칸 */
     .app { display: flex; height: calc(100vh - 56px); }
     .map-wrap { position: relative; flex: 1; min-width: 0; }
-    #map { width: 100%; height: 100%; background: #cfe3ea; }
+    #map { width: 100%; height: 100%; background: #cfe3ea; touch-action: none; } /* 지도 위에서 손가락을 움직이면 페이지 말고 지도가 움직여요 */
     .no-map {
       position: absolute;
       inset: 0;
@@ -1153,7 +1153,51 @@
       kakao.maps.event.addListener(map, "zoom_changed", function () { zooming = false; drawDepthLayer(); });
       kakao.maps.event.addListener(map, "dragstart", function () { follow = false; }); // 지도를 손으로 움직이면 내 배 따라가기를 멈춰요
       window.addEventListener("resize", drawDepthLayer);
+      setupPinchZoom();
       drawRoute();
+    }
+
+    // ── 두 손가락으로 벌리고 오므려서 확대·축소 (터치 화면용) ──
+    // 크롬북처럼 카카오맵이 손가락 확대를 못 알아듣는 화면이 있어서 직접 도와줘요.
+    // 손가락을 뗀 뒤 카카오맵이 이미 확대했으면 아무것도 하지 않아요 (두 번 확대되지 않게).
+    const PINCH_STEP = 0.6; // 손가락 사이가 2의 이만큼 제곱배 벌어질 때마다 한 단계씩 (작을수록 예민해요)
+    function setupPinchZoom() {
+      const box = $("map");
+      const fingers = new Map(); // 화면에 닿은 손가락들 { id: {x, y} }
+      let pinch = null;           // { startGap, gap, level, mid }
+      const gapOf = function () {
+        const p = Array.from(fingers.values());
+        return Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      };
+      box.addEventListener("pointerdown", function (event) { // true: 카카오맵보다 먼저 손가락을 알아채요
+        if (event.pointerType !== "touch") return;
+        fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (fingers.size === 2) {
+          const p = Array.from(fingers.values()), rect = box.getBoundingClientRect();
+          pinch = { startGap: gapOf(), gap: gapOf(), level: map.getLevel(),
+            mid: { x: (p[0].x + p[1].x) / 2 - rect.left, y: (p[0].y + p[1].y) / 2 - rect.top } };
+        }
+      }, true);
+      box.addEventListener("pointermove", function (event) {
+        if (!fingers.has(event.pointerId)) return;
+        fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (pinch && fingers.size === 2) pinch.gap = gapOf();
+      }, true);
+      const lift = function (event) {
+        if (!fingers.delete(event.pointerId) || !pinch || fingers.size >= 2) return;
+        const done = pinch;
+        pinch = null;
+        const steps = Math.round(Math.log2(done.gap / done.startGap) / PINCH_STEP);
+        if (!steps || done.startGap < 10) return;
+        setTimeout(function () {
+          if (map.getLevel() !== done.level) return; // 카카오맵이 벌써 확대·축소했어요
+          const level = Math.max(1, Math.min(14, done.level - steps)); // 벌리면(steps > 0) 크게 보여요
+          const anchor = map.getProjection().coordsFromContainerPoint(new kakao.maps.Point(done.mid.x, done.mid.y));
+          map.setLevel(level, { anchor: anchor, animate: { duration: 250 } });
+        }, 350);
+      };
+      box.addEventListener("pointerup", lift, true);
+      box.addEventListener("pointercancel", lift, true);
     }
 
     function moveMap(lat, lng, level) {
