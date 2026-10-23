@@ -2105,7 +2105,7 @@
       if (!name && kakao.maps.services) {
         new kakao.maps.services.Geocoder().coord2RegionCode(place.lng, place.lat, function (result, status) {
           if (ask === roadviewAsk && status === kakao.maps.services.Status.OK && result[0]) {
-            $("naverLink").href = "https://map.naver.com/p/search/" + encodeURIComponent(result[0].address_name);
+            $("naverLink").href = "https://map.naver.com/p/search/" + encodeURIComponent(result[0].address_name.split(" ").slice(-2).join(" ")); // "여수시 ○○동"처럼 짧게
           }
         });
       }
