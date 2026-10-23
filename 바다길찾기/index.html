@@ -602,7 +602,10 @@
         addOverlay(point, dot, 6);
       });
       docks.forEach(function (dock) {
-        const pin = el("div", "dock-pin", "⚓ " + dock.name);
+        // 이름표가 겹치지 않게 지도에는 ⚓만 보이고, 누르면 이름이 나와요
+        const pin = el("div", "dock-pin", "⚓");
+        pin.title = dock.name;
+        pin.addEventListener("click", function () { showHint("⚓ " + dock.name + " · " + dock.address, 4000); });
         addOverlay(dock, pin, 5);
       });
     }
