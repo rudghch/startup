@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>바다 길찾기</title>
+  <title>dockmap</title>
   <!-- 카카오맵 불러오기 (appkey는 길찾기와 같은 JavaScript 키, services는 장소 검색 도구) -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
   <style>
@@ -90,6 +90,7 @@
       background: #fff;
       font-size: 14px;
     }
+    .map-tools button.on { background: #0b6e8a; border-color: #0b6e8a; color: #fff; }
     .map-hint {
       position: absolute;
       left: 50%;
@@ -107,6 +108,22 @@
     }
     .map-hint button { margin-left: 8px; border: 0; border-radius: 6px; padding: 3px 8px; background: rgba(255, 255, 255, 0.3); color: #fff; }
 
+    /* 수심 색칠 (지도 위에 겹쳐 그려요) */
+    #depthLayer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .legend {
+      position: absolute;
+      left: 10px;
+      bottom: 64px;
+      z-index: 5;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+      line-height: 1.6;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+    .legend i { display: inline-block; width: 14px; height: 10px; margin-right: 4px; border-radius: 2px; vertical-align: -1px; }
+
     .side {
       width: 400px;
       flex-shrink: 0;
@@ -116,7 +133,7 @@
       border-left: 1px solid #d6e4ea;
     }
     .side h2 { margin: 0 0 6px; font-size: 20px; }
-    .side h3 { margin: 16px 0 8px; font-size: 16px; }
+    .side h3 { margin: 18px 0 8px; font-size: 16px; }
     .intro { margin: 0 0 12px; color: #5b6272; font-size: 14px; line-height: 1.5; }
     .primary {
       width: 100%;
@@ -129,9 +146,6 @@
       font-weight: bold;
     }
     .primary:disabled { opacity: 0.5; cursor: default; }
-    .side input[type=search] { width: 100%; margin: 12px 0 4px; padding: 9px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
-    .count { margin: 4px 0 10px; color: #5b6272; font-size: 14px; }
-    .empty { color: #5b6272; line-height: 1.6; }
     .row { display: flex; flex-wrap: wrap; gap: 6px; }
     .soft {
       padding: 8px 10px;
@@ -144,62 +158,18 @@
     }
     .soft.on { background: #ff8c00; border-color: #ff8c00; color: #fff; }
     .soft:disabled { opacity: 0.5; cursor: default; }
-    label.soft { display: inline-block; cursor: pointer; }
     .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
     .chips .soft { padding: 5px 9px; font-size: 13px; border-radius: 999px; }
     .note { margin: 8px 0 0; font-size: 14px; color: #3d5866; line-height: 1.5; }
-    .warn { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: #fff4e0; color: #8a5300; font-size: 14px; line-height: 1.5; }
+    .note input { width: 72px; padding: 3px 6px; border: 1px solid #c9d3dc; border-radius: 6px; }
+    .warn { margin: 12px 0; padding: 8px 10px; border-radius: 8px; background: #fff4e0; color: #8a5300; font-size: 14px; line-height: 1.5; }
     .field { display: block; width: 100%; padding: 9px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
-    textarea.field { height: 90px; resize: vertical; }
-    .letters { margin: 2px 0 0; text-align: right; font-size: 12px; color: #8a93a3; }
-    .step { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #e8eef2; }
-    .step h3 { margin: 0 0 8px; }
-    .step h3 .ok { color: #1e9e6a; }
-    .buttons { display: flex; gap: 8px; }
-    .buttons .primary { flex: 1; }
-    .buttons .soft { padding: 12px 16px; }
+    textarea.field { height: 80px; resize: vertical; }
     .error { min-height: 20px; margin: 8px 0 0; color: #c0392b; font-size: 14px; }
+    .box { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #e6f3f7; line-height: 1.6; font-size: 14px; }
+    .box b.big { font-size: 18px; }
 
     /* 지도 위 표시들 */
-    .pin {
-      position: relative;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 3px solid #fff;
-      background: #0b6e8a;
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
-      cursor: pointer;
-    }
-    .pin img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
-    .pin .badge {
-      position: absolute;
-      right: -6px;
-      bottom: -6px;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: #fff;
-      font-size: 13px;
-      line-height: 22px;
-      text-align: center;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-    .pin.now { border-color: #ff8c00; }
-    .pin.draft { background: #ff8c00; border-color: #ff8c00; }
-    .alert-pin {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: 3px solid #c0392b;
-      background: #fff;
-      font-size: 20px;
-      line-height: 32px;
-      text-align: center;
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
-      cursor: pointer;
-    }
-    .place-pin { font-size: 34px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
     .route-dot {
       width: 26px;
       height: 26px;
@@ -225,14 +195,43 @@
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
       cursor: pointer;
     }
+    .boat-pin { font-size: 30px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+    .boat-pin span { display: inline-block; }
 
-    /* 바다 길찾기 */
+    /* 바닷길 */
     .legs { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
-    .legs li { padding: 6px 0; border-bottom: 1px solid #eef2f5; }
-    .total { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #e6f3f7; line-height: 1.6; }
-    .total b { font-size: 18px; }
+    .legs li { padding: 6px 0; border-bottom: 1px solid #eef2f5; line-height: 1.5; }
     .docks button { display: block; width: 100%; margin-bottom: 6px; padding: 8px 10px; border: 1px solid #d6e4ea; border-radius: 10px; background: #fff; text-align: left; }
     .docks button span { display: block; font-size: 12px; color: #5b6272; }
+    .live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+    .live-grid div { padding: 8px 6px; border-radius: 10px; background: #f1f6f9; text-align: center; }
+    .live-grid small { display: block; font-size: 12px; color: #5b6272; }
+    .live-grid b { font-size: 16px; }
+
+    /* 배 댈 곳 창 */
+    dialog {
+      width: min(560px, calc(100% - 24px));
+      max-height: calc(100% - 24px);
+      padding: 16px;
+      border: 0;
+      border-radius: 16px;
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+    dialog h2 { margin: 0 0 4px; }
+    .meta { margin: 0 0 8px; color: #5b6272; font-size: 14px; line-height: 1.5; }
+    .meta a { color: #0b6e8a; }
+    .stats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .stats div { flex: 1; min-width: 120px; padding: 8px 10px; border-radius: 10px; background: #f1f6f9; font-size: 14px; }
+    .stats b { display: block; font-size: 18px; }
+    .review { padding: 8px 0; border-bottom: 1px solid #eef2f5; font-size: 14px; line-height: 1.5; }
+    .review .stars { color: #f0a500; }
+    .review small { color: #5b6272; }
+    .review button { margin-left: 6px; border: 0; background: none; color: #c0392b; font-size: 12px; }
+    .star-pick button { padding: 2px 4px; border: 0; background: none; font-size: 26px; color: #c9d3dc; }
+    .star-pick button.on { color: #f0a500; }
+    .two { display: flex; gap: 8px; margin: 8px 0; }
+    .two label { flex: 1; font-size: 13px; color: #3d5866; }
+    .two input { display: block; width: 100%; margin-top: 2px; padding: 7px 8px; border: 1px solid #c9d3dc; border-radius: 8px; }
 
     /* 좁은 화면(핸드폰): 지도 위, 옆 칸 아래 */
     @media (max-width: 800px) {
@@ -248,13 +247,33 @@
 </head>
 <body>
   <header class="top">
-    <h1>⛵ 바다 길찾기</h1>
+    <h1>⚓ dockmap</h1>
+    <div class="me" id="meBox" hidden>
+      <b id="meName"></b>
+      <button type="button" id="logoutButton">로그아웃</button>
+    </div>
     <a href="../">🏠 처음 화면</a>
   </header>
 
-  <main class="app" id="appBox">
+  <!-- 로그인 -->
+  <section class="login" id="loginBox" hidden>
+    <h2 id="loginTitle">로그인</h2>
+    <p>바닷길, 기름값, 수심, 내 배 위치, 배 댈 곳의 자리와 리뷰를 알려 줘요.</p>
+    <p id="loginHelp"></p>
+    <form id="loginForm">
+      <input id="idInput" placeholder="아이디" autocomplete="username" maxlength="12">
+      <input id="passwordInput" type="password" placeholder="비밀번호" autocomplete="current-password" maxlength="50">
+      <input id="codeInput" placeholder="가입 코드 (선생님께 물어보세요)" hidden>
+      <button type="submit" class="primary" id="loginButton">로그인</button>
+    </form>
+    <button type="button" class="link" id="modeButton"></button>
+    <p class="error" id="loginError"></p>
+  </section>
+
+  <main class="app" id="appBox" hidden>
     <div class="map-wrap" id="mapWrap">
       <div id="map"></div>
+      <canvas id="depthLayer"></canvas>
       <div class="no-map" id="noMap" hidden>
         지도를 불러오지 못했어요.<br>지도는 웹 주소(rudghch.github.io)에서 열어야 보여요.
       </div>
@@ -264,7 +283,9 @@
           <button type="submit">찾기</button>
         </form>
         <button type="button" id="mapTypeButton">🛰️ 위성지도</button>
+        <button type="button" id="depthButton">🌊 수심 보기</button>
       </div>
+      <div class="legend" id="depthLegend" hidden></div>
       <div class="map-hint" id="mapHint" hidden>
         <span id="mapHintText"></span>
         <button type="button" id="stopPickButton">그만</button>
@@ -272,13 +293,13 @@
     </div>
 
     <aside class="side" id="side">
-    <section id="routePane">
-      <h2>⛵ 바다 길찾기</h2>
-      <p class="intro">지도에서 출발하는 곳, 들르는 곳, 도착하는 곳을 차례로 누르면 거리와 걸리는 시간, 가는 방향을 알려 주고, 도착지 근처에 배를 댈 곳(정박할 곳)을 찾아 줘요.</p>
+      <h2>⚓ dockmap</h2>
+      <p class="intro">지도에서 출발하는 곳과 도착하는 곳을 누르면 땅을 피해 가는 바닷길과 걸리는 시간, 기름값을 알려 주고, 도착지 근처 배 댈 곳의 자리 수와 리뷰를 보여 줘요. 길을 찍지 않을 때 지도를 누르면 그곳 수심을 알려 줘요.</p>
 
       <h3>1. 무엇을 타나요?</h3>
       <div class="chips" id="boatPick"></div>
-      <p class="note">빠르기: <input type="number" id="speedInput" min="1" max="60" step="1" style="width: 64px;"> 노트 (1노트 = 한 시간에 1.85km)</p>
+      <p class="note">빠르기 <input type="number" id="speedInput" min="1" max="60" step="1"> 노트 (1노트 = 한 시간에 1.85km)</p>
+      <p class="note">한 시간에 쓰는 기름 <input type="number" id="fuelInput" min="0" max="2000" step="1"> L · 기름값 1L에 <input type="number" id="priceInput" min="0" max="10000" step="10"> 원</p>
 
       <h3>2. 바닷길 찍기</h3>
       <div class="row">
@@ -288,35 +309,141 @@
       </div>
       <p class="note" id="routeNote">아직 찍은 곳이 없어요.</p>
       <ol class="legs" id="routeLegs"></ol>
-      <div class="total" id="routeTotal" hidden></div>
+      <div class="box" id="routeTotal" hidden></div>
 
       <div id="routeEndBox" hidden>
         <h3>3. 도착지 바다 상태</h3>
         <p class="note" id="routeSea">알아보는 중…</p>
-        <button type="button" class="soft" id="routeSeaButton">🌊 도착지 바다 자세히 보기</button>
+        <button type="button" class="soft" id="routeSeaButton">🚦 씨그널에서 도착지 바다 자세히 보기</button>
 
         <h3>4. 배를 댈 곳 (도착지 근처 20km)</h3>
+        <p class="note">눌러서 자리 수와 리뷰를 보고, 다녀왔으면 리뷰를 남겨 주세요.</p>
         <div class="docks" id="dockList"></div>
       </div>
 
-      <p class="warn">이 길은 곧은 선이라 섬, 바위, 얕은 곳을 피하지 않아요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
-    </section>
+      <h3>📡 내 배 위치</h3>
+      <p class="note">핸드폰의 위치 기능으로 지금 내 배가 어디 있는지 지도에 보여 주고, 둘레의 수심과 바다 상태를 알려 줘요. 내 위치는 이 화면에서만 보이고 서버에 올리지 않아요.</p>
+      <div class="row" style="margin-top: 8px;">
+        <button type="button" class="soft" id="liveButton">📡 내 배 위치 켜기</button>
+        <button type="button" class="soft" id="followButton" hidden>🎯 지도를 내 배에 맞추기</button>
+      </div>
+      <div id="liveBox" hidden>
+        <div class="live-grid" id="liveGrid"></div>
+        <p class="note" id="liveSea"></p>
+      </div>
+
+      <p class="warn">바닷길은 약 450m 칸으로 나눈 바다 지도로 찾아서, 아주 작은 섬이나 바위, 좁은 물길은 잘 모를 수 있어요. 수심과 기름값도 어림값이에요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
     </aside>
   </main>
+
+  <!-- 배 댈 곳 자세히 보기 (자리 수와 리뷰) -->
+  <dialog id="dockDialog">
+    <h2 id="dockName"></h2>
+    <p class="meta" id="dockMeta"></p>
+    <div class="stats">
+      <div>⭐ 별점<b id="dockStars">-</b></div>
+      <div>⚓ 배 댈 자리<b id="dockSpots">-</b></div>
+      <div>🟢 빈자리<b id="dockEmpty">-</b></div>
+    </div>
+    <h3>리뷰</h3>
+    <div id="reviewList"></div>
+
+    <form id="reviewForm">
+      <h3>리뷰 남기기</h3>
+      <div class="star-pick" id="starPick"></div>
+      <div class="two">
+        <label>배 댈 자리 수 (아는 만큼)<input type="number" id="spotsInput" min="0" max="2000" placeholder="예: 30"></label>
+        <label>지금 빈자리 (본 만큼)<input type="number" id="emptyInput" min="0" max="2000" placeholder="예: 5"></label>
+      </div>
+      <textarea class="field" id="reviewText" maxlength="200" placeholder="배 대기 쉬웠는지, 물이 깊은지, 화장실·식당이 가까운지 적어 주세요"></textarea>
+      <div class="row" style="margin-top: 8px;">
+        <button type="submit" class="soft" id="reviewSend">올리기</button>
+        <button type="button" class="soft" id="dockClose">닫기</button>
+      </div>
+      <p class="error" id="reviewError"></p>
+    </form>
+  </dialog>
 
   <script>
     const $ = function (id) { return document.getElementById(id); };
 
-    // 이 서비스는 로그인 없이 누구나 써요. 서버에 저장하는 것도 없어요.
-    const ERROR_TEXT = {};
+    // ───────── 서버 ─────────
+    // 계정과 리뷰는 메신저·잉스타·섬지도와 같은 서버에 저장해요. 그래서 그 계정으로 바로 들어올 수 있어요.
+    const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
+    // 배 댈 곳 리뷰는 "berth" + 카카오 장소 번호를 글자로 바꾼 게시판에 모아요 (서버는 고치지 않아요)
+    const TOKEN_KEY = "messenger.token"; // 메신저·잉스타와 같은 이름이라 한 번 로그인하면 다 들어가져요
+
+    // 지도가 처음 보여 줄 곳 (여수 바다)
+    const FIRST_PLACE = { lat: 34.66, lng: 127.70, level: 9 };
+
+    let token = localStorage.getItem(TOKEN_KEY);
+    let me = null; // 지금 로그인한 아이디
+
+    const ERROR_TEXT = {
+      BAD_ID: "아이디는 띄어쓰기 없이 2~12글자로 적어 주세요.",
+      BAD_PASSWORD: "비밀번호는 4글자부터 적을 수 있어요.",
+      BAD_CODE: "가입 코드가 맞지 않아요. 선생님께 물어보세요.",
+      ID_TAKEN: "이미 누가 쓰고 있는 아이디예요. 다른 아이디를 적어 주세요.",
+      WRONG_LOGIN: "아이디나 비밀번호가 맞지 않아요.",
+      NOT_LOGGED_IN: "다시 로그인해 주세요.",
+      BAD_POST: "글이 너무 길어요.",
+      BAD_WORD: "나쁜 말이 들어 있어서 올릴 수 없어요. 고운 말로 바꿔 주세요.",
+      NOT_YOURS: "내가 올린 것만 지울 수 있어요.",
+      NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요.",
+      NO_SEA_DATA: "바다 정보를 받지 못했어요. 잠시 뒤에 다시 해 주세요.",
+      NO_GPS: "내 자리를 알 수 없어요. 위치 허용을 눌렀는지 확인해 주세요."
+    };
     function errorText(error) {
       return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
     }
 
-    // 지도가 처음 보여 줄 곳 (여수 바다)
-    const FIRST_PLACE = { lat: 34.62, lng: 127.74, level: 9 };
+    // 서버에 일 시키기 (action: 시킬 일 이름, data: 함께 보낼 내용)
+    async function call(action, data) {
+      let response;
+      try {
+        response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify(Object.assign({ action: action, token: token }, data))
+        });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      const result = await response.json().catch(function () { return null; });
+      if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
+      return result;
+    }
 
-    // 바다 정보는 무료 서버 Open-Meteo에서 받아요 (키가 필요 없어요). 약 5km 칸마다 계산한 예상값이에요.
+    // 숫자를 게시판 이름에 쓸 수 있게 글자로 바꾸기 (0→a … 9→j)
+    function lettersOf(number) {
+      return String(number).replace(/\d/g, function (d) { return "abcdefghij"[d]; }).replace(/[^a-j]/g, "");
+    }
+    function reviewBoard(dock) { return ("berth" + lettersOf(dock.id)).slice(0, 20); }
+
+    // ───────── 나쁜 말 막기 (잉스타·섬지도와 같은 목록) ─────────
+    const BAD_WORDS = [
+      "시발", "씨발", "씨빨", "씨바", "씨팔", "시팔",
+      "병신", "븅신", "지랄", "존나", "좆나", "좆까", "좆", "썅",
+      "개새끼", "개새", "새끼야", "미친놈", "미친년", "미친새끼", "또라이", "등신",
+      "니애미", "니어미", "느금마",
+      "닥쳐", "엿먹어", "꺼져라", "죽어라", "뒤져라",
+      "ㅅㅂ", "ㅆㅂ", "ㅂㅅ", "ㅄ", "ㅈㄹ", "ㅈㄴ", "ㅈㄲ", "ㄴㅇㅁ", "ㄴㄱㅁ",
+      "ㄳㄲ", "ㄱㅅㄲ", "ㅅㄲ", "ㅁㅊㄴ", "ㄲㅈ", "ㄷㅊ",
+      "fuck", "shit", "bitch"
+    ];
+    const BAD_WORD_PATTERN = new RegExp(
+      BAD_WORDS.slice().sort(function (a, b) { return b.length - a.length; }).map(function (word) {
+        return Array.from(word).join("[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\\s]*");
+      }).join("|"),
+      "gi"
+    );
+    function hasBadWords(text) {
+      BAD_WORD_PATTERN.lastIndex = 0;
+      return BAD_WORD_PATTERN.test(text);
+    }
+    function hideBadWords(text) {
+      return text.replace(BAD_WORD_PATTERN, "###");
+    }
+
     // ───────── 작은 도구들 ─────────
     // 화면 조각 만들기 (글은 textContent로 넣어서 안전해요)
     function el(tag, className, text) {
@@ -326,10 +453,13 @@
       return node;
     }
 
-    function dateText(sk) {
-      return new Date(Number(String(sk).slice(0, -6))).toLocaleDateString("ko-KR");
-    }
     function timeOf(sk) { return Number(String(sk).slice(0, -6)); } // 올린 시각 (밀리초)
+    function timeAgo(sk) {
+      const minutes = Math.round((Date.now() - timeOf(sk)) / 60000);
+      if (minutes < 60) return Math.max(1, minutes) + "분 전";
+      if (minutes < 60 * 24) return Math.round(minutes / 60) + "시간 전";
+      return Math.round(minutes / 60 / 24) + "일 전";
+    }
 
     const DIRECTION_NAMES = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
     function directionName(dir) {
@@ -352,27 +482,21 @@
         Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin((b.lng - a.lng) * r / 2), 2);
       return 12742 * Math.asin(Math.sqrt(h));
     }
-
-    function placeText(place) {
-      return "위도 " + place.lat.toFixed(4) + ", 경도 " + place.lng.toFixed(4);
+    function pathKm(points) {
+      let km = 0;
+      for (let i = 1; i < points.length; i++) km += distanceKm(points[i - 1], points[i]);
+      return km;
     }
 
-    // 지금 내 자리 (핸드폰·컴퓨터의 위치 기능)
-    function findMe() {
-      return new Promise(function (resolve, reject) {
-        if (!navigator.geolocation) { reject(new Error("NO_GPS")); return; }
-        navigator.geolocation.getCurrentPosition(
-          function (pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-          function () { reject(new Error("NO_GPS")); },
-          { enableHighAccuracy: true, timeout: 10000 }
-        );
-      });
+    function hoursText(hours) {
+      const minutes = Math.round(hours * 60);
+      if (minutes < 60) return minutes + "분";
+      return Math.floor(minutes / 60) + "시간" + (minutes % 60 ? " " + (minutes % 60) + "분" : "");
     }
-    ERROR_TEXT.NO_GPS = "내 자리를 알 수 없어요. 위치 허용을 눌렀는지 확인하거나 지도에서 눌러 주세요.";
 
+    // ───────── 바다 날씨 (씨그널과 같은 무료 서버 Open-Meteo, 키가 필요 없어요) ─────────
     const MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
     const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
-
     const WEATHER_NAMES = [
       [0, "☀️ 맑음"], [3, "⛅ 구름"], [48, "🌫️ 안개"], [67, "🌧️ 비"], [77, "❄️ 눈"], [82, "🌦️ 소나기"], [99, "⛈️ 천둥번개"]
     ];
@@ -380,7 +504,6 @@
       const found = WEATHER_NAMES.find(function (pair) { return code <= pair[0]; });
       return found ? found[1] : "";
     }
-
     async function getJson(url) {
       for (let tryCount = 0; tryCount < 2; tryCount++) { // 가끔 대답을 못 하면 한 번 더 물어봐요
         try {
@@ -392,30 +515,254 @@
       }
       throw new Error("NO_SEA_DATA");
     }
-    ERROR_TEXT.NO_SEA_DATA = "바다 정보를 받지 못했어요. 잠시 뒤에 다시 해 주세요.";
-
-    // 한 곳의 바다 정보 받기 (수온·파도·물높이 + 바람·기온·날씨)
+    // 한 곳의 바다 정보 받기 (파도·수온 + 바람·기온·날씨)
     async function fetchSea(place) {
       const where = "latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lng.toFixed(4) + "&timezone=Asia%2FSeoul";
       const both = await Promise.all([
-        getJson(MARINE_URL + "?" + where + "&cell_selection=sea&forecast_days=2" +
-          "&current=wave_height,sea_surface_temperature&hourly=sea_level_height_msl"),
-        getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms" +
-          "&current=temperature_2m,wind_speed_10m,wind_gusts_10m,weather_code,uv_index")
+        getJson(MARINE_URL + "?" + where + "&cell_selection=sea&current=wave_height,sea_surface_temperature"),
+        getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms&current=temperature_2m,wind_speed_10m,weather_code")
       ]);
       const sea = both[0].current || {};
       const air = both[1].current || {};
-      return {
-        water: sea.sea_surface_temperature,
-        wave: sea.wave_height,
-        wind: air.wind_speed_10m,
-        gust: air.wind_gusts_10m,
-        air: air.temperature_2m,
-        weather: air.weather_code,
-        uv: air.uv_index,
-        tideTimes: (both[0].hourly && both[0].hourly.time) || [],
-        tide: (both[0].hourly && both[0].hourly.sea_level_height_msl) || []
+      return { wave: sea.wave_height, water: sea.sea_surface_temperature, wind: air.wind_speed_10m, air: air.temperature_2m, weather: air.weather_code };
+    }
+    // 배를 띄워도 되는지: 0 🟢, 1 🟡, 2 🔴
+    function boatLevel(data) {
+      return (data.wave > 1.5 || data.wind > 10) ? 2 : (data.wave > 1 || data.wind > 7) ? 1 : 0;
+    }
+    function seaText(data) {
+      const look = ["🟢 잔잔해요", "🟡 조심해요", "🔴 배를 띄우기 위험해요"][boatLevel(data)];
+      function number(value, digits, unit) { return typeof value === "number" ? value.toFixed(digits) + unit : "모름"; }
+      return look + " · 파도 " + number(data.wave, 1, "m") + " · 바람 " + number(data.wind, 1, "m/s") +
+        " · 수온 " + number(data.water, 1, "°C") + " · " + weatherName(data.weather);
+    }
+
+    // ───────── 수심 지도 ─────────
+    // depth.json: 여수 바다를 약 450m 칸으로 나눠 칸마다 높이(m)를 적은 파일이에요. 0보다 작으면 바다 깊이, 크면 땅 높이.
+    // 세계 바다 지도 GEBCO 2020에서 받아 왔어요 (opentopodata.org). 칸이 커서 아주 작은 섬은 바다로 보일 수 있어요.
+    const DEPTH_FILE = "depth.json";
+    const SAFE_DEPTH = 2; // 바닷길은 이것보다 얕은 곳(m)을 피해요
+    const DEPTH_COLORS = [ // [이만큼 깊을 때까지(m), 색]
+      [2, "#d8f3ff"], [5, "#a9e1fb"], [10, "#6fc3ee"], [20, "#3a9bd8"], [50, "#1f6fb4"], [100000, "#123f7a"]
+    ];
+    let depth = null; // { lat0, lng0, step, rows, cols, values }
+
+    async function loadDepth() {
+      try {
+        const data = await (await fetch(DEPTH_FILE)).json();
+        depth = {
+          lat0: data.lat0, lng0: data.lng0, step: data.step, rows: data.rows, cols: data.cols,
+          values: Int16Array.from(data.values.split(",").map(Number))
+        };
+      } catch (error) {
+        depth = null; // 파일을 못 읽으면 곧은 선으로 이어요
+      }
+      drawDepthLayer();
+      if (routePoints.length >= 2) routeChanged();
+    }
+
+    // 지도 위 한 곳이 어느 칸인지 (여수 바다 밖이면 null)
+    function cellOf(place) {
+      if (!depth) return null;
+      const r = Math.round((place.lat - depth.lat0) / depth.step);
+      const c = Math.round((place.lng - depth.lng0) / depth.step);
+      if (r < 0 || c < 0 || r >= depth.rows || c >= depth.cols) return null;
+      return { r: r, c: c };
+    }
+    function heightOfCell(r, c) { return depth.values[r * depth.cols + c]; }
+    function placeOfCell(r, c) { return { lat: depth.lat0 + r * depth.step, lng: depth.lng0 + c * depth.step }; }
+    function heightAt(place) {
+      const cell = cellOf(place);
+      return cell ? heightOfCell(cell.r, cell.c) : null;
+    }
+    function depthText(place) {
+      const h = heightAt(place);
+      if (h === null) return depth ? "여수 바다 밖이라 몰라요" : "지도를 아직 못 받았어요";
+      if (h >= 0) return "땅이에요 (높이 약 " + h + "m)";
+      return "약 " + (-h) + "m";
+    }
+    function depthColor(meters) {
+      return DEPTH_COLORS.find(function (pair) { return meters <= pair[0]; })[1];
+    }
+
+    // 수심 색칠: 지도 위에 캔버스를 겹쳐서 칸마다 색을 칠해요
+    let showDepth = false;
+    let depthFrame = 0;
+    function drawDepthLayer() {
+      cancelAnimationFrame(depthFrame);
+      depthFrame = requestAnimationFrame(paintDepth);
+    }
+    function paintDepth() {
+      const canvas = $("depthLayer");
+      const box = $("mapWrap");
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = box.clientWidth * ratio;
+      canvas.height = box.clientHeight * ratio;
+      canvas.style.width = box.clientWidth + "px";
+      canvas.style.height = box.clientHeight + "px";
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      $("depthLegend").hidden = !showDepth;
+      if (!showDepth || !depth || !map) return;
+      const projection = map.getProjection();
+      const half = depth.step / 2;
+      // 맨 아래 왼쪽 칸과 맨 위 오른쪽 칸의 화면 자리를 구하고, 그 사이는 똑같이 나눠요
+      const a = projection.containerPointFromCoords(new kakao.maps.LatLng(depth.lat0 - half, depth.lng0 - half));
+      const b = projection.containerPointFromCoords(new kakao.maps.LatLng(depth.lat0 + (depth.rows - 0.5) * depth.step, depth.lng0 + (depth.cols - 0.5) * depth.step));
+      const cw = (b.x - a.x) / depth.cols;
+      const ch = (a.y - b.y) / depth.rows;
+      ctx.globalAlpha = 0.55;
+      ctx.scale(ratio, ratio);
+      for (let r = 0; r < depth.rows; r++) {
+        const y = a.y - (r + 1) * ch;
+        if (y > box.clientHeight || y + ch < 0) continue;
+        for (let c = 0; c < depth.cols; c++) {
+          const x = a.x + c * cw;
+          if (x > box.clientWidth || x + cw < 0) continue;
+          const h = heightOfCell(r, c);
+          if (h >= 0) continue; // 땅은 칠하지 않아요
+          ctx.fillStyle = depthColor(-h);
+          ctx.fillRect(x, y, cw + 0.6, ch + 0.6);
+        }
+      }
+    }
+    function drawLegend() {
+      const box = $("depthLegend");
+      box.textContent = "";
+      box.append(el("b", "", "수심 (어림값)"), el("br"));
+      let from = 0;
+      DEPTH_COLORS.forEach(function (pair) {
+        const swatch = el("i");
+        swatch.style.background = pair[1];
+        box.append(swatch, document.createTextNode(pair[0] > 1000 ? from + "m보다 깊어요" : from + "~" + pair[0] + "m"), el("br"));
+        from = pair[0];
+      });
+    }
+    $("depthButton").addEventListener("click", function () {
+      showDepth = !showDepth;
+      this.classList.toggle("on", showDepth);
+      this.textContent = showDepth ? "🌊 수심 끄기" : "🌊 수심 보기";
+      if (showDepth && !depth) showHint("수심 지도를 받는 중이에요…", 2000);
+      drawDepthLayer();
+    });
+
+    // ───────── 바닷길 찾기 (땅을 피해서) ─────────
+    // 바다 칸만 지나가게 칸을 따라 가장 짧은 길을 찾아요 (A* 길찾기라는 방법이에요)
+    function isSea(r, c) {
+      return r >= 0 && c >= 0 && r < depth.rows && c < depth.cols && heightOfCell(r, c) <= -SAFE_DEPTH;
+    }
+    // 항구처럼 바닷가에 찍으면 그 칸이 땅일 수 있어서, 가장 가까운 바다 칸을 찾아요 (약 3km 안)
+    function nearestSea(place) {
+      const cell = cellOf(place);
+      if (!cell) return null;
+      for (let d = 0; d <= 7; d++) {
+        let best = null;
+        for (let r = cell.r - d; r <= cell.r + d; r++) {
+          for (let c = cell.c - d; c <= cell.c + d; c++) {
+            if (Math.max(Math.abs(r - cell.r), Math.abs(c - cell.c)) !== d || !isSea(r, c)) continue;
+            const km = distanceKm(place, placeOfCell(r, c));
+            if (!best || km < best.km) best = { r: r, c: c, km: km };
+          }
+        }
+        if (best) return best;
+      }
+      return null;
+    }
+
+    function seaPath(from, to) {
+      if (!depth) return null;
+      const start = nearestSea(from);
+      const goal = nearestSea(to);
+      if (!start || !goal) return null;
+      const cols = depth.cols;
+      const total = depth.rows * cols;
+      const cost = new Float64Array(total).fill(Infinity);
+      const came = new Int32Array(total).fill(-1);
+      const kmX = depth.step * 111.32 * Math.cos(from.lat * Math.PI / 180); // 옆 칸까지 거리(km)
+      const kmY = depth.step * 110.57;                                       // 위 칸까지 거리(km)
+      const guess = function (i) { // 남은 거리 어림
+        const dr = (Math.floor(i / cols) - goal.r) * kmY, dc = (i % cols - goal.c) * kmX;
+        return Math.sqrt(dr * dr + dc * dc);
       };
+      // 가장 가까워 보이는 칸부터 꺼내는 줄 (작은 것이 위로 오는 더미)
+      const heap = [];
+      function push(i, f) {
+        heap.push([f, i]);
+        let k = heap.length - 1;
+        while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; }
+      }
+      function pop() {
+        const top = heap[0], last = heap.pop();
+        if (heap.length) {
+          heap[0] = last;
+          let k = 0;
+          for (;;) {
+            const l = 2 * k + 1, r = l + 1;
+            let m = k;
+            if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+            if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+            if (m === k) break;
+            [heap[m], heap[k]] = [heap[k], heap[m]]; k = m;
+          }
+        }
+        return top;
+      }
+      const startI = start.r * cols + start.c, goalI = goal.r * cols + goal.c;
+      cost[startI] = 0;
+      push(startI, guess(startI));
+      const steps = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+      while (heap.length) {
+        const i = pop()[1];
+        if (i === goalI) break;
+        const r = Math.floor(i / cols), c = i % cols;
+        for (const s of steps) {
+          const nr = r + s[0], nc = c + s[1];
+          if (!isSea(nr, nc)) continue;
+          if (s[0] && s[1] && (!isSea(r + s[0], c) || !isSea(r, c + s[1]))) continue; // 땅 모서리를 비스듬히 지나가지 않아요
+          const j = nr * cols + nc;
+          const step = Math.sqrt(Math.pow(s[0] * kmY, 2) + Math.pow(s[1] * kmX, 2));
+          if (cost[i] + step < cost[j]) {
+            cost[j] = cost[i] + step;
+            came[j] = i;
+            push(j, cost[j] + guess(j));
+          }
+        }
+      }
+      if (cost[goalI] === Infinity) return null;
+      const cells = [];
+      for (let i = goalI; i !== -1; i = came[i]) cells.push(i);
+      cells.reverse();
+      // 꺾이는 곳을 줄여서 부드러운 길로 만들기: 바다로만 곧게 갈 수 있으면 중간 칸을 건너뛰어요
+      const points = cells.map(function (i) { return placeOfCell(Math.floor(i / cols), i % cols); });
+      const smooth = [points[0]];
+      let k = 0;
+      while (k < points.length - 1) {
+        let far = k + 1;
+        for (let j = points.length - 1; j > k + 1; j--) {
+          if (straightBySea(points[k], points[j])) { far = j; break; }
+        }
+        smooth.push(points[far]);
+        k = far;
+      }
+      return [from].concat(smooth, [to]);
+    }
+    // 두 곳을 곧게 이은 선이 바다 칸만 지나가는지 (칸의 1/3 간격으로 살펴봐요)
+    function straightBySea(a, b) {
+      const n = Math.ceil(Math.max(Math.abs(a.lat - b.lat), Math.abs(a.lng - b.lng)) / depth.step * 3);
+      for (let i = 1; i < n; i++) {
+        const cell = cellOf({ lat: a.lat + (b.lat - a.lat) * i / n, lng: a.lng + (b.lng - a.lng) * i / n });
+        if (!cell || !isSea(cell.r, cell.c)) return false;
+      }
+      return true;
+    }
+    // 길에서 가장 얕은 곳 (m)
+    function shallowest(points) {
+      let least = null;
+      for (let i = 1; i < points.length - 1; i++) {
+        const h = heightAt(points[i]);
+        if (h !== null && (least === null || -h < least)) least = -h;
+      }
+      return least;
     }
 
     // ───────── 지도 ─────────
@@ -438,7 +785,10 @@
       kakao.maps.event.addListener(map, "click", function (mouseEvent) {
         mapClicked({ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() });
       });
-      drawMap();
+      kakao.maps.event.addListener(map, "bounds_changed", drawDepthLayer);
+      kakao.maps.event.addListener(map, "dragstart", function () { follow = false; }); // 지도를 손으로 움직이면 내 배 따라가기를 멈춰요
+      window.addEventListener("resize", drawDepthLayer);
+      drawRoute();
     }
 
     function moveMap(lat, lng, level) {
@@ -505,7 +855,7 @@
 
     // 지도 누르기 시작 (what: 무엇을 정할지, text: 안내 글)
     function startPicking(what, text) {
-      if (!map) { showHint("지도가 없어서 누를 수 없어요. '📍 지금 내 자리'를 써 주세요.", 3000); return; }
+      if (!map) { showHint("지도가 없어서 누를 수 없어요.", 3000); return; }
       picking = what;
       showHint(text);
       bringIntoView($("mapWrap"));
@@ -513,23 +863,24 @@
     function stopPicking() {
       picking = null;
       hideHint();
+      $("routeDrawButton").classList.remove("on");
     }
     $("stopPickButton").addEventListener("click", stopPicking);
 
-    function drawMap() { drawRoute(); }
     function mapClicked(place) {
-      if (picking === "route") addRoutePoint(place);
+      if (picking === "route") { addRoutePoint(place); return; }
+      showHint("🌊 이곳 수심: " + depthText(place), 4000); // 길을 찍지 않을 때는 수심을 알려 줘요
     }
-    $("stopPickButton").addEventListener("click", function () { $("routeDrawButton").classList.remove("on"); });
 
-    // ═════════ ③ 바다 길찾기 ═════════
-    // 탈것과 빠르기 (노트 = 한 시간에 갈 수 있는 해리. 1해리 = 1.852km)
+    // ═════════ 바닷길과 기름값 ═════════
+    // 탈것: 빠르기(노트)와 한 시간에 쓰는 기름(L)의 어림값이에요. 화면에서 바꿀 수 있어요.
     const BOATS = [
-      { id: "kayak", name: "🛶 카약", knots: 3 },
-      { id: "yacht", name: "⛵ 요트", knots: 6 },
-      { id: "ferry", name: "🛳️ 여객선", knots: 15 },
-      { id: "speed", name: "🚤 모터보트", knots: 25 }
+      { id: "kayak", name: "🛶 카약", knots: 3, fuel: 0 },     // 사람 힘으로 저어서 기름이 안 들어요
+      { id: "yacht", name: "⛵ 요트", knots: 6, fuel: 3 },     // 엔진으로 천천히 갈 때
+      { id: "ferry", name: "🛳️ 여객선", knots: 15, fuel: 150 },
+      { id: "speed", name: "🚤 모터보트", knots: 25, fuel: 60 }
     ];
+    const FUEL_PRICE = 1700; // 기름 1L 값(원) 어림값. 화면에서 바꿀 수 있어요
     // 배를 댈 곳을 찾을 때 카카오맵에 물어볼 말
     const DOCK_WORDS = ["마리나", "요트", "선착장", "여객선터미널", "항구"];
     const DOCK_RADIUS = 20000; // 도착지에서 몇 m 안을 찾을지 (카카오는 20000까지)
@@ -537,6 +888,7 @@
 
     let boat = BOATS[1];
     let routePoints = []; // 지도에서 찍은 곳들 (첫째는 출발, 마지막은 도착)
+    let routeLegs = [];   // 찍은 곳 사이마다 찾은 바닷길 { points, sea }
     let routeLine = null;
     let routeAsk = 0;
 
@@ -549,16 +901,17 @@
         button.addEventListener("click", function () {
           boat = item;
           $("speedInput").value = item.knots;
+          $("fuelInput").value = item.fuel;
           drawBoatPick();
           drawRouteText();
         });
         box.append(button);
       });
     }
-    $("speedInput").addEventListener("input", drawRouteText);
+    ["speedInput", "fuelInput", "priceInput"].forEach(function (id) { $(id).addEventListener("input", drawRouteText); });
 
     $("routeDrawButton").addEventListener("click", function () {
-      if (picking === "route") { stopPicking(); this.classList.remove("on"); return; }
+      if (picking === "route") { stopPicking(); return; }
       startPicking("route", routePoints.length ? "다음에 갈 곳을 차례로 눌러 주세요" : "출발하는 곳을 지도에서 눌러 주세요");
       if (picking === "route") this.classList.add("on");
     });
@@ -578,6 +931,12 @@
     }
 
     function routeChanged() {
+      // 찍은 곳 사이마다 바닷길을 찾고, 못 찾으면 곧은 선으로 이어요
+      routeLegs = [];
+      for (let i = 1; i < routePoints.length; i++) {
+        const path = seaPath(routePoints[i - 1], routePoints[i]);
+        routeLegs.push(path ? { points: path, sea: true } : { points: [routePoints[i - 1], routePoints[i]], sea: false });
+      }
       drawRoute();
       drawRouteText();
       const end = routePoints[routePoints.length - 1];
@@ -589,10 +948,12 @@
       clearMarks();
       if (routeLine) { routeLine.setMap(null); routeLine = null; }
       if (!map) return;
-      if (routePoints.length >= 2) {
+      const all = [];
+      routeLegs.forEach(function (leg, i) { all.push.apply(all, i ? leg.points.slice(1) : leg.points); });
+      if (all.length >= 2) {
         routeLine = new kakao.maps.Polyline({
-          path: routePoints.map(function (p) { return new kakao.maps.LatLng(p.lat, p.lng); }),
-          strokeWeight: 4, strokeColor: "#ff8c00", strokeOpacity: 0.9, strokeStyle: "shortdash"
+          path: all.map(function (p) { return new kakao.maps.LatLng(p.lat, p.lng); }),
+          strokeWeight: 5, strokeColor: "#ff6a00", strokeOpacity: 0.9
         });
         routeLine.setMap(map);
       }
@@ -602,67 +963,73 @@
         addOverlay(point, dot, 6);
       });
       docks.forEach(function (dock) {
-        // 이름표가 겹치지 않게 지도에는 ⚓만 보이고, 누르면 이름이 나와요
+        // 이름표가 겹치지 않게 지도에는 ⚓만 보이고, 누르면 자리 수와 리뷰 창이 열려요
         const pin = el("div", "dock-pin", "⚓");
         pin.title = dock.name;
-        pin.addEventListener("click", function () { showHint("⚓ " + dock.name + " · " + dock.address, 4000); });
+        pin.addEventListener("click", function () { openDock(dock); });
         addOverlay(dock, pin, 5);
       });
-    }
-
-    function hoursText(hours) {
-      const minutes = Math.round(hours * 60);
-      if (minutes < 60) return minutes + "분";
-      return Math.floor(minutes / 60) + "시간" + (minutes % 60 ? " " + (minutes % 60) + "분" : "");
+      drawBoat();
     }
 
     function drawRouteText() {
       const knots = Math.max(1, Number($("speedInput").value) || boat.knots);
       const kmPerHour = knots * 1.852;
+      const fuelPerHour = Math.max(0, Number($("fuelInput").value) || 0);
+      const price = Math.max(0, Number($("priceInput").value) || 0);
       const legs = $("routeLegs");
       legs.textContent = "";
       let total = 0;
-      for (let i = 1; i < routePoints.length; i++) {
-        const a = routePoints[i - 1], b = routePoints[i];
-        const km = distanceKm(a, b);
-        const dir = bearing(a, b);
+      routeLegs.forEach(function (leg, i) {
+        const a = routePoints[i], b = routePoints[i + 1];
+        const km = pathKm(leg.points);
+        const firstDir = bearing(leg.points[0], leg.points[1]);
         total += km;
-        const from = i === 1 ? "출발" : (i - 1) + "번";
-        const to = i === routePoints.length - 1 ? "도착" : i + "번";
-        legs.append(el("li", "", from + " → " + to + ": " + directionName(dir) + "(" + dir + "°)으로 " +
-          km.toFixed(1) + "km · " + hoursText(km / kmPerHour)));
-      }
+        const from = i === 0 ? "출발" : i + "번";
+        const to = i === routeLegs.length - 1 ? "도착" : (i + 1) + "번";
+        const item = el("li", "", from + " → " + to + ": " + (leg.sea ? "바닷길 " : "곧은 선 ") + km.toFixed(1) + "km · " +
+          hoursText(km / kmPerHour) + " · 처음에 " + directionName(firstDir) + "(" + firstDir + "°)으로");
+        if (leg.sea) {
+          const least = shallowest(leg.points);
+          item.append(el("br"), el("small", "", "곧게 가면 " + distanceKm(a, b).toFixed(1) + "km지만 땅을 피해 돌아가요" + (least !== null ? " · 가장 얕은 곳 약 " + least + "m" : "")));
+        } else {
+          item.append(el("br"), el("small", "", depth ? "⚠️ 바닷길을 찾지 못해서 곧은 선으로 이었어요 (여수 바다 밖이거나 막힌 곳)" : "수심 지도를 받는 중이라 곧은 선으로 이었어요"));
+        }
+        legs.append(item);
+      });
       $("routeNote").textContent =
         routePoints.length === 0 ? "아직 찍은 곳이 없어요." :
         routePoints.length === 1 ? "출발하는 곳을 찍었어요. 도착하는 곳도 찍어 주세요." :
         routePoints.length + "곳을 찍었어요.";
-      $("routeTotal").hidden = routePoints.length < 2;
-      $("routeTotal").textContent = "";
-      if (routePoints.length >= 2) {
-        $("routeTotal").append(
-          el("b", "", "모두 " + total.toFixed(1) + "km (" + (total / 1.852).toFixed(1) + "해리)"),
-          el("br"),
-          document.createTextNode(boat.name + " " + knots + "노트로 약 " + hoursText(total / kmPerHour) + " 걸려요")
-        );
-      }
+      const box = $("routeTotal");
+      box.hidden = routePoints.length < 2;
+      box.textContent = "";
+      if (routePoints.length < 2) return;
+      const hours = total / kmPerHour;
+      const liters = hours * fuelPerHour;
+      box.append(
+        el("b", "big", "모두 " + total.toFixed(1) + "km (" + (total / 1.852).toFixed(1) + "해리)"),
+        el("br"),
+        document.createTextNode(boat.name + " " + knots + "노트로 약 " + hoursText(hours) + " 걸려요"),
+        el("br"),
+        document.createTextNode(fuelPerHour === 0
+          ? "⛽ 기름이 안 들어요 (사람 힘이나 바람으로 가요)"
+          : "⛽ 기름 약 " + liters.toFixed(1) + "L · 약 " + (Math.round(liters * price / 100) * 100).toLocaleString("ko-KR") + "원 · 연비 " + (total / liters).toFixed(2) + "km/L (1L로 가는 거리)")
+      );
     }
 
     // 도착지의 바다 상태와 배를 댈 곳
     let docks = [];
     async function checkRouteEnd(end) {
       const ask = ++routeAsk;
-      $("routeSea").textContent = "알아보는 중…";
+      $("routeSea").textContent = "알아보는 중… · 수심 " + depthText(end);
+      findDocks(end, ask);
       try {
         const data = await fetchSea(end);
-        if (ask !== routeAsk) return;
-        const level = (data.wave > 1.5 || data.wind > 10) ? 2 : (data.wave > 1 || data.wind > 7) ? 1 : 0;
-        const look = ["🟢 잔잔해요", "🟡 조심해요", "🔴 배를 띄우기 위험해요"][level];
-        $("routeSea").textContent = look + " · 파도 " + (typeof data.wave === "number" ? data.wave.toFixed(1) + "m" : "모름") +
-          " · 바람 " + (typeof data.wind === "number" ? data.wind.toFixed(1) + "m/s" : "모름") + " · " + weatherName(data.weather);
+        if (ask === routeAsk) $("routeSea").textContent = seaText(data) + " · 수심 " + depthText(end);
       } catch (error) {
         if (ask === routeAsk) $("routeSea").textContent = errorText(error);
       }
-      findDocks(end, ask);
     }
     $("routeSeaButton").addEventListener("click", function () {
       const end = routePoints[routePoints.length - 1];
@@ -689,34 +1056,362 @@
           if (status === kakao.maps.services.Status.OK) {
             results.forEach(function (item) {
               if (DOCK_SKIP.some(function (word) { return item.place_name.includes(word); })) return;
-              found[item.id] = { name: item.place_name, address: item.road_address_name || item.address_name, lat: Number(item.y), lng: Number(item.x), km: Number(item.distance) / 1000 };
+              found[item.id] = {
+                id: item.id, name: item.place_name, address: item.road_address_name || item.address_name,
+                phone: item.phone, url: item.place_url, lat: Number(item.y), lng: Number(item.x), km: Number(item.distance) / 1000
+              };
             });
           }
-          if (--left === 0) showDocks(Object.values(found));
+          if (--left === 0) showDocks(Object.values(found), ask);
         }, { location: new kakao.maps.LatLng(end.lat, end.lng), radius: DOCK_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE });
       });
     }
-    function showDocks(list) {
+    function showDocks(list, ask) {
       docks = list.sort(function (a, b) { return a.km - b.km; }).slice(0, 8);
       const box = $("dockList");
       box.textContent = "";
       docks.forEach(function (dock) {
         const button = el("button", "", "⚓ " + dock.name + " · " + dock.km.toFixed(1) + "km");
         button.type = "button";
-        button.append(el("span", "", dock.address));
-        button.addEventListener("click", function () { moveMap(dock.lat, dock.lng, 4); bringIntoView($("mapWrap")); });
+        const line = el("span", "", dock.address);
+        button.append(line);
+        button.addEventListener("click", function () { moveMap(dock.lat, dock.lng, 4); openDock(dock); });
         box.append(button);
+        // 별점과 자리 수를 미리 받아 와서 목록에 보여 줘요
+        loadReviews(dock).then(function (summary) {
+          if (ask === routeAsk && summary.count) line.textContent = summaryText(summary) + " · " + dock.address;
+        }).catch(function () {});
       });
       if (!docks.length) box.append(el("p", "note", "도착지 근처 20km 안에서 배를 댈 곳을 찾지 못했어요."));
       drawRoute();
     }
 
+    // ═════════ 배 댈 곳: 자리 수와 리뷰 ═════════
+    // 리뷰 글 칸에는 별점, 자리 수, 빈자리, 글이 JSON으로 함께 들어 있어요
+    function readReview(item) {
+      try {
+        const data = JSON.parse(item.text);
+        const stars = Math.round(Number(data.stars));
+        if (!(stars >= 1 && stars <= 5)) return null;
+        const count = function (value) { const n = Math.round(Number(value)); return value !== null && value !== "" && n >= 0 && n <= 2000 ? n : null; };
+        return { sk: item.sk, author: item.author, stars: stars, spots: count(data.spots), empty: count(data.empty), text: hideBadWords(String(data.text || "").slice(0, 200)) };
+      } catch (error) {
+        return null;
+      }
+    }
+    async function loadReviews(dock) {
+      const list = (await call("posts", { board: reviewBoard(dock) })).map(readReview).filter(Boolean); // 새것부터
+      const withSpots = list.find(function (r) { return r.spots !== null; });
+      const withEmpty = list.find(function (r) { return r.empty !== null; });
+      return {
+        list: list,
+        count: list.length,
+        stars: list.length ? list.reduce(function (sum, r) { return sum + r.stars; }, 0) / list.length : null,
+        spots: withSpots || null,
+        empty: withEmpty || null
+      };
+    }
+    function summaryText(summary) {
+      return "⭐ " + summary.stars.toFixed(1) + " (" + summary.count + "개)" + (summary.spots ? " · 자리 " + summary.spots.spots + "개" : "");
+    }
+
+    let openedDock = null;
+    let myStars = 0;
+    function drawStarPick() {
+      const box = $("starPick");
+      box.textContent = "";
+      for (let n = 1; n <= 5; n++) {
+        const star = el("button", n <= myStars ? "on" : "", "★");
+        star.type = "button";
+        star.setAttribute("aria-label", "별 " + n + "개");
+        star.addEventListener("click", function () { myStars = n; drawStarPick(); });
+        box.append(star);
+      }
+    }
+
+    function openDock(dock) {
+      openedDock = dock;
+      myStars = 0;
+      $("reviewForm").reset();
+      $("reviewError").textContent = "";
+      drawStarPick();
+      $("dockName").textContent = "⚓ " + dock.name;
+      const meta = $("dockMeta");
+      meta.textContent = dock.address + (dock.km !== undefined ? " · 도착지에서 " + dock.km.toFixed(1) + "km" : "") + (dock.phone ? " · ☎ " + dock.phone : "") + " · 수심 " + depthText(dock) + " ";
+      if (dock.url) {
+        const link = el("a", "", "카카오맵에서 보기");
+        link.href = dock.url;
+        link.target = "_blank";
+        link.rel = "noopener";
+        meta.append(link);
+      }
+      $("dockStars").textContent = "-";
+      $("dockSpots").textContent = "-";
+      $("dockEmpty").textContent = "-";
+      $("reviewList").textContent = "불러오는 중…";
+      if (!$("dockDialog").open) $("dockDialog").showModal();
+      drawReviews(dock);
+    }
+
+    async function drawReviews(dock) {
+      let summary;
+      try {
+        summary = await loadReviews(dock);
+      } catch (error) {
+        $("reviewList").textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+        return;
+      }
+      if (openedDock !== dock) return;
+      $("dockStars").textContent = summary.count ? summary.stars.toFixed(1) + " / 5 (" + summary.count + "개)" : "아직 없어요";
+      $("dockSpots").textContent = summary.spots ? summary.spots.spots + "자리" : "몰라요";
+      $("dockEmpty").textContent = summary.empty ? summary.empty.empty + "자리 (" + timeAgo(summary.empty.sk) + ")" : "몰라요";
+      const box = $("reviewList");
+      box.textContent = "";
+      summary.list.forEach(function (review) {
+        const line = el("div", "review");
+        line.append(el("span", "stars", "★".repeat(review.stars) + "☆".repeat(5 - review.stars)), document.createTextNode(" "), el("b", "", review.author), document.createTextNode(" "), el("small", "", timeAgo(review.sk)));
+        if (review.author === me) {
+          const x = el("button", "", "삭제");
+          x.type = "button";
+          x.addEventListener("click", async function () {
+            if (!confirm("이 리뷰를 지울까요?")) return;
+            try {
+              await call("remove", { board: reviewBoard(dock), sk: review.sk });
+              drawReviews(dock);
+            } catch (error) {
+              $("reviewError").textContent = errorText(error);
+            }
+          });
+          line.append(x);
+        }
+        if (review.text) line.append(el("br"), document.createTextNode(review.text));
+        const counts = [];
+        if (review.spots !== null) counts.push("자리 " + review.spots + "개");
+        if (review.empty !== null) counts.push("빈자리 " + review.empty + "개");
+        if (counts.length) line.append(el("br"), el("small", "", "⚓ " + counts.join(" · ")));
+        box.append(line);
+      });
+      if (!summary.count) box.append(el("p", "note", "아직 리뷰가 없어요. 첫 리뷰를 남겨 주세요!"));
+    }
+
+    $("dockClose").addEventListener("click", function () { $("dockDialog").close(); });
+    $("dockDialog").addEventListener("click", function (event) {
+      if (event.target === this) this.close(); // 창 바깥을 누르면 닫혀요
+    });
+    $("dockDialog").addEventListener("close", function () { openedDock = null; });
+
+    $("reviewForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const dock = openedDock;
+      if (!dock) return;
+      const text = $("reviewText").value.trim();
+      const problem = !myStars ? "별점을 골라 주세요." : hasBadWords(text) ? ERROR_TEXT.BAD_WORD : "";
+      $("reviewError").textContent = problem;
+      if (problem) return;
+      $("reviewSend").disabled = true;
+      try {
+        await call("post", {
+          board: reviewBoard(dock),
+          text: JSON.stringify({ stars: myStars, spots: $("spotsInput").value, empty: $("emptyInput").value, text: text })
+        });
+        myStars = 0;
+        $("reviewForm").reset();
+        drawStarPick();
+        await drawReviews(dock);
+      } catch (error) {
+        $("reviewError").textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+      $("reviewSend").disabled = false;
+    });
+
+    // ═════════ 내 배 위치 (실시간) ═════════
+    // 핸드폰의 위치 기능(GPS)을 켜 두면 움직일 때마다 내 배 자리를 지도에 다시 그려요.
+    let watchId = null;
+    let boatNow = null;   // { lat, lng, speed(노트), heading(도) }
+    let follow = true;    // 지도가 내 배를 따라갈지
+    let liveSeaAt = null; // 마지막으로 바다 상태를 물어본 곳
+    let liveSeaTime = 0;
+
+    $("liveButton").addEventListener("click", function () {
+      if (watchId !== null) { stopLive(); return; }
+      if (!navigator.geolocation) { $("liveBox").hidden = false; $("liveSea").textContent = ERROR_TEXT.NO_GPS; return; }
+      this.textContent = "📡 내 배 위치 끄기";
+      this.classList.add("on");
+      $("followButton").hidden = false;
+      $("liveBox").hidden = false;
+      $("liveSea").textContent = "내 자리를 찾는 중…";
+      follow = true;
+      watchId = navigator.geolocation.watchPosition(boatMoved, function () {
+        $("liveSea").textContent = ERROR_TEXT.NO_GPS;
+      }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+    });
+    function stopLive() {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+      boatNow = null;
+      $("liveButton").textContent = "📡 내 배 위치 켜기";
+      $("liveButton").classList.remove("on");
+      $("followButton").hidden = true;
+      $("liveBox").hidden = true;
+      drawBoat();
+    }
+    $("followButton").addEventListener("click", function () {
+      follow = true;
+      if (boatNow) moveMap(boatNow.lat, boatNow.lng, 5);
+    });
+
+    function boatMoved(pos) {
+      const place = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      let speed = typeof pos.coords.speed === "number" && pos.coords.speed >= 0 ? pos.coords.speed * 1.9438 : null; // m/s → 노트
+      let heading = typeof pos.coords.heading === "number" && !isNaN(pos.coords.heading) ? pos.coords.heading : null;
+      if (boatNow && (speed === null || heading === null)) { // 핸드폰이 알려 주지 않으면 지난 자리와 비교해서 구해요
+        const km = distanceKm(boatNow, place);
+        const hours = (pos.timestamp - boatNow.time) / 3600000;
+        if (speed === null && hours > 0) speed = km / 1.852 / hours;
+        if (heading === null && km > 0.01) heading = bearing(boatNow, place);
+      }
+      const first = !boatNow;
+      boatNow = { lat: place.lat, lng: place.lng, speed: speed, heading: heading, time: pos.timestamp };
+      if (first || follow) moveMap(place.lat, place.lng, first ? 5 : null);
+      drawBoat();
+      drawLive();
+      // 바다 상태는 5분마다, 또는 2km 넘게 움직였을 때 다시 물어봐요
+      if (!liveSeaAt || Date.now() - liveSeaTime > 300000 || distanceKm(liveSeaAt, place) > 2) {
+        liveSeaAt = place;
+        liveSeaTime = Date.now();
+        fetchSea(place).then(function (data) {
+          if (boatNow) $("liveSea").textContent = "둘레 바다: " + seaText(data);
+        }).catch(function (error) { $("liveSea").textContent = errorText(error); });
+      }
+    }
+    let boatOverlay = null; // 지도 위 내 배 (길 표시와 따로 지우고 그려요)
+    function drawBoat() {
+      if (boatOverlay) { boatOverlay.setMap(null); boatOverlay = null; }
+      if (!boatNow || !map) return;
+      const pin = el("div", "boat-pin");
+      const icon = el("span", "", "🚤");
+      if (boatNow.heading !== null) icon.style.transform = "rotate(" + (boatNow.heading - 90) + "deg)"; // 🚤 그림은 오른쪽(동)을 보고 있어요
+      pin.append(icon);
+      pin.title = "내 배";
+      boatOverlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(boatNow.lat, boatNow.lng),
+        content: pin, map: map, xAnchor: 0.5, yAnchor: 0.5, zIndex: 8
+      });
+    }
+    function drawLive() {
+      const grid = $("liveGrid");
+      grid.textContent = "";
+      const end = routePoints.length >= 2 ? routePoints[routePoints.length - 1] : null;
+      [
+        ["⚡ 속력", boatNow.speed === null ? "모름" : boatNow.speed.toFixed(1) + "노트"],
+        ["🧭 방향", boatNow.heading === null ? "모름" : directionName(boatNow.heading)],
+        ["🌊 수심", depthText(boatNow).replace(" (높이", "\n(높이")],
+        ["📍 위도", boatNow.lat.toFixed(4)],
+        ["📍 경도", boatNow.lng.toFixed(4)],
+        ["🏁 도착지까지", end ? distanceKm(boatNow, end).toFixed(1) + "km" : "길 없음"]
+      ].forEach(function (pair) {
+        const box = el("div");
+        box.append(el("small", "", pair[0]), el("b", "", pair[1]));
+        grid.append(box);
+      });
+    }
+
+    // ───────── 로그인 ─────────
+    let signupMode = false;
+    let needsCode = true;
+
+    function setMode(signup) {
+      signupMode = signup;
+      $("loginTitle").textContent = signup ? "계정 만들기" : "로그인";
+      $("loginHelp").textContent = signup
+        ? "진짜 이름 말고 별명으로 아이디를 지어 주세요. 비밀번호는 다른 곳에서 쓰는 것 말고 새로 지어 주세요."
+        : "message나 잉스타 계정이 있으면 그 아이디와 비밀번호로 들어올 수 있어요.";
+      $("loginButton").textContent = signup ? "가입하기" : "로그인";
+      $("modeButton").textContent = signup ? "이미 계정이 있어요. 로그인하기" : "처음이에요. 계정 만들기";
+      $("passwordInput").autocomplete = signup ? "new-password" : "current-password";
+      $("codeInput").hidden = !(signup && needsCode);
+      $("loginError").textContent = "";
+    }
+    $("modeButton").addEventListener("click", function () { setMode(!signupMode); });
+
+    $("loginForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const id = $("idInput").value.trim();
+      const password = $("passwordInput").value;
+      if (Array.from(id).length < 2 || /\s/.test(id)) { $("loginError").textContent = ERROR_TEXT.BAD_ID; return; }
+      if (password.length < 4) { $("loginError").textContent = ERROR_TEXT.BAD_PASSWORD; return; }
+
+      $("loginButton").disabled = true;
+      $("loginError").textContent = "";
+      try {
+        const result = signupMode
+          ? await call("signup", { id: id, password: password, code: $("codeInput").value.trim() })
+          : await call("login", { id: id, password: password });
+        token = result.token;
+        localStorage.setItem(TOKEN_KEY, token);
+        $("loginForm").reset();
+        enter(result.id);
+      } catch (error) {
+        $("loginError").textContent = errorText(error);
+      }
+      $("loginButton").disabled = false;
+    });
+
+    function enter(id) {
+      me = id;
+      $("meName").textContent = id;
+      $("meBox").hidden = false;
+      $("loginBox").hidden = true;
+      $("appBox").hidden = false;
+      setupMap();
+      if (!depth) loadDepth();
+    }
+
+    function leave() {
+      me = null;
+      token = null;
+      localStorage.removeItem(TOKEN_KEY);
+      stopLive();
+      if ($("dockDialog").open) $("dockDialog").close();
+      $("meBox").hidden = true;
+      $("appBox").hidden = true;
+      $("loginBox").hidden = false;
+      setMode(false);
+    }
+
+    $("logoutButton").addEventListener("click", function () {
+      call("logout").catch(function () {});
+      leave();
+    });
 
     // ───────── 시작 ─────────
-    drawBoatPick();
-    $("speedInput").value = boat.knots;
-    drawRouteText();
-    setupMap();
+    async function start() {
+      drawBoatPick();
+      drawLegend();
+      $("speedInput").value = boat.knots;
+      $("fuelInput").value = boat.fuel;
+      $("priceInput").value = FUEL_PRICE;
+      drawRouteText();
+      try {
+        needsCode = (await call("info")).needsCode;
+      } catch (error) {
+        // 서버에 물어보지 못하면 가입 코드 칸을 보여 줘요
+      }
+      setMode(false);
+      if (token) {
+        try {
+          const result = await call("whoami");
+          enter(result.id);
+          return;
+        } catch (error) {
+          if (error.message === "NOT_LOGGED_IN") { token = null; localStorage.removeItem(TOKEN_KEY); }
+        }
+      }
+      $("loginBox").hidden = false;
+    }
+    start();
   </script>
 </body>
 </html>
