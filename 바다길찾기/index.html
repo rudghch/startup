@@ -1193,7 +1193,7 @@
           if (map.getLevel() !== done.level) return; // 카카오맵이 벌써 확대·축소했어요
           const level = Math.max(1, Math.min(14, done.level - steps)); // 벌리면(steps > 0) 크게 보여요
           const anchor = map.getProjection().coordsFromContainerPoint(new kakao.maps.Point(done.mid.x, done.mid.y));
-          map.setLevel(level, { anchor: anchor, animate: { duration: 250 } });
+          map.setLevel(level, { anchor: anchor, animate: true }); // animate에 시간을 적으면 카카오맵이 축소를 안 해서 true만 써요
         }, 350);
       };
       box.addEventListener("pointerup", lift, true);
