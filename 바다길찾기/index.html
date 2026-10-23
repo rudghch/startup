@@ -1212,6 +1212,7 @@
       const points = routePoints.slice();
       routeLegs = [];
       for (let i = 1; i < points.length; i++) routeLegs.push({ points: [points[i - 1], points[i]], sea: false, waiting: true });
+      if (points.length < 2) docks = []; // 도착지가 없으면 배 댈 곳 ⚓도 지워요
       drawRoute();
       drawRouteText();
       $("routeEndBox").hidden = points.length < 2;
