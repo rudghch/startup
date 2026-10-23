@@ -783,17 +783,23 @@
             ctx.drawImage(contour.picture, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
           } else {
             // 많이 확대했으면 선을 화면 크기에 맞춰 새로 그어요 (선 굵기는 늘 같아요)
+            // 숫자 자리도 선을 따라 화면에서 잰 길이로 골라요 (확대해도 숫자가 사라지지 않게)
             contour.lines.forEach(function (line) {
               const look = contourLook(line.level), c = line.coords;
+              let run = CONTOUR_LABEL_GAP * 0.4;
               ctx.beginPath();
               for (let i = 0; i < c.length; i += 4) {
-                ctx.moveTo(a.x + c[i] * sx, a.y + c[i + 1] * sy);
-                ctx.lineTo(a.x + c[i + 2] * sx, a.y + c[i + 3] * sy);
+                const x1 = a.x + c[i] * sx, y1 = a.y + c[i + 1] * sy, x2 = a.x + c[i + 2] * sx, y2 = a.y + c[i + 3] * sy;
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                run += Math.hypot(x2 - x1, y2 - y1);
+                if (run >= CONTOUR_LABEL_GAP * 0.5) { run = 0; labelSpots.push([(x1 + x2) / 2, (y1 + y2) / 2, line.level]); }
               }
               ctx.strokeStyle = look.color;
               ctx.lineWidth = look.width;
               ctx.stroke();
             });
+            continue;
           }
           contour.labels.forEach(function (label) { labelSpots.push([a.x + label[0] * sx, a.y + label[1] * sy, label[2]]); });
         }
