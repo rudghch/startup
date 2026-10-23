@@ -667,7 +667,7 @@
     $("routeSeaButton").addEventListener("click", function () {
       const end = routePoints[routePoints.length - 1];
       if (!end) return;
-      // 오늘의 바다 서비스를 새 창으로 열고, 주소 끝에 도착지(위도,경도)를 적어 보내요
+      // 씨그널 서비스를 새 창으로 열고, 주소 끝에 도착지(위도,경도)를 적어 보내요
       window.open("../오늘의바다/#" + end.lat.toFixed(5) + "," + end.lng.toFixed(5), "_blank");
     });
 
