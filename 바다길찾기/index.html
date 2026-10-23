@@ -332,7 +332,7 @@
         <p class="note" id="liveSea"></p>
       </div>
 
-      <p class="warn">바닷길은 약 450m 칸으로 나눈 바다 지도로 찾아서, 아주 작은 섬이나 바위, 좁은 물길은 잘 모를 수 있어요. 수심과 기름값도 어림값이에요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
+      <p class="warn">바닷길은 약 130m 칸으로 나눈 지도로 찾아서(먼 길은 더 큰 칸), 아주 작은 섬이나 바위, 얕은 곳은 잘 모를 수 있어요. 수심은 약 1.8km 칸으로 잰 어림값이고, 기름값도 어림값이에요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
     </aside>
   </main>
 
@@ -537,57 +537,116 @@
         " · 수온 " + number(data.water, 1, "°C") + " · " + weatherName(data.weather);
     }
 
-    // ───────── 수심 지도 ─────────
-    // depth.json: 여수 바다를 약 450m 칸으로 나눠 칸마다 높이(m)를 적은 파일이에요. 0보다 작으면 바다 깊이, 크면 땅 높이.
-    // 세계 바다 지도 GEBCO 2020에서 받아 왔어요 (opentopodata.org). 칸이 커서 아주 작은 섬은 바다로 보일 수 있어요.
-    const DEPTH_FILE = "depth.json";
-    const SAFE_DEPTH = 2; // 바닷길은 이것보다 얕은 곳(m)을 피해요
+    // ───────── 땅 높이·바다 깊이 지도 (온 세계) ─────────
+    // Mapzen 지형 타일(AWS 공개 데이터)을 그때그때 받아 와요. 바다 깊이는 ETOPO1, 땅 높이는 SRTM 같은 자료로 만든 거예요.
+    // 타일 하나는 256×256 칸 그림이고, 칸마다 색으로 높이(m)가 숨어 있어요: 높이 = 빨강×256 + 초록 + 파랑÷256 - 32768
+    // 0보다 크면 땅, 0이거나 작으면 바다예요. 바다 깊이는 10단계(한 칸 약 130m)까지만 들어 있어서 수심은 10단계로 봐요.
+    // (바닷길은 바닷가가 더 자세한 11단계로 찾아요. 아래 "바닷길 찾기"를 보세요)
+    const TILE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/terrarium/";
+    const TILE_MAX_ZOOM = 10;
+    const MAX_CELLS = 1600000; // 바닷길을 찾을 때 한 번에 살펴볼 칸 수 (너무 크면 느려져요)
+    const KOREA = { south: 32.5, west: 123.5, north: 39.5, east: 132.0 }; // 길을 못 찾으면 마지막으로 살펴볼 넓은 바다
     const DEPTH_COLORS = [ // [이만큼 깊을 때까지(m), 색]
-      [2, "#d8f3ff"], [5, "#a9e1fb"], [10, "#6fc3ee"], [20, "#3a9bd8"], [50, "#1f6fb4"], [100000, "#123f7a"]
+      [5, "#d8f3ff"], [20, "#a9e1fb"], [50, "#6fc3ee"], [100, "#3a9bd8"], [500, "#1f6fb4"], [100000, "#123f7a"]
     ];
-    let depth = null; // { lat0, lng0, step, rows, cols, values }
 
-    async function loadDepth() {
-      try {
-        const data = await (await fetch(DEPTH_FILE)).json();
-        depth = {
-          lat0: data.lat0, lng0: data.lng0, step: data.step, rows: data.rows, cols: data.cols,
-          values: Int16Array.from(data.values.split(",").map(Number))
-        };
-      } catch (error) {
-        depth = null; // 파일을 못 읽으면 곧은 선으로 이어요
+    // 지구를 펼친 그림(메르카토르)에서 위도·경도 ↔ 칸 자리 바꾸기 (z: 확대 단계)
+    function worldX(lng, z) { return (lng + 180) / 360 * 256 * Math.pow(2, z); }
+    function worldY(lat, z) {
+      const r = lat * Math.PI / 180;
+      return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 256 * Math.pow(2, z);
+    }
+    function lngOf(x, z) { return x / (256 * Math.pow(2, z)) * 360 - 180; }
+    function latOf(y, z) {
+      const n = Math.PI - 2 * Math.PI * y / (256 * Math.pow(2, z));
+      return Math.atan(Math.sinh(n)) * 180 / Math.PI;
+    }
+
+    // 타일 하나 받기: 높이 65536개가 든 Int16Array (못 받으면 null). 한 번 받은 것은 기억해요
+    const tiles = new Map();
+    let tilesWaiting = 0; // 아직 받는 중인 타일 수 (화면에 "지도 조각 받는 중"으로 보여 줘요)
+    function getTile(z, x, y) {
+      const key = z + "/" + x + "/" + y;
+      if (!tiles.has(key)) {
+        tilesWaiting++;
+        tiles.set(key, (async function () {
+          try {
+            const response = await fetch(TILE_URL + key + ".png");
+            if (!response.ok) return null;
+            const picture = await createImageBitmap(await response.blob());
+            const canvas = document.createElement("canvas");
+            canvas.width = canvas.height = 256;
+            const ctx = canvas.getContext("2d", { willReadFrequently: true });
+            ctx.drawImage(picture, 0, 0);
+            const rgba = ctx.getImageData(0, 0, 256, 256).data;
+            const heights = new Int16Array(65536);
+            for (let i = 0; i < 65536; i++) {
+              heights[i] = Math.max(-32000, Math.min(32000, Math.round(rgba[i * 4] * 256 + rgba[i * 4 + 1] + rgba[i * 4 + 2] / 256 - 32768)));
+            }
+            return heights;
+          } catch (error) {
+            return null;
+          } finally {
+            tilesWaiting--;
+          }
+        })());
       }
-      drawDepthLayer();
-      if (routePoints.length >= 2) routeChanged();
+      return tiles.get(key);
     }
 
-    // 지도 위 한 곳이 어느 칸인지 (여수 바다 밖이면 null)
-    function cellOf(place) {
-      if (!depth) return null;
-      const r = Math.round((place.lat - depth.lat0) / depth.step);
-      const c = Math.round((place.lng - depth.lng0) / depth.step);
-      if (r < 0 || c < 0 || r >= depth.rows || c >= depth.cols) return null;
-      return { r: r, c: c };
+    // 한 곳의 높이(m) (0보다 작으면 바다 깊이). 모르면 null
+    async function heightAt(place) {
+      const z = TILE_MAX_ZOOM;
+      const x = worldX(place.lng, z), y = worldY(place.lat, z);
+      const heights = await getTile(z, Math.floor(x / 256), Math.floor(y / 256));
+      if (!heights) return null;
+      return heights[(Math.floor(y) % 256) * 256 + (Math.floor(x) % 256)];
     }
-    function heightOfCell(r, c) { return depth.values[r * depth.cols + c]; }
-    function placeOfCell(r, c) { return { lat: depth.lat0 + r * depth.step, lng: depth.lng0 + c * depth.step }; }
-    function heightAt(place) {
-      const cell = cellOf(place);
-      return cell ? heightOfCell(cell.r, cell.c) : null;
-    }
-    function depthText(place) {
-      const h = heightAt(place);
-      if (h === null) return depth ? "여수 바다 밖이라 몰라요" : "지도를 아직 못 받았어요";
-      if (h >= 0) return "땅이에요 (높이 약 " + h + "m)";
+    async function depthText(place) {
+      const h = await heightAt(place);
+      if (h === null) return "몰라요 (지도를 받지 못했어요)";
+      if (h > 0) return "땅이에요 (높이 약 " + h + "m)";
+      if (h === 0) return "얕은 바다예요 (깊이는 몰라요)";
       return "약 " + (-h) + "m";
     }
     function depthColor(meters) {
       return DEPTH_COLORS.find(function (pair) { return meters <= pair[0]; })[1];
     }
 
-    // 수심 색칠: 지도 위에 캔버스를 겹쳐서 칸마다 색을 칠해요
+    // ── 수심 색칠 ──
+    // 타일마다 색칠한 그림을 한 번만 만들어 두고, 지도를 움직이면 그 그림을 제자리에 다시 놓기만 해요 (그래서 빨라요)
     let showDepth = false;
     let depthFrame = 0;
+    let zooming = false;
+    const paintedTiles = new Map(); // "z/x/y" → 색칠한 캔버스 (받는 중이면 "wait", 못 받으면 null)
+    function paintedTile(z, x, y) {
+      const key = z + "/" + x + "/" + y;
+      if (!paintedTiles.has(key)) {
+        paintedTiles.set(key, "wait");
+        getTile(z, x, y).then(function (heights) {
+          if (!heights) { paintedTiles.set(key, null); return; }
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = 256;
+          const ctx = canvas.getContext("2d");
+          const image = ctx.createImageData(256, 256);
+          const colors = {};
+          for (let i = 0; i < 65536; i++) {
+            const h = heights[i];
+            if (h >= 0) continue; // 땅과 깊이를 모르는 곳은 비워 둬요
+            const color = colors[-h] || (colors[-h] = depthColor(-h));
+            image.data[i * 4] = parseInt(color.slice(1, 3), 16);
+            image.data[i * 4 + 1] = parseInt(color.slice(3, 5), 16);
+            image.data[i * 4 + 2] = parseInt(color.slice(5, 7), 16);
+            image.data[i * 4 + 3] = 150;
+          }
+          ctx.putImageData(image, 0, 0);
+          paintedTiles.set(key, canvas);
+          drawDepthLayer();
+        });
+      }
+      return paintedTiles.get(key);
+    }
+
     function drawDepthLayer() {
       cancelAnimationFrame(depthFrame);
       depthFrame = requestAnimationFrame(paintDepth);
@@ -596,33 +655,36 @@
       const canvas = $("depthLayer");
       const box = $("mapWrap");
       const ratio = window.devicePixelRatio || 1;
-      canvas.width = box.clientWidth * ratio;
-      canvas.height = box.clientHeight * ratio;
-      canvas.style.width = box.clientWidth + "px";
-      canvas.style.height = box.clientHeight + "px";
+      if (canvas.width !== box.clientWidth * ratio || canvas.height !== box.clientHeight * ratio) {
+        canvas.width = box.clientWidth * ratio;
+        canvas.height = box.clientHeight * ratio;
+        canvas.style.width = box.clientWidth + "px";
+        canvas.style.height = box.clientHeight + "px";
+      }
       const ctx = canvas.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       $("depthLegend").hidden = !showDepth;
-      if (!showDepth || !depth || !map) return;
+      canvas.style.visibility = zooming ? "hidden" : "visible";
+      if (!showDepth || !map || zooming) return;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest(), ne = bounds.getNorthEast();
+      // 화면 한 칸에 타일 한 칸 정도가 되는 확대 단계를 골라요
+      const degreesPerPixel = (ne.getLng() - sw.getLng()) / box.clientWidth;
+      const z = Math.max(4, Math.min(TILE_MAX_ZOOM, Math.round(Math.log2(360 / (256 * degreesPerPixel)))));
+      const x0 = Math.floor(worldX(sw.getLng(), z) / 256), x1 = Math.floor(worldX(ne.getLng(), z) / 256);
+      const y0 = Math.floor(worldY(ne.getLat(), z) / 256), y1 = Math.floor(worldY(sw.getLat(), z) / 256);
       const projection = map.getProjection();
-      const half = depth.step / 2;
-      // 맨 아래 왼쪽 칸과 맨 위 오른쪽 칸의 화면 자리를 구하고, 그 사이는 똑같이 나눠요
-      const a = projection.containerPointFromCoords(new kakao.maps.LatLng(depth.lat0 - half, depth.lng0 - half));
-      const b = projection.containerPointFromCoords(new kakao.maps.LatLng(depth.lat0 + (depth.rows - 0.5) * depth.step, depth.lng0 + (depth.cols - 0.5) * depth.step));
-      const cw = (b.x - a.x) / depth.cols;
-      const ch = (a.y - b.y) / depth.rows;
-      ctx.globalAlpha = 0.55;
-      ctx.scale(ratio, ratio);
-      for (let r = 0; r < depth.rows; r++) {
-        const y = a.y - (r + 1) * ch;
-        if (y > box.clientHeight || y + ch < 0) continue;
-        for (let c = 0; c < depth.cols; c++) {
-          const x = a.x + c * cw;
-          if (x > box.clientWidth || x + cw < 0) continue;
-          const h = heightOfCell(r, c);
-          if (h >= 0) continue; // 땅은 칠하지 않아요
-          ctx.fillStyle = depthColor(-h);
-          ctx.fillRect(x, y, cw + 0.6, ch + 0.6);
+      for (let ty = y0; ty <= y1; ty++) {
+        for (let tx = x0; tx <= x1; tx++) {
+          const picture = paintedTile(z, tx, ty);
+          if (!picture || picture === "wait") continue;
+          // 타일의 왼쪽 위·오른쪽 아래가 화면 어디인지 구해서 그 사이에 그림을 늘려 그려요
+          const a = projection.containerPointFromCoords(new kakao.maps.LatLng(latOf(ty * 256, z), lngOf(tx * 256, z)));
+          const b = projection.containerPointFromCoords(new kakao.maps.LatLng(latOf((ty + 1) * 256, z), lngOf((tx + 1) * 256, z)));
+          ctx.drawImage(picture, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
         }
       }
     }
@@ -637,132 +699,329 @@
         box.append(swatch, document.createTextNode(pair[0] > 1000 ? from + "m보다 깊어요" : from + "~" + pair[0] + "m"), el("br"));
         from = pair[0];
       });
+      box.append(el("small", "", "자료: Mapzen 지형 타일 (ETOPO1·SRTM)"));
     }
     $("depthButton").addEventListener("click", function () {
       showDepth = !showDepth;
       this.classList.toggle("on", showDepth);
       this.textContent = showDepth ? "🌊 수심 끄기" : "🌊 수심 보기";
-      if (showDepth && !depth) showHint("수심 지도를 받는 중이에요…", 2000);
       drawDepthLayer();
     });
 
     // ───────── 바닷길 찾기 (땅을 피해서) ─────────
-    // 바다 칸만 지나가게 칸을 따라 가장 짧은 길을 찾아요 (A* 길찾기라는 방법이에요)
-    function isSea(r, c) {
-      return r >= 0 && c >= 0 && r < depth.rows && c < depth.cols && heightOfCell(r, c) <= -SAFE_DEPTH;
-    }
-    // 항구처럼 바닷가에 찍으면 그 칸이 땅일 수 있어서, 가장 가까운 바다 칸을 찾아요 (약 3km 안)
-    function nearestSea(place) {
-      const cell = cellOf(place);
-      if (!cell) return null;
-      for (let d = 0; d <= 7; d++) {
-        let best = null;
-        for (let r = cell.r - d; r <= cell.r + d; r++) {
-          for (let c = cell.c - d; c <= cell.c + d; c++) {
-            if (Math.max(Math.abs(r - cell.r), Math.abs(c - cell.c)) !== d || !isSea(r, c)) continue;
-            const km = distanceKm(place, placeOfCell(r, c));
-            if (!best || km < best.km) best = { r: r, c: c, km: km };
-          }
+    // 두 곳 둘레의 지도를 칸으로 나눠서, 바다 칸만 지나가는 가장 짧은 길을 찾아요 (A* 길찾기라는 방법이에요).
+    // 다리 밑 좁은 물길은 지도에서 땅 몇 칸으로 막혀 보일 때가 있어서, 양쪽이 바다인 얇은 땅(10단계에서 3칸, 약 400m까지)은
+    // 조금 비싸게 지나갈 수 있게 해요. 방파제처럼 아주 얇은 땅도 그래서 지나갈 수 있어요.
+    // 바닷길은 11단계(한 칸 약 65m)로 찾아요. 11단계 타일은 바다가 0, 바닷가에 1~2m짜리 잡음이 있어서 높이 3m부터 땅으로 쳐요.
+    const ROUTE_ZOOM = 11;
+    const THIN_LAND_CELLS = 3; // 몇 칸 두께까지의 땅을 지나갈 수 있게 할지 (11단계에서 약 200m)
+    const THIN_LAND_COST = 6;  // 얇은 땅을 지날 때 몇 배로 먼 것으로 칠지
+    const PIECE_DEGREES = 0.3; // 먼 길은 이만큼씩 나눠서 자세한 지도로 다시 찾아요
+
+    // 넓이(south, west, north, east)를 칸으로 나눈 지도 만들기 (maxZoom보다 자세하게는 안 해요)
+    async function buildGrid(area, maxZoom) {
+      let z = maxZoom || ROUTE_ZOOM;
+      while (z > 5 && (worldX(area.east, z) - worldX(area.west, z)) * (worldY(area.south, z) - worldY(area.north, z)) > MAX_CELLS) z--;
+      const x0 = Math.floor(worldX(area.west, z)), x1 = Math.ceil(worldX(area.east, z));
+      const y0 = Math.floor(worldY(area.north, z)), y1 = Math.ceil(worldY(area.south, z));
+      const w = x1 - x0, h = y1 - y0;
+      const heights = new Int16Array(w * h).fill(1); // 받지 못한 곳은 땅으로 쳐요
+      const jobs = [];
+      for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y1 - 1) / 256); ty++) {
+        for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x1 - 1) / 256); tx++) {
+          jobs.push(getTile(z, tx, ty).then(function (tile) {
+            if (!tile) return;
+            for (let py = 0; py < 256; py++) {
+              const gy = ty * 256 + py - y0;
+              if (gy < 0 || gy >= h) continue;
+              for (let px = 0; px < 256; px++) {
+                const gx = tx * 256 + px - x0;
+                if (gx >= 0 && gx < w) heights[gy * w + gx] = tile[py * 256 + px];
+              }
+            }
+          }));
         }
-        if (best) return best;
       }
-      return null;
+      await Promise.all(jobs);
+      // 칸마다 한 칸의 가로·세로 거리(km) (위도에 따라 달라요)
+      const rowKmX = new Float32Array(h), rowKmY = new Float32Array(h);
+      for (let r = 0; r < h; r++) {
+        const lat = latOf(y0 + r + 0.5, z);
+        rowKmX[r] = 360 / (256 * Math.pow(2, z)) * 111.32 * Math.cos(lat * Math.PI / 180);
+        rowKmY[r] = (latOf(y0 + r, z) - latOf(y0 + r + 1, z)) * 110.57;
+      }
+      const grid = { z: z, x0: x0, y0: y0, w: w, h: h, heights: heights, rowKmX: rowKmX, rowKmY: rowKmY, landMin: z >= ROUTE_ZOOM ? 3 : 1 };
+      markPassable(grid);
+      return grid;
+    }
+    function gridCell(grid, place) {
+      const c = Math.floor(worldX(place.lng, grid.z)) - grid.x0, r = Math.floor(worldY(place.lat, grid.z)) - grid.y0;
+      return r >= 0 && c >= 0 && r < grid.h && c < grid.w ? { r: r, c: c } : null;
+    }
+    function gridPlace(grid, r, c) {
+      return { lat: latOf(grid.y0 + r + 0.5, grid.z), lng: lngOf(grid.x0 + c + 0.5, grid.z) };
+    }
+    function isSea(grid, r, c) {
+      return r >= 0 && c >= 0 && r < grid.h && c < grid.w && grid.heights[r * grid.w + c] < grid.landMin;
     }
 
-    function seaPath(from, to) {
-      if (!depth) return null;
-      const start = nearestSea(from);
-      const goal = nearestSea(to);
-      if (!start || !goal) return null;
-      const cols = depth.cols;
-      const total = depth.rows * cols;
-      const cost = new Float64Array(total).fill(Infinity);
+    // 칸마다 지나갈 수 있는지 미리 적어 두기: 1 바다, 2 얇은 땅, 0 못 지나감.
+    // 그리고 이어진 바다끼리 같은 번호를 붙여요 (막힌 호수에서 길을 찾지 않으려고)
+    function markPassable(grid) {
+      const w = grid.w, h = grid.h, heights = grid.heights;
+      const pass = new Uint8Array(w * h);
+      const thin = grid.z >= ROUTE_ZOOM ? THIN_LAND_CELLS : 2; // 대강 찾는 넓은 지도는 칸이 커서 2칸까지
+      const landMin = grid.landMin;
+      const axes = [[1, 0], [0, 1], [1, 1], [1, -1]];
+      for (let r = 0; r < h; r++) {
+        for (let c = 0; c < w; c++) {
+          const i = r * w + c;
+          if (heights[i] < landMin) { pass[i] = 1; continue; }
+          for (const a of axes) { // 이 땅을 한 방향으로 지나가면 몇 칸 만에 양쪽 바다가 나오는지
+            let back = 1, front = 1, open = 0;
+            while (back <= thin && isLandAt(r - a[0] * back, c - a[1] * back)) back++;
+            while (front <= thin && isLandAt(r + a[0] * front, c + a[1] * front)) front++;
+            if (back <= thin && front <= thin && back + front - 1 <= thin &&
+                isSea(grid, r - a[0] * back, c - a[1] * back) && isSea(grid, r + a[0] * front, c + a[1] * front)) open = 1;
+            if (open) { pass[i] = 2; break; }
+          }
+        }
+      }
+      function isLandAt(r, c) { return r >= 0 && c >= 0 && r < h && c < w && heights[r * w + c] >= landMin; }
+      // 이어진 바다끼리 번호 붙이기
+      const group = new Int32Array(w * h);
+      const queue = new Int32Array(w * h);
+      let next = 0;
+      for (let s = 0; s < w * h; s++) {
+        if (!pass[s] || group[s]) continue;
+        next++;
+        let head = 0, tail = 0;
+        queue[tail++] = s;
+        group[s] = next;
+        while (head < tail) {
+          const i = queue[head++], r = Math.floor(i / w), c = i % w;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = r + dr, nc = c + dc;
+              if (nr < 0 || nc < 0 || nr >= h || nc >= w) continue;
+              const j = nr * w + nc;
+              if (pass[j] && !group[j]) { group[j] = next; queue[tail++] = j; }
+            }
+          }
+        }
+      }
+      // 가장 큰 바다(먼 바다와 이어진 물) 번호
+      const sizes = new Int32Array(next + 1);
+      for (let i = 0; i < w * h; i++) sizes[group[i]]++;
+      let big = 0;
+      for (let id = 1; id <= next; id++) if (!big || sizes[id] > sizes[big]) big = id;
+      grid.pass = pass;
+      grid.group = group;
+      grid.bigGroup = big;
+    }
+
+    // 찍은 곳 둘레(보통 3km 안)의 바다 칸들을 가까운 순서로
+    function seaNear(grid, place, reachKm) {
+      const cell = gridCell(grid, place);
+      if (!cell) return [];
+      const reach = Math.max(1, Math.ceil((reachKm || 3) / grid.rowKmX[cell.r]));
+      const list = [];
+      for (let r = cell.r - reach; r <= cell.r + reach; r++) {
+        for (let c = cell.c - reach; c <= cell.c + reach; c++) {
+          if (isSea(grid, r, c)) list.push({ r: r, c: c, far: (r - cell.r) * (r - cell.r) + (c - cell.c) * (c - cell.c) });
+        }
+      }
+      return list.sort(function (a, b) { return a.far - b.far; });
+    }
+    // 출발 칸과 도착 칸을 같은 바다(이어진 물)에서 골라요
+    // loose: 같은 바다를 못 찾으면 가장 큰 바다에서 가장 가까운 칸을 써요 (대강 찾을 때만)
+    function pickEnds(grid, from, to, reachKm, loose) {
+      const starts = seaNear(grid, from, reachKm), goals = seaNear(grid, to, reachKm);
+      let best = null;
+      const goalOf = {};
+      goals.forEach(function (g) {
+        const id = grid.group[g.r * grid.w + g.c];
+        if (!goalOf[id]) goalOf[id] = g;
+      });
+      starts.forEach(function (s) {
+        const g = goalOf[grid.group[s.r * grid.w + s.c]];
+        if (g && (!best || s.far + g.far < best.far)) best = { start: s, goal: g, far: s.far + g.far };
+      });
+      if (!best && loose) {
+        const inBig = function (list) { return list.find(function (cell) { return grid.group[cell.r * grid.w + cell.c] === grid.bigGroup; }); };
+        const s = inBig(seaNear(grid, from, 60)), g = inBig(seaNear(grid, to, 60));
+        if (s && g) best = { start: s, goal: g, far: s.far + g.far };
+      }
+      return best;
+    }
+
+    // 칸 지도 위에서 가장 짧은 바닷길 (못 찾으면 null)
+    function searchGrid(grid, from, to, reachKm, loose) {
+      const ends = pickEnds(grid, from, to, reachKm, loose);
+      if (!ends) return null;
+      const start = ends.start, goal = ends.goal;
+      const w = grid.w, total = w * grid.h, pass = grid.pass;
+      const cost = new Float32Array(total).fill(Infinity);
       const came = new Int32Array(total).fill(-1);
-      const kmX = depth.step * 111.32 * Math.cos(from.lat * Math.PI / 180); // 옆 칸까지 거리(km)
-      const kmY = depth.step * 110.57;                                       // 위 칸까지 거리(km)
-      const guess = function (i) { // 남은 거리 어림
-        const dr = (Math.floor(i / cols) - goal.r) * kmY, dc = (i % cols - goal.c) * kmX;
-        return Math.sqrt(dr * dr + dc * dc);
+      const done = new Uint8Array(total);
+      const goalKmX = grid.rowKmX[goal.r];
+      const guess = function (r, c) { // 남은 거리 어림 (km)
+        const dy = (r - goal.r) * grid.rowKmY[r], dx = (c - goal.c) * goalKmX;
+        return Math.sqrt(dx * dx + dy * dy);
       };
       // 가장 가까워 보이는 칸부터 꺼내는 줄 (작은 것이 위로 오는 더미)
-      const heap = [];
+      const heapF = [], heapI = [];
       function push(i, f) {
-        heap.push([f, i]);
-        let k = heap.length - 1;
-        while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; }
+        let k = heapF.length;
+        heapF.push(f); heapI.push(i);
+        while (k > 0) {
+          const p = (k - 1) >> 1;
+          if (heapF[p] <= heapF[k]) break;
+          [heapF[p], heapF[k]] = [heapF[k], heapF[p]]; [heapI[p], heapI[k]] = [heapI[k], heapI[p]]; k = p;
+        }
       }
       function pop() {
-        const top = heap[0], last = heap.pop();
-        if (heap.length) {
-          heap[0] = last;
+        const top = heapI[0];
+        const lastF = heapF.pop(), lastI = heapI.pop();
+        if (heapF.length) {
+          heapF[0] = lastF; heapI[0] = lastI;
           let k = 0;
           for (;;) {
             const l = 2 * k + 1, r = l + 1;
             let m = k;
-            if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
-            if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+            if (l < heapF.length && heapF[l] < heapF[m]) m = l;
+            if (r < heapF.length && heapF[r] < heapF[m]) m = r;
             if (m === k) break;
-            [heap[m], heap[k]] = [heap[k], heap[m]]; k = m;
+            [heapF[m], heapF[k]] = [heapF[k], heapF[m]]; [heapI[m], heapI[k]] = [heapI[k], heapI[m]]; k = m;
           }
         }
         return top;
       }
-      const startI = start.r * cols + start.c, goalI = goal.r * cols + goal.c;
+      const passAt = function (r, c) { return r >= 0 && c >= 0 && r < grid.h && c < w ? pass[r * w + c] : 0; };
+      const startI = start.r * w + start.c, goalI = goal.r * w + goal.c;
       cost[startI] = 0;
-      push(startI, guess(startI));
+      push(startI, guess(start.r, start.c));
       const steps = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
-      while (heap.length) {
-        const i = pop()[1];
+      while (heapF.length) {
+        const i = pop();
+        if (done[i]) continue;
+        done[i] = 1;
         if (i === goalI) break;
-        const r = Math.floor(i / cols), c = i % cols;
+        const r = Math.floor(i / w), c = i % w;
         for (const s of steps) {
           const nr = r + s[0], nc = c + s[1];
-          if (!isSea(nr, nc)) continue;
-          if (s[0] && s[1] && (!isSea(r + s[0], c) || !isSea(r, c + s[1]))) continue; // 땅 모서리를 비스듬히 지나가지 않아요
-          const j = nr * cols + nc;
-          const step = Math.sqrt(Math.pow(s[0] * kmY, 2) + Math.pow(s[1] * kmX, 2));
-          if (cost[i] + step < cost[j]) {
-            cost[j] = cost[i] + step;
+          const kind = passAt(nr, nc);
+          if (!kind) continue;
+          const j = nr * w + nc;
+          if (done[j]) continue;
+          const kmX = s[1] * grid.rowKmX[r], kmY = s[0] * grid.rowKmY[r];
+          const next = cost[i] + Math.sqrt(kmX * kmX + kmY * kmY) * (kind === 2 ? THIN_LAND_COST : 1);
+          if (next < cost[j]) {
+            cost[j] = next;
             came[j] = i;
-            push(j, cost[j] + guess(j));
+            push(j, next + guess(nr, nc));
           }
         }
       }
       if (cost[goalI] === Infinity) return null;
       const cells = [];
-      for (let i = goalI; i !== -1; i = came[i]) cells.push(i);
+      for (let i = goalI; i !== -1; i = came[i]) cells.push([Math.floor(i / w), i % w]);
       cells.reverse();
       // 꺾이는 곳을 줄여서 부드러운 길로 만들기: 바다로만 곧게 갈 수 있으면 중간 칸을 건너뛰어요
-      const points = cells.map(function (i) { return placeOfCell(Math.floor(i / cols), i % cols); });
-      const smooth = [points[0]];
+      const keep = [cells[0]];
       let k = 0;
-      while (k < points.length - 1) {
+      while (k < cells.length - 1) {
         let far = k + 1;
-        for (let j = points.length - 1; j > k + 1; j--) {
-          if (straightBySea(points[k], points[j])) { far = j; break; }
+        for (let j = Math.min(cells.length - 1, k + 400); j > k + 1; j--) {
+          if (straightBySea(grid, cells[k], cells[j])) { far = j; break; }
         }
-        smooth.push(points[far]);
+        keep.push(cells[far]);
         k = far;
       }
-      return [from].concat(smooth, [to]);
+      // 가장 얕은 곳: 지나가는 바다 칸 중 가장 얕은 곳 (깊이를 아는 곳만)
+      let least = null;
+      cells.forEach(function (cell) {
+        const h = grid.heights[cell[0] * w + cell[1]];
+        if (h < 0 && (least === null || -h < least)) least = -h;
+      });
+      return {
+        points: keep.map(function (cell) { return gridPlace(grid, cell[0], cell[1]); }),
+        cells: cells.map(function (cell) { return gridPlace(grid, cell[0], cell[1]); }),
+        least: least,
+        thin: cells.some(function (cell) { return pass[cell[0] * w + cell[1]] === 2; }),
+        z: grid.z
+      };
     }
-    // 두 곳을 곧게 이은 선이 바다 칸만 지나가는지 (칸의 1/3 간격으로 살펴봐요)
-    function straightBySea(a, b) {
-      const n = Math.ceil(Math.max(Math.abs(a.lat - b.lat), Math.abs(a.lng - b.lng)) / depth.step * 3);
+    // 두 칸을 곧게 이은 선이 바다 칸만 지나가는지 (칸의 1/3 간격으로 살펴봐요)
+    function straightBySea(grid, a, b) {
+      const n = Math.ceil(Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1])) * 3);
       for (let i = 1; i < n; i++) {
-        const cell = cellOf({ lat: a.lat + (b.lat - a.lat) * i / n, lng: a.lng + (b.lng - a.lng) * i / n });
-        if (!cell || !isSea(cell.r, cell.c)) return false;
+        const r = Math.round(a[0] + (b[0] - a[0]) * i / n), c = Math.round(a[1] + (b[1] - a[1]) * i / n);
+        if (!isSea(grid, r, c)) return false;
       }
       return true;
     }
-    // 길에서 가장 얕은 곳 (m)
-    function shallowest(points) {
-      let least = null;
-      for (let i = 1; i < points.length - 1; i++) {
-        const h = heightAt(points[i]);
-        if (h !== null && (least === null || -h < least)) least = -h;
+    function areaAround(a, b, pad) {
+      return {
+        south: Math.min(a.lat, b.lat) - pad, north: Math.max(a.lat, b.lat) + pad,
+        west: Math.min(a.lng, b.lng) - pad, east: Math.max(a.lng, b.lng) + pad
+      };
+    }
+    function joinFound(parts) {
+      const points = [];
+      parts.forEach(function (part) { points.push.apply(points, part.points); });
+      const leasts = parts.map(function (part) { return part.least; }).filter(function (v) { return v !== null; });
+      return { points: points, least: leasts.length ? Math.min.apply(null, leasts) : null, thin: parts.some(function (part) { return part.thin; }) };
+    }
+
+    // 두 곳 사이 바닷길
+    // 1) 가까우면 자세한 지도(11단계)로 바로 찾아요.
+    // 2) 멀면 넓은 지도로 대강 찾은 뒤, 그 길을 PIECE_DEGREES만큼씩 잘라 자세한 지도로 다시 찾아요.
+    async function seaPath(from, to) {
+      const span = Math.max(Math.abs(from.lat - to.lat), Math.abs(from.lng - to.lng));
+      for (const pad of [Math.max(0.15, span * 0.4), Math.max(0.4, span)]) {
+        const grid = await buildGrid(areaAround(from, to, pad));
+        if (grid.z < ROUTE_ZOOM) break; // 너무 넓으면 2)로 가요
+        const found = searchGrid(grid, from, to);
+        if (found) return withEnds(found, from, to);
       }
-      return least;
+      // 넓은 지도로 대강 찾기 (우리나라 바다 전체까지 넓혀 봐요)
+      let rough = null;
+      for (const area of [areaAround(from, to, Math.max(0.6, span * 0.6)), {
+        south: Math.min(KOREA.south, from.lat, to.lat), north: Math.max(KOREA.north, from.lat, to.lat),
+        west: Math.min(KOREA.west, from.lng, to.lng), east: Math.max(KOREA.east, from.lng, to.lng)
+      }]) {
+        rough = searchGrid(await buildGrid(area), from, to, 20, true); // 대강 찾을 때는 칸이 커서 좁은 항구 입구가 막혀 보일 수 있어서 20km 안까지 봐요
+        if (rough) break;
+      }
+      if (!rough) return null;
+      if (rough.z >= ROUTE_ZOOM) return withEnds(rough, from, to);
+      // 대강 찾은 길을 조각내서 자세히 다시 찾기
+      const stops = [from];
+      let last = from;
+      rough.cells.forEach(function (place) {
+        if (Math.max(Math.abs(place.lat - last.lat), Math.abs(place.lng - last.lng)) >= PIECE_DEGREES) { stops.push(place); last = place; }
+      });
+      stops.push(to);
+      const parts = [];
+      for (let i = 1; i < stops.length; i++) {
+        const piece = searchGrid(await buildGrid(areaAround(stops[i - 1], stops[i], 0.12)), stops[i - 1], stops[i]);
+        if (piece) {
+          parts.push(piece);
+        } else { // 자세한 지도로 못 찾은 조각은 대강 찾은 길을 그대로 써요
+          parts.push({ points: rough.cells.filter(function (place, k, list) { return k % 4 === 0 || k === list.length - 1; }).filter(function (place) {
+            return inBetween(place, stops[i - 1], stops[i]);
+          }), least: null, thin: false });
+        }
+      }
+      return withEnds(joinFound(parts), from, to);
+    }
+    function inBetween(place, a, b) {
+      return place.lat >= Math.min(a.lat, b.lat) - 0.01 && place.lat <= Math.max(a.lat, b.lat) + 0.01 &&
+        place.lng >= Math.min(a.lng, b.lng) - 0.01 && place.lng <= Math.max(a.lng, b.lng) + 0.01;
+    }
+    function withEnds(found, from, to) {
+      return { points: [from].concat(found.points, [to]), least: found.least, thin: found.thin };
     }
 
     // ───────── 지도 ─────────
@@ -786,6 +1045,9 @@
         mapClicked({ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() });
       });
       kakao.maps.event.addListener(map, "bounds_changed", drawDepthLayer);
+      // 확대·축소하는 동안에는 수심 색칠을 잠깐 숨겼다가, 다 바뀌면 새 크기로 다시 그려요 (버벅이지 않게)
+      kakao.maps.event.addListener(map, "zoom_start", function () { zooming = true; drawDepthLayer(); });
+      kakao.maps.event.addListener(map, "zoom_changed", function () { zooming = false; drawDepthLayer(); });
       kakao.maps.event.addListener(map, "dragstart", function () { follow = false; }); // 지도를 손으로 움직이면 내 배 따라가기를 멈춰요
       window.addEventListener("resize", drawDepthLayer);
       drawRoute();
@@ -869,7 +1131,9 @@
 
     function mapClicked(place) {
       if (picking === "route") { addRoutePoint(place); return; }
-      showHint("🌊 이곳 수심: " + depthText(place), 4000); // 길을 찍지 않을 때는 수심을 알려 줘요
+      // 길을 찍지 않을 때는 수심을 알려 줘요
+      showHint("🌊 이곳 수심을 알아보는 중…", 4000);
+      depthText(place).then(function (text) { if (!picking) showHint("🌊 이곳 수심: " + text, 4000); });
     }
 
     // ═════════ 바닷길과 기름값 ═════════
@@ -930,18 +1194,42 @@
       routeChanged();
     }
 
-    function routeChanged() {
-      // 찍은 곳 사이마다 바닷길을 찾고, 못 찾으면 곧은 선으로 이어요
-      routeLegs = [];
-      for (let i = 1; i < routePoints.length; i++) {
-        const path = seaPath(routePoints[i - 1], routePoints[i]);
-        routeLegs.push(path ? { points: path, sea: true } : { points: [routePoints[i - 1], routePoints[i]], sea: false });
+    // 한 번 찾은 구간은 기억해 둬요 (찍은 곳을 더해도 앞 구간은 다시 찾지 않아요)
+    const legMemory = new Map();
+    async function findLeg(a, b) {
+      const key = a.lat + "," + a.lng + ">" + b.lat + "," + b.lng;
+      if (!legMemory.has(key)) {
+        legMemory.set(key, seaPath(a, b).then(function (found) {
+          return found ? { points: found.points, sea: true, least: found.least, thin: found.thin } : { points: [a, b], sea: false };
+        }));
       }
+      return legMemory.get(key);
+    }
+
+    async function routeChanged() {
+      // 찍은 곳 사이마다 바닷길을 찾고, 못 찾으면 곧은 선으로 이어요
+      const ask = ++routeAsk;
+      const points = routePoints.slice();
+      routeLegs = [];
+      for (let i = 1; i < points.length; i++) routeLegs.push({ points: [points[i - 1], points[i]], sea: false, waiting: true });
       drawRoute();
       drawRouteText();
-      const end = routePoints[routePoints.length - 1];
-      $("routeEndBox").hidden = routePoints.length < 2;
-      if (routePoints.length >= 2) checkRouteEnd(end);
+      $("routeEndBox").hidden = points.length < 2;
+      if (points.length < 2) return;
+      checkRouteEnd(points[points.length - 1], ask);
+      // 찾는 동안 "지도 조각 ○개 받는 중"이 바뀌는 것을 보여 줘요
+      const ticker = setInterval(function () { if (ask === routeAsk) drawRouteText(); }, 700);
+      try {
+        for (let i = 1; i < points.length; i++) {
+          const leg = await findLeg(points[i - 1], points[i]);
+          if (ask !== routeAsk) return; // 그새 찍은 곳이 바뀌었으면 그만둬요
+          routeLegs[i - 1] = leg;
+          drawRoute();
+          drawRouteText();
+        }
+      } finally {
+        clearInterval(ticker);
+      }
     }
 
     function drawRoute() {
@@ -989,11 +1277,14 @@
         const to = i === routeLegs.length - 1 ? "도착" : (i + 1) + "번";
         const item = el("li", "", from + " → " + to + ": " + (leg.sea ? "바닷길 " : "곧은 선 ") + km.toFixed(1) + "km · " +
           hoursText(km / kmPerHour) + " · 처음에 " + directionName(firstDir) + "(" + firstDir + "°)으로");
-        if (leg.sea) {
-          const least = shallowest(leg.points);
-          item.append(el("br"), el("small", "", "곧게 가면 " + distanceKm(a, b).toFixed(1) + "km지만 땅을 피해 돌아가요" + (least !== null ? " · 가장 얕은 곳 약 " + least + "m" : "")));
+        if (leg.waiting) {
+          item.append(el("br"), el("small", "", "🔎 땅을 피하는 바닷길을 찾는 중이에요…" + (tilesWaiting ? " (지도 조각 " + tilesWaiting + "개 받는 중)" : " (멀면 몇 초 걸려요)")));
+        } else if (leg.sea) {
+          item.append(el("br"), el("small", "", "곧게 가면 " + distanceKm(a, b).toFixed(1) + "km" +
+            (km > distanceKm(a, b) * 1.05 ? "지만 땅을 피해 돌아가요" : "") +
+            (leg.thin ? " · 다리 밑 같은 아주 좁은 물길을 지나요" : "")));
         } else {
-          item.append(el("br"), el("small", "", depth ? "⚠️ 바닷길을 찾지 못해서 곧은 선으로 이었어요 (여수 바다 밖이거나 막힌 곳)" : "수심 지도를 받는 중이라 곧은 선으로 이었어요"));
+          item.append(el("br"), el("small", "", "⚠️ 바닷길을 찾지 못해서 곧은 선으로 이었어요 (바다와 이어지지 않은 곳이거나 지도를 받지 못했어요)"));
         }
         legs.append(item);
       });
@@ -1016,17 +1307,17 @@
           ? "⛽ 기름이 안 들어요 (사람 힘이나 바람으로 가요)"
           : "⛽ 기름 약 " + liters.toFixed(1) + "L · 약 " + (Math.round(liters * price / 100) * 100).toLocaleString("ko-KR") + "원 · 연비 " + (total / liters).toFixed(2) + "km/L (1L로 가는 거리)")
       );
+      if (routeLegs.some(function (leg) { return leg.waiting; })) box.append(el("br"), el("small", "", "바닷길을 찾는 중이라 숫자가 바뀔 수 있어요."));
     }
 
     // 도착지의 바다 상태와 배를 댈 곳
     let docks = [];
-    async function checkRouteEnd(end) {
-      const ask = ++routeAsk;
-      $("routeSea").textContent = "알아보는 중… · 수심 " + depthText(end);
+    async function checkRouteEnd(end, ask) {
+      $("routeSea").textContent = "알아보는 중…";
       findDocks(end, ask);
       try {
-        const data = await fetchSea(end);
-        if (ask === routeAsk) $("routeSea").textContent = seaText(data) + " · 수심 " + depthText(end);
+        const both = await Promise.all([fetchSea(end), depthText(end)]);
+        if (ask === routeAsk) $("routeSea").textContent = seaText(both[0]) + " · 수심 " + both[1];
       } catch (error) {
         if (ask === routeAsk) $("routeSea").textContent = errorText(error);
       }
@@ -1137,7 +1428,10 @@
       drawStarPick();
       $("dockName").textContent = "⚓ " + dock.name;
       const meta = $("dockMeta");
-      meta.textContent = dock.address + (dock.km !== undefined ? " · 도착지에서 " + dock.km.toFixed(1) + "km" : "") + (dock.phone ? " · ☎ " + dock.phone : "") + " · 수심 " + depthText(dock) + " ";
+      meta.textContent = dock.address + (dock.km !== undefined ? " · 도착지에서 " + dock.km.toFixed(1) + "km" : "") + (dock.phone ? " · ☎ " + dock.phone : "") + " ";
+      const depthLine = el("span", "", "· 수심 알아보는 중 ");
+      meta.append(depthLine);
+      depthText(dock).then(function (text) { depthLine.textContent = "· 수심 " + text + " "; });
       if (dock.url) {
         const link = el("a", "", "카카오맵에서 보기");
         link.href = dock.url;
@@ -1277,6 +1571,10 @@
       if (first || follow) moveMap(place.lat, place.lng, first ? 5 : null);
       drawBoat();
       drawLive();
+      depthText(place).then(function (text) {
+        liveDepth = text;
+        if (boatNow) drawLive();
+      });
       // 바다 상태는 5분마다, 또는 2km 넘게 움직였을 때 다시 물어봐요
       if (!liveSeaAt || Date.now() - liveSeaTime > 300000 || distanceKm(liveSeaAt, place) > 2) {
         liveSeaAt = place;
@@ -1300,6 +1598,7 @@
         content: pin, map: map, xAnchor: 0.5, yAnchor: 0.5, zIndex: 8
       });
     }
+    let liveDepth = "알아보는 중";
     function drawLive() {
       const grid = $("liveGrid");
       grid.textContent = "";
@@ -1307,7 +1606,7 @@
       [
         ["⚡ 속력", boatNow.speed === null ? "모름" : boatNow.speed.toFixed(1) + "노트"],
         ["🧭 방향", boatNow.heading === null ? "모름" : directionName(boatNow.heading)],
-        ["🌊 수심", depthText(boatNow).replace(" (높이", "\n(높이")],
+        ["🌊 수심", liveDepth],
         ["📍 위도", boatNow.lat.toFixed(4)],
         ["📍 경도", boatNow.lng.toFixed(4)],
         ["🏁 도착지까지", end ? distanceKm(boatNow, end).toFixed(1) + "km" : "길 없음"]
@@ -1366,7 +1665,7 @@
       $("loginBox").hidden = true;
       $("appBox").hidden = false;
       setupMap();
-      if (!depth) loadDepth();
+
     }
 
     function leave() {
