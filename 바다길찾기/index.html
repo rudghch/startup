@@ -653,11 +653,17 @@
     // ── 수심 등고선 (같은 깊이를 이은 선, 바다에서는 "등심선"이라고도 해요) ──
     const CONTOUR_LEVELS = [5, 10, 20, 50, 100, 200, 500, 1000, 2000]; // 이 깊이(m)마다 선을 그어요
     const CONTOUR_BOLD = [10, 50, 100, 500, 1000];                     // 이 깊이는 굵게
-    const CONTOUR_LABEL_GAP = 220; // 숫자를 몇 칸(px)마다 적을지
+    const CONTOUR_LABEL_GAP = 220;     // 화면에서 같은 깊이 숫자 사이를 적어도 몇 px 띄울지
+    const CONTOUR_LABEL_GAP_TILE = 40; // 타일 안에서 숫자를 적을 수 있는 자리를 몇 칸마다 남겨 둘지
+    const CONTOUR_FONT = "bold 11px sans-serif"; // 숫자 크기 (확대·축소해도 늘 이 크기)
+    function contourLook(level) {
+      const bold = CONTOUR_BOLD.includes(level);
+      return { color: bold ? "rgba(10, 60, 120, 0.9)" : "rgba(20, 90, 160, 0.6)", width: bold ? 1.4 : 0.8 };
+    }
     const CONTOUR_SMOOTH = 2;      // 선을 긋기 전에 둘레 몇 칸씩 평균을 내서 자잘한 잡음을 없애요
     let showColors = true;
     let showContours = true;
-    const contourTiles = new Map(); // "z/x/y" → 등고선을 그린 캔버스
+    const contourTiles = new Map(); // "z/x/y" → { picture: 등고선 그림, lines: 깊이마다 선들, labels: 숫자 자리 }
     function contourTile(z, x, y) {
       const key = z + "/" + x + "/" + y;
       if (!contourTiles.has(key)) {
@@ -685,10 +691,12 @@
             }
           }
           const depthAt = function (px, py) { return smooth[py * 256 + px]; };
-          const labels = [];
+          const labels = []; // 숫자를 적을 수 있는 자리들 (화면에 그릴 때 겹치지 않게 골라 써요)
+          const lines = [];  // 깊이마다 짧은 선들 (크게 확대했을 때 화면 크기에 맞춰 다시 그려요)
           CONTOUR_LEVELS.forEach(function (level) {
             ctx.beginPath();
-            let run = CONTOUR_LABEL_GAP * 0.5;
+            const coords = [];
+            let run = CONTOUR_LABEL_GAP_TILE * 0.5;
             // 네모 칸(2×2 점)마다 그 깊이가 어디를 지나는지 찾아 짧은 선을 그어요 (마칭 스퀘어라는 방법)
             for (let py = 0; py < 255; py++) {
               for (let px = 0; px < 255; px++) {
@@ -705,29 +713,20 @@
                 pairs.forEach(function (pair) {
                   ctx.moveTo(pair[0][0] + 0.5, pair[0][1] + 0.5);
                   ctx.lineTo(pair[1][0] + 0.5, pair[1][1] + 0.5);
+                  coords.push(pair[0][0] + 0.5, pair[0][1] + 0.5, pair[1][0] + 0.5, pair[1][1] + 0.5);
                   run += 1;
-                  if (run >= CONTOUR_LABEL_GAP) { run = 0; labels.push([pair[0][0] + 0.5, pair[0][1] + 0.5, level]); }
+                  if (run >= CONTOUR_LABEL_GAP_TILE) { run = 0; labels.push([pair[0][0] + 0.5, pair[0][1] + 0.5, level]); }
                 });
               }
             }
-            const bold = CONTOUR_BOLD.includes(level);
-            ctx.strokeStyle = bold ? "rgba(10, 60, 120, 0.9)" : "rgba(20, 90, 160, 0.6)";
-            ctx.lineWidth = bold ? 1.4 : 0.8;
+            const look = contourLook(level);
+            ctx.strokeStyle = look.color;
+            ctx.lineWidth = look.width;
             ctx.stroke();
+            if (coords.length) lines.push({ level: level, coords: Float32Array.from(coords) });
           });
-          // 선 위에 깊이 숫자 적기 (흰 테두리를 둘러 잘 보이게)
-          ctx.font = "bold 10px sans-serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          labels.forEach(function (label) {
-            const text = label[2] + "m";
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-            ctx.strokeText(text, label[0], label[1]);
-            ctx.fillStyle = "#0b3d6b";
-            ctx.fillText(text, label[0], label[1]);
-          });
-          contourTiles.set(key, canvas);
+          // 숫자는 여기서 적지 않고, 화면에 그릴 때 늘 같은 크기로 적어요
+          contourTiles.set(key, { picture: canvas, lines: lines, labels: labels });
           drawDepthLayer();
         });
       }
@@ -764,19 +763,61 @@
       const x0 = Math.floor(worldX(sw.getLng(), z) / 256), x1 = Math.floor(worldX(ne.getLng(), z) / 256);
       const y0 = Math.floor(worldY(ne.getLat(), z) / 256), y1 = Math.floor(worldY(sw.getLat(), z) / 256);
       const projection = map.getProjection();
+      const labelSpots = []; // 이번에 숫자를 적을 자리 [x, y, level]
       for (let ty = y0; ty <= y1; ty++) {
         for (let tx = x0; tx <= x1; tx++) {
           // 타일의 왼쪽 위·오른쪽 아래가 화면 어디인지 구해서 그 사이에 그림을 늘려 그려요
           const a = projection.containerPointFromCoords(new kakao.maps.LatLng(latOf(ty * 256, z), lngOf(tx * 256, z)));
           const b = projection.containerPointFromCoords(new kakao.maps.LatLng(latOf((ty + 1) * 256, z), lngOf((tx + 1) * 256, z)));
-          const pictures = [showColors ? paintedTile(z, tx, ty) : null, showContours ? contourTile(z, tx, ty) : null];
-          pictures.forEach(function (picture, i) {
-            if (!picture || picture === "wait") return;
-            ctx.imageSmoothingEnabled = i === 1; // 색칠은 또렷하게, 등고선은 부드럽게
-            ctx.drawImage(picture, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
-          });
+          const sx = (b.x - a.x) / 256, sy = (b.y - a.y) / 256; // 타일 한 칸이 화면에서 몇 px인지
+          const colors = showColors ? paintedTile(z, tx, ty) : null;
+          if (colors && colors !== "wait") {
+            ctx.imageSmoothingEnabled = sx > 2; // 많이 확대하면 네모가 덜 보이게 부드럽게
+            ctx.drawImage(colors, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
+          }
+          const contour = showContours ? contourTile(z, tx, ty) : null;
+          if (!contour || contour === "wait") continue;
+          if (sx <= 1.5) {
+            // 타일이 화면과 비슷한 크기면 미리 그려 둔 그림을 그대로 놓아요 (빨라요)
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(contour.picture, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
+          } else {
+            // 많이 확대했으면 선을 화면 크기에 맞춰 새로 그어요 (선 굵기는 늘 같아요)
+            contour.lines.forEach(function (line) {
+              const look = contourLook(line.level), c = line.coords;
+              ctx.beginPath();
+              for (let i = 0; i < c.length; i += 4) {
+                ctx.moveTo(a.x + c[i] * sx, a.y + c[i + 1] * sy);
+                ctx.lineTo(a.x + c[i + 2] * sx, a.y + c[i + 3] * sy);
+              }
+              ctx.strokeStyle = look.color;
+              ctx.lineWidth = look.width;
+              ctx.stroke();
+            });
+          }
+          contour.labels.forEach(function (label) { labelSpots.push([a.x + label[0] * sx, a.y + label[1] * sy, label[2]]); });
         }
       }
+      // 깊이 숫자: 늘 같은 크기로, 같은 깊이끼리 CONTOUR_LABEL_GAP보다 가까우면 빼요
+      ctx.font = CONTOUR_FONT;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const placed = [];
+      labelSpots.forEach(function (spot) {
+        if (spot[0] < 10 || spot[1] < 10 || spot[0] > box.clientWidth - 10 || spot[1] > box.clientHeight - 10) return;
+        const crowded = placed.some(function (p) {
+          const far = Math.hypot(p[0] - spot[0], p[1] - spot[1]);
+          return far < (p[2] === spot[2] ? CONTOUR_LABEL_GAP : 40);
+        });
+        if (crowded) return;
+        placed.push(spot);
+        const text = spot[2] + "m";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.strokeText(text, spot[0], spot[1]);
+        ctx.fillStyle = "#0b3d6b";
+        ctx.fillText(text, spot[0], spot[1]);
+      });
     }
     function drawLegend() {
       const box = $("depthLegend");
