@@ -2115,6 +2115,7 @@
           if (ask !== roadviewAsk) return;
           if (panoId) {
             roadview.setPanoId(panoId, position);
+            placeRoadviewSpot(place); // 걸어가면 position_changed가 더 정확한 자리로 옮겨요
             $("islandNote").textContent = "📷 " + (name || "고른 곳") + (ROADVIEW_RADII[i] > 300 ? " 둘레 (" + (ROADVIEW_RADII[i] / 1000) + "km 안)에서 가장 가까운 길" : "") + "의 로드뷰예요. 끌어서 둘러보세요.";
             bringIntoView($("roadview"));
             return;
