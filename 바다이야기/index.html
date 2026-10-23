@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>바다 이야기</title>
+  <title>물고기가 무꼬?!</title>
+  <link rel="icon" href="logo.png">
   <!-- 카카오맵 불러오기 (appkey는 길찾기와 같은 JavaScript 키, services는 장소 검색 도구) -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
   <style>
@@ -327,6 +328,38 @@
     .comment-form { display: flex; gap: 6px; margin-top: 8px; }
     .comment-form input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
 
+    /* 로고와 기능 고르기 */
+    .logo { width: 34px; height: 34px; vertical-align: -9px; }
+    .top .logo { background: #fff; border-radius: 8px; }
+    .modes { display: flex; gap: 4px; margin: -4px 0 14px; }
+    .modes button { flex: 1; padding: 8px 4px; border: 1px solid #b8c6cf; border-radius: 10px; background: #f6f9fb; font-size: 14px; font-weight: bold; white-space: nowrap; }
+    .modes button.on { background: #0b6e8a; border-color: #0b6e8a; color: #fff; }
+
+    /* AI 물어보기 */
+    .ai-preview { display: block; width: 100%; max-height: 240px; object-fit: contain; margin-top: 10px; border-radius: 10px; background: #000; }
+    .ai-card { margin-top: 10px; padding: 12px; border-radius: 14px; background: #e6f3f7; line-height: 1.6; }
+    .ai-card h3 { margin: 0; font-size: 20px; }
+    .ai-card .sci { color: #3d5866; font-style: italic; font-size: 14px; }
+    .ai-card ul { margin: 6px 0; padding-left: 20px; }
+    .ai-card .caution { padding: 6px 8px; border-radius: 8px; background: #fde8e6; color: #9b2c22; font-size: 14px; }
+    .ai-card .sure { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #fff; font-size: 12px; vertical-align: 3px; }
+
+    /* 언제 어디에 살까? */
+    #whereLayer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .where-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .where-tools input[type=date] { padding: 6px 8px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    .where-tools .chips { margin: 0; }
+    .critter { display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 6px; padding: 8px 10px; border: 1px solid #d6e4ea; border-radius: 10px; background: #fff; text-align: left; }
+    .critter.on { border-color: #ff8c00; background: #fff8ee; }
+    .critter .emo { font-size: 22px; }
+    .critter .words { flex: 1; min-width: 0; }
+    .critter .words b { display: block; font-size: 15px; }
+    .critter .words small { display: block; color: #5b6272; font-size: 12px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .critter .num { font-size: 13px; color: #0b6e8a; font-weight: bold; white-space: nowrap; }
+    .bars { display: flex; align-items: flex-end; gap: 1px; height: 22px; margin-top: 3px; }
+    .bars i { flex: 1; min-height: 1px; background: #a9d4e4; border-radius: 1px; }
+    .bars i.now { background: #ff8c00; }
+
     /* 좁은 화면(핸드폰): 지도 위, 옆 칸 아래 */
     @media (max-width: 800px) {
       .app { display: block; height: auto; }
@@ -341,7 +374,7 @@
 </head>
 <body>
   <header class="top">
-    <h1>🏝️ 바다 이야기</h1>
+    <h1><img class="logo" src="logo.png" alt=""> 물고기가 무꼬?!</h1>
     <div class="me" id="meBox" hidden>
       <b id="meName"></b>
       <button type="button" id="logoutButton">로그아웃</button>
@@ -352,7 +385,7 @@
   <!-- 로그인 -->
   <section class="login" id="loginBox" hidden>
     <h2 id="loginTitle">로그인</h2>
-    <p>섬과 바다의 사진·영상을 모으고, 찍은 곳을 지도에 표시해요. 모르는 바다 생물도 물어볼 수 있어요.</p>
+    <p>바다 생물 사진을 찍으면 AI가 무슨 생물인지 알려 주고, 어느 바다에 어떤 생물이 언제 많이 사는지 지도로 보여 줘요.</p>
     <p id="loginHelp"></p>
     <form id="loginForm">
       <input id="idInput" placeholder="아이디" autocomplete="username" maxlength="12">
@@ -367,6 +400,7 @@
   <main class="app" id="appBox" hidden>
     <div class="map-wrap" id="mapWrap">
       <div id="map"></div>
+      <canvas id="whereLayer"></canvas>
       <div class="no-map" id="noMap" hidden>
         지도를 불러오지 못했어요.<br>지도는 웹 주소(rudghch.github.io)에서 열어야 보여요.
       </div>
@@ -384,9 +418,48 @@
     </div>
 
     <aside class="side" id="side">
+    <!-- 기능 고르기 -->
+    <nav class="modes" id="modes">
+      <button type="button" data-pane="story" class="on">📸 바다 이야기</button>
+      <button type="button" data-pane="ai">🤖 AI 물어보기</button>
+      <button type="button" data-pane="where">🗺️ 언제 어디에?</button>
+    </nav>
+
+    <!-- AI에게 물어보기 -->
+    <section id="aiPane" hidden>
+      <h2>🤖 이 생물은 뭐꼬?</h2>
+      <p class="intro">바다 생물 사진을 찍거나 고르면 AI가 무슨 생물인지, 어떤 특징이 있는지 알려 줘요.</p>
+      <p class="warn" id="aiOff" hidden>AI가 아직 연결되지 않았어요. 선생님이 서버에 AI 키를 넣으면 켜져요.</p>
+      <div class="row">
+        <label class="soft">📷 사진 찍기<input type="file" id="aiCamera" accept="image/*" capture="environment" hidden></label>
+        <label class="soft">📁 사진 고르기<input type="file" id="aiFile" accept="image/*" hidden></label>
+      </div>
+      <img id="aiPreview" class="ai-preview" alt="고른 사진" hidden>
+      <p class="note" id="aiStatus"></p>
+      <div class="ai-card" id="aiResult" hidden></div>
+      <p class="warn">AI도 틀릴 수 있어요. 독이 있을 수 있는 생물은 만지지 말고, 먹어도 되는지는 꼭 어른께 물어보세요. 사람 얼굴이 나온 사진은 보내지 마세요.</p>
+    </section>
+
+    <!-- 언제 어디에 살까? -->
+    <section id="wherePane" hidden>
+      <h2>🗺️ 언제 어디에 살까?</h2>
+      <p class="intro">지금 지도에 보이는 바다에서, 고른 날짜의 달(또는 계절)에 사람들이 실제로 만나 기록한 바다 생물을 보여 줘요. 국립해양생물자원관 해양생물 공간정보시스템도 쓰는 세계 바다 생물 기록(OBIS)이에요.</p>
+      <div class="where-tools">
+        <label>📅 날짜 <input type="date" id="whereDate"></label>
+        <div class="chips" id="whereSpan"></div>
+      </div>
+      <p class="note" id="whereWhen"></p>
+      <button type="button" class="primary" id="whereSearch">🔎 지금 지도에 보이는 바다에서 찾기</button>
+      <div class="chips" id="whereGroups" style="margin-top: 10px;"></div>
+      <p class="count" id="whereCount"></p>
+      <div id="whereList"></div>
+      <p class="warn">기록이 많다고 꼭 그 생물이 많이 사는 것은 아니에요. 사람들이 많이 조사한 곳과 달일수록 기록이 많아요.</p>
+      <p class="note">자료: <a href="https://obis.org" target="_blank" rel="noopener">OBIS 세계 해양생물 정보 시스템</a> · <a href="https://www.mabik.re.kr" target="_blank" rel="noopener">국립해양생물자원관</a> · 한국 이름: GBIF</p>
+    </section>
+
     <section id="storyPane">
       <div id="storyListPane">
-        <h2>🏝️ 섬과 바다 이야기</h2>
+        <h2>📸 바다 이야기</h2>
         <p class="intro">섬의 모습, 바다 생물, 어업 도구를 사진·영상으로 올리고 찍은 곳을 지도에 표시해요. 모르는 바다 생물은 "❓ 이게 뭐예요?"로 물어보세요. 🌐 표시는 누구나 쓸 수 있게 허락된 인터넷 사진이에요.</p>
         <button type="button" class="primary" id="newStoryButton">＋ 사진·영상 올리기</button>
         <input type="search" id="storyFilter" placeholder="섬 이름이나 설명으로 찾기">
@@ -747,6 +820,10 @@
       kakao.maps.event.addListener(map, "click", function (mouseEvent) {
         mapClicked({ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() });
       });
+      // 생물 기록 점은 지도를 움직이면 다시 그리고, 확대·축소하는 동안은 잠깐 숨겨요
+      kakao.maps.event.addListener(map, "bounds_changed", drawWhereLayer);
+      kakao.maps.event.addListener(map, "zoom_start", function () { whereZooming = true; drawWhereLayer(); });
+      kakao.maps.event.addListener(map, "zoom_changed", function () { whereZooming = false; drawWhereLayer(); });
       drawMap();
     }
 
@@ -825,7 +902,7 @@
     }
     $("stopPickButton").addEventListener("click", stopPicking);
 
-    function drawMap() { drawStorySpots(); }
+    function drawMap() { if (pane !== "where") drawStorySpots(); }
     function mapClicked(place) {
       if (picking === "story") { setStorySpot(place, "지도에서 고른 곳"); stopPicking(); }
     }
@@ -1062,7 +1139,7 @@
     function drawStorySpots() {
       clearMarks();
       storyDraftOverlay = null;
-      if (!map) return;
+      if (!map || pane === "where") return; // "언제 어디에?"를 볼 때는 사진 자리를 숨겨요
       shownStories().forEach(function (story) {
         const first = story.media[0];
         const pin = story.web
@@ -1380,6 +1457,397 @@
     });
 
 
+    // ═════════ 기능 고르기: 📸 바다 이야기 / 🤖 AI 물어보기 / 🗺️ 언제 어디에? ═════════
+    let pane = "story";
+    function setPane(name) {
+      pane = name;
+      document.querySelectorAll("#modes button").forEach(function (button) { button.classList.toggle("on", button.dataset.pane === name); });
+      $("storyPane").hidden = name !== "story";
+      $("aiPane").hidden = name !== "ai";
+      $("wherePane").hidden = name !== "where";
+      stopPicking();
+      // 지도에는 바다 이야기 사진이나, 생물 기록 점 중 하나만 보여요
+      if (name === "where") { clearMarks(); if (!whereRecords) searchWhere(); } else drawStorySpots();
+      drawWhereLayer();
+    }
+    document.querySelectorAll("#modes button").forEach(function (button) {
+      button.addEventListener("click", function () { setPane(button.dataset.pane); });
+    });
+
+    // ═════════ 🤖 AI 물어보기 ═════════
+    // 사진을 우리 서버(FishAiApi)로 보내면, 서버가 Claude AI에게 물어보고 답을 돌려줘요.
+    // AI 키는 비밀이라 서버에만 있어요. 서버 주소가 비어 있으면 "아직 연결되지 않았어요"가 나와요.
+    const FISH_AI_URL = ""; // 선생님이 스택을 업데이트하면 나오는 FishAiUrl을 여기에 넣어요
+    const AI_PHOTO_SIZE = 1024; // 사진을 이 크기로 줄여서 보내요 (작을수록 빨라요)
+    Object.assign(ERROR_TEXT, {
+      NO_KEY: "AI가 아직 연결되지 않았어요. 선생님이 서버에 AI 키를 넣으면 켜져요.",
+      TOO_MANY: "오늘 물어볼 수 있는 만큼 다 물어봤어요. 내일 다시 해 봐요.",
+      AI_DOWN: "AI가 대답하지 못했어요. 잠시 뒤에 다시 해 주세요.",
+      AI_BAD: "AI의 대답을 읽지 못했어요. 다시 해 주세요.",
+      BAD_ORIGIN: "이 주소에서는 AI를 쓸 수 없어요."
+    });
+    let aiFile = null;
+    let aiAnswer = null;
+
+    function blobToBase64(blob) {
+      return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () { resolve(String(reader.result).split(",")[1]); };
+        reader.onerror = function () { reject(new Error("BAD_FILE")); };
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function askAi(file) {
+      aiFile = file;
+      aiAnswer = null;
+      const preview = $("aiPreview");
+      if (preview.src) URL.revokeObjectURL(preview.src);
+      preview.src = URL.createObjectURL(file);
+      preview.hidden = false;
+      $("aiResult").hidden = true;
+      if (!FISH_AI_URL) { $("aiStatus").textContent = ERROR_TEXT.NO_KEY; return; }
+      $("aiStatus").textContent = "🤖 AI가 사진을 보고 있어요… (10~30초쯤 걸려요)";
+      try {
+        const image = await blobToBase64(await shrinkPhoto(file, AI_PHOTO_SIZE));
+        // 찍은 곳(사진 속 위치 정보)과 이번 달을 함께 알려 주면 AI가 더 잘 맞혀요
+        const spot = await readPhotoPlace(file);
+        let response;
+        try {
+          response = await fetch(FISH_AI_URL, {
+            method: "POST",
+            body: JSON.stringify({ token: token, image: image, month: new Date().getMonth() + 1, place: spot ? "위도 " + spot.lat.toFixed(3) + ", 경도 " + spot.lng.toFixed(3) + " (우리나라 바다)" : "" })
+          });
+        } catch (error) {
+          throw new Error("NO_SERVER");
+        }
+        const result = await response.json().catch(function () { return null; });
+        if (!response.ok) throw new Error((result && result.error) || "AI_DOWN");
+        if (aiFile !== file) return;
+        aiAnswer = result;
+        drawAiAnswer(result);
+        $("aiStatus").textContent = typeof result.left === "number" ? "오늘 " + result.left + "번 더 물어볼 수 있어요." : "";
+      } catch (error) {
+        if (aiFile !== file) return;
+        $("aiStatus").textContent = ERROR_TEXT[error.message] || (String(error.message).startsWith("AI_") ? ERROR_TEXT.AI_DOWN : errorText(error));
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+    }
+    ["aiCamera", "aiFile"].forEach(function (id) {
+      $(id).addEventListener("change", function () {
+        if (this.files[0] && this.files[0].type.startsWith("image/")) askAi(this.files[0]);
+        this.value = "";
+      });
+    });
+
+    function drawAiAnswer(a) {
+      const box = $("aiResult");
+      box.textContent = "";
+      box.hidden = false;
+      if (!a.found) {
+        box.append(el("h3", "", "🤔 잘 모르겠어요"), el("p", "", hideBadWords(String(a.message || "바다 생물이 잘 보이게 가까이 다시 찍어 봐요."))));
+        return;
+      }
+      const title = el("h3", "", (GROUP_EMOJI[a.group] || "🐟") + " " + (a.korean_name || "이름을 모르는 생물"));
+      title.append(el("span", "sure", "확신 " + (a.confidence || "보통")));
+      box.append(title);
+      if (a.scientific_name) box.append(el("div", "sci", a.scientific_name + (a.group ? " · " + a.group : "")));
+      if (a.features && a.features.length) {
+        const list = el("ul");
+        a.features.slice(0, 5).forEach(function (text) { list.append(el("li", "", String(text))); });
+        box.append(el("b", "", "생김새와 특징"), list);
+      }
+      if (a.habitat) box.append(el("div", "", "🏠 사는 곳: " + a.habitat));
+      if (a.season) box.append(el("div", "", "📅 많이 보이는 때: " + a.season));
+      if (a.caution) box.append(el("p", "caution", "⚠️ 조심해요: " + a.caution));
+      if (a.similar && a.similar.length) box.append(el("div", "", "🔍 헷갈리기 쉬운 생물: " + a.similar.join(", ")));
+      if (a.message) box.append(el("p", "", "💬 " + a.message));
+      const row = el("div", "row");
+      const share = el("button", "soft", "📸 이 사진을 바다 이야기에 올리기");
+      share.type = "button";
+      share.addEventListener("click", shareAiPhoto);
+      const where = el("button", "soft", "🗺️ 언제 어디에 사는지 보기");
+      where.type = "button";
+      where.addEventListener("click", function () {
+        setPane("where");
+        if (a.scientific_name) whereFocus = a.scientific_name;
+        drawWhere();
+      });
+      row.append(share, where);
+      box.append(row);
+    }
+
+    // AI가 알려 준 생물을 바다 이야기 올리기 창에 미리 채워 줘요 (섬 이름과 찍은 곳은 직접 정해요)
+    async function shareAiPhoto() {
+      if (!aiFile || !aiAnswer) return;
+      setPane("story");
+      openStoryCompose();
+      storyDraft.kind = aiAnswer.confidence === "낮음" ? "ask" : "life";
+      drawStoryKindPick();
+      $("storyText").value = ("AI가 알려 준 이름: " + (aiAnswer.korean_name || "?") + (aiAnswer.scientific_name ? " (" + aiAnswer.scientific_name + ")" : "") +
+        (aiAnswer.features && aiAnswer.features.length ? "\n특징: " + aiAnswer.features.join(", ") : "")).slice(0, MAX_TEXT);
+      $("storyLetters").textContent = $("storyText").value.length + " / " + MAX_TEXT;
+      await addStoryFiles([aiFile]);
+    }
+
+    // ═════════ 🗺️ 언제 어디에 살까? ═════════
+    // OBIS(세계 해양생물 정보 시스템)에 모인 바다 생물 기록을 지도에 보이는 바다만큼 받아 와서, 고른 달·계절에 기록된 생물을 세어요.
+    const OBIS_URL = "https://api.obis.org/v3/occurrence";
+    const WHERE_MAX_SPAN = 1.2;  // 한 번에 살펴볼 바다 크기(도). 지도가 더 넓으면 가운데만 살펴봐요
+    const WHERE_PAGE = 5000;     // 한 번에 받을 기록 수
+    const WHERE_PAGES = 3;       // 최대 몇 번 받을지 (많으면 느려져요)
+    const SEASONS = { 봄: [3, 4, 5], 여름: [6, 7, 8], 가을: [9, 10, 11], 겨울: [12, 1, 2] };
+    // 생물 무리 (OBIS의 분류로 나눠요). on: 처음에 보일지
+    const GROUPS = [
+      { id: "fish", name: "🐟 물고기", color: "#1f6fb4", on: true },
+      { id: "crab", name: "🦀 게·새우", color: "#e4572e", on: true },
+      { id: "squid", name: "🐙 문어·오징어", color: "#8e44ad", on: true },
+      { id: "shell", name: "🐚 조개·고둥", color: "#c08a2b", on: true },
+      { id: "star", name: "⭐ 불가사리·성게", color: "#e0a800", on: true },
+      { id: "jelly", name: "🪼 해파리·산호", color: "#d63384", on: true },
+      { id: "big", name: "🐬 고래·물범·거북", color: "#0b6e8a", on: true },
+      { id: "bird", name: "🐦 바닷새", color: "#6c757d", on: false },
+      { id: "tiny", name: "🦐 작은 생물", color: "#2a9d8f", on: false } // 플랑크톤, 갯지렁이 같은 아주 작은 생물
+    ];
+    const GROUP_EMOJI = { "물고기": "🐟", "게·새우": "🦀", "문어·오징어": "🐙", "조개·고둥": "🐚", "불가사리·성게": "⭐", "해파리·산호": "🪼", "해조류": "🌿", "고래·바다거북": "🐬" };
+    function groupOf(r) {
+      const c = r["class"] || "", p = r.phylum || "";
+      if (/Teleostei|Actinopter|Elasmobranchii|Holocephali|Chondrichthyes|Myxini|Petromyzonti|Cephalaspidomorphi/.test(c)) return "fish";
+      if (c === "Malacostraca") return "crab";
+      if (c === "Cephalopoda") return "squid";
+      if (/Bivalvia|Gastropoda|Polyplacophora|Scaphopoda/.test(c)) return "shell";
+      if (p === "Echinodermata") return "star";
+      if (p === "Cnidaria" || p === "Ctenophora") return "jelly";
+      if (c === "Mammalia" || c === "Reptilia") return "big";
+      if (c === "Aves") return "bird";
+      if (p === "Chordata" && !c && /formes$/.test(r.order || "")) return "fish";
+      return "tiny";
+    }
+    function groupById(id) { return GROUPS.find(function (g) { return g.id === id; }); }
+
+    // 자주 보이는 우리 바다 생물의 한국 이름 (없는 것은 GBIF에서 찾아봐요)
+    const KOREAN_NAMES = {
+      "Engraulis japonicus": "멸치", "Sebastes schlegelii": "조피볼락(우럭)", "Sebastes inermis": "볼락", "Acanthopagrus schlegelii": "감성돔",
+      "Pagrus major": "참돔", "Lateolabrax japonicus": "농어", "Paralichthys olivaceus": "넙치(광어)", "Konosirus punctatus": "전어",
+      "Trachurus japonicus": "전갱이", "Scomber japonicus": "고등어", "Trichiurus japonicus": "갈치", "Trichiurus lepturus": "갈치",
+      "Larimichthys polyactis": "참조기", "Mugil cephalus": "숭어", "Hexagrammos otakii": "쥐노래미", "Conger myriaster": "붕장어",
+      "Platycephalus indicus": "양태", "Sardinops melanostictus": "정어리", "Takifugu niphobles": "복섬", "Takifugu rubripes": "자주복",
+      "Oplegnathus fasciatus": "돌돔", "Girella punctata": "벵에돔", "Thamnaconus modestus": "말쥐치", "Stephanolepis cirrhifer": "쥐치",
+      "Ditrema temminckii": "망상어", "Lophius litulon": "황아귀", "Clupea pallasii": "청어", "Scomberomorus niphonius": "삼치",
+      "Seriola quinqueradiata": "방어", "Cololabis saira": "꽁치", "Acanthogobius flavimanus": "문절망둑", "Periophthalmus modestus": "말뚝망둥어",
+      "Ammodytes personatus": "까나리", "Kareius bicoloratus": "돌가자미", "Okamejei kenojei": "홍어", "Planiliza haematocheilus": "가숭어",
+      "Octopus minor": "낙지", "Amphioctopus fangsiao": "주꾸미", "Enteroctopus dofleini": "대문어", "Sepia esculenta": "참갑오징어",
+      "Todarodes pacificus": "살오징어", "Portunus trituberculatus": "꽃게", "Charybdis japonica": "민꽃게", "Hemigrapsus sanguineus": "무늬발게",
+      "Hemigrapsus penicillatus": "풀게", "Macrophthalmus japonicus": "칠게", "Austruca lactea": "흰발농게", "Marsupenaeus japonicus": "보리새우",
+      "Fenneropenaeus chinensis": "대하", "Oratosquilla oratoria": "갯가재", "Ligia exotica": "갯강구", "Magallana gigas": "참굴",
+      "Crassostrea gigas": "참굴", "Mytilus galloprovincialis": "지중해담치", "Mytilus coruscus": "홍합", "Ruditapes philippinarum": "바지락",
+      "Tegillarca granosa": "꼬막", "Anadara broughtonii": "피조개", "Haliotis discus": "전복", "Turbo sazae": "소라", "Rapana venosa": "피뿔고둥",
+      "Littorina brevicula": "총알고둥", "Sinonovacula constricta": "가리맛조개", "Atrina pectinata": "키조개", "Mactra veneriformis": "동죽",
+      "Cyclina sinensis": "가무락조개", "Asterias amurensis": "아무르불가사리", "Patiria pectinifera": "별불가사리", "Apostichopus japonicus": "돌기해삼",
+      "Hemicentrotus pulcherrimus": "말똥성게", "Heliocidaris crassispina": "보라성게", "Aurelia aurita": "보름달물해파리", "Aurelia coerulea": "보름달물해파리",
+      "Nemopilema nomurai": "노무라입깃해파리", "Chrysaora pacifica": "커튼원양해파리", "Cyanea nozakii": "유령해파리",
+      "Neophocaena asiaeorientalis": "상괭이", "Phoca largha": "점박이물범", "Delphinus delphis": "참돌고래", "Balaenoptera acutorostrata": "밍크고래",
+      "Chelonia mydas": "푸른바다거북", "Caretta caretta": "붉은바다거북", "Larus crassirostris": "괭이갈매기"
+    };
+    const gbifNames = new Map(); // 학명 → 한국 이름 ("" 이면 없음)
+    async function koreanName(species) {
+      if (KOREAN_NAMES[species]) return KOREAN_NAMES[species];
+      if (!gbifNames.has(species)) {
+        gbifNames.set(species, (async function () {
+          try {
+            const match = await (await fetch("https://api.gbif.org/v1/species/match?name=" + encodeURIComponent(species))).json();
+            if (!match.usageKey) return "";
+            const names = await (await fetch("https://api.gbif.org/v1/species/" + match.usageKey + "/vernacularNames?limit=100")).json();
+            const kor = (names.results || []).find(function (n) { return n.language === "kor"; });
+            return kor ? kor.vernacularName : "";
+          } catch (error) {
+            return "";
+          }
+        })());
+      }
+      return gbifNames.get(species);
+    }
+
+    let whereRecords = null; // 받아 온 기록 [{ species, month, lat, lng, group }]
+    let whereArea = null;
+    let whereSpan = "month"; // "month"(그 달), "season"(그 계절), "year"(1년 내내)
+    let whereFocus = null;   // 지도에서 그 생물만 보여 줄 학명
+    let whereAsk = 0;
+    const groupOn = {};
+    GROUPS.forEach(function (g) { groupOn[g.id] = g.on; });
+
+    function whereDate() { return new Date(($("whereDate").value || new Date().toISOString().slice(0, 10)) + "T12:00:00"); }
+    function seasonOf(month) { return Object.keys(SEASONS).find(function (s) { return SEASONS[s].includes(month); }); }
+    function shownMonths() {
+      const month = whereDate().getMonth() + 1;
+      return whereSpan === "month" ? [month] : whereSpan === "season" ? SEASONS[seasonOf(month)] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+
+    function drawWhereTools() {
+      const month = whereDate().getMonth() + 1;
+      const spanBox = $("whereSpan");
+      spanBox.textContent = "";
+      [["month", month + "월만"], ["season", seasonOf(month) + " (" + SEASONS[seasonOf(month)].join("·") + "월)"], ["year", "1년 내내"]].forEach(function (pair) {
+        const button = el("button", "soft" + (whereSpan === pair[0] ? " on" : ""), pair[1]);
+        button.type = "button";
+        button.addEventListener("click", function () { whereSpan = pair[0]; drawWhereTools(); drawWhere(); });
+        spanBox.append(button);
+      });
+      const groupBox = $("whereGroups");
+      groupBox.textContent = "";
+      GROUPS.forEach(function (g) {
+        const button = el("button", "soft" + (groupOn[g.id] ? " on" : ""), g.name);
+        button.type = "button";
+        button.addEventListener("click", function () { groupOn[g.id] = !groupOn[g.id]; drawWhereTools(); drawWhere(); });
+        groupBox.append(button);
+      });
+      $("whereWhen").textContent = "📅 " + whereDate().toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) + "은 " + seasonOf(month) + "이에요. " +
+        (whereSpan === "month" ? month + "월" : whereSpan === "season" ? seasonOf(month) : "1년 내내") + "에 기록된 생물을 보여 줘요.";
+    }
+    $("whereDate").addEventListener("change", function () { drawWhereTools(); drawWhere(); });
+
+    // 지도에 보이는 바다의 기록 받기
+    async function searchWhere() {
+      let area;
+      if (map) {
+        const b = map.getBounds(), sw = b.getSouthWest(), ne = b.getNorthEast();
+        area = { south: sw.getLat(), west: sw.getLng(), north: ne.getLat(), east: ne.getLng() };
+      } else {
+        area = { south: FIRST_PLACE.lat - 0.3, west: FIRST_PLACE.lng - 0.3, north: FIRST_PLACE.lat + 0.3, east: FIRST_PLACE.lng + 0.3 };
+      }
+      let note = "";
+      ["lat", "lng"].forEach(function (axis) {
+        const lo = axis === "lat" ? "south" : "west", hi = axis === "lat" ? "north" : "east";
+        if (area[hi] - area[lo] > WHERE_MAX_SPAN) {
+          const mid = (area[hi] + area[lo]) / 2;
+          area[lo] = mid - WHERE_MAX_SPAN / 2; area[hi] = mid + WHERE_MAX_SPAN / 2;
+          note = " (지도가 넓어서 가운데 바다만 살펴봤어요. 확대하면 더 자세해요)";
+        }
+      });
+      const ask = ++whereAsk;
+      whereArea = area;
+      whereRecords = null;
+      $("whereSearch").disabled = true;
+      $("whereCount").textContent = "🔎 바다 생물 기록을 받는 중…";
+      $("whereList").textContent = "";
+      const f = function (n) { return n.toFixed(4); };
+      const polygon = "POLYGON((" + [[area.west, area.south], [area.east, area.south], [area.east, area.north], [area.west, area.north], [area.west, area.south]]
+        .map(function (p) { return f(p[0]) + " " + f(p[1]); }).join(",") + "))";
+      const records = [];
+      let total = 0;
+      try {
+        let after = "";
+        for (let page = 0; page < WHERE_PAGES; page++) {
+          const url = OBIS_URL + "?taxonid=2&size=" + WHERE_PAGE + "&geometry=" + encodeURIComponent(polygon) +
+            "&fields=id,species,eventDate,decimalLatitude,decimalLongitude,phylum,class,order" + (after ? "&after=" + after : "");
+          const data = await (await fetch(url)).json();
+          if (ask !== whereAsk) return;
+          total = data.total || 0;
+          (data.results || []).forEach(function (r) {
+            const month = Number(String(r.eventDate || "").slice(5, 7));
+            if (!r.species || !(month >= 1 && month <= 12)) return; // 종 이름이나 달을 모르는 기록은 빼요
+            records.push({ species: r.species, month: month, lat: r.decimalLatitude, lng: r.decimalLongitude, group: groupOf(r) });
+          });
+          if (!data.results || data.results.length < WHERE_PAGE) break;
+          after = data.results[data.results.length - 1].id;
+          $("whereCount").textContent = "🔎 바다 생물 기록을 받는 중… (" + records.length + "개)";
+        }
+      } catch (error) {
+        if (ask === whereAsk) $("whereCount").textContent = "기록을 받지 못했어요. 인터넷을 확인하고 다시 해 주세요.";
+        $("whereSearch").disabled = false;
+        return;
+      }
+      $("whereSearch").disabled = false;
+      whereRecords = records;
+      whereRecords.note = note + (total > records.length + 500 ? " 기록이 너무 많아서 " + records.length + "개만 살펴봤어요." : "");
+      drawWhere();
+    }
+    $("whereSearch").addEventListener("click", function () { whereFocus = null; searchWhere(); });
+
+    // 고른 때·무리에 맞는 생물 목록 그리기
+    function drawWhere() {
+      drawWhereTools();
+      $("aiOff").hidden = Boolean(FISH_AI_URL);
+      drawWhereLayer();
+      if (!whereRecords) return;
+      const months = shownMonths();
+      const bySpecies = {};
+      whereRecords.forEach(function (r) {
+        if (!groupOn[r.group]) return;
+        const s = bySpecies[r.species] || (bySpecies[r.species] = { species: r.species, group: r.group, months: new Array(13).fill(0), now: 0 });
+        s.months[r.month]++;
+        if (months.includes(r.month)) s.now++;
+      });
+      const list = Object.values(bySpecies).filter(function (s) { return s.now > 0; }).sort(function (a, b) { return b.now - a.now; });
+      const shownCount = list.reduce(function (sum, s) { return sum + s.now; }, 0);
+      $("whereCount").textContent = list.length ? list.length + "가지 생물, 기록 " + shownCount + "개" + (whereRecords.note || "") : "이 바다·이때에 기록된 생물이 없어요. 지도를 옮기거나 \"1년 내내\"로 바꿔 봐요." + (whereRecords.note || "");
+      const box = $("whereList");
+      box.textContent = "";
+      list.slice(0, 40).forEach(function (s) {
+        const g = groupById(s.group);
+        const item = el("button", "critter" + (whereFocus === s.species ? " on" : ""));
+        item.type = "button";
+        const words = el("span", "words");
+        const name = el("b", "", s.species);
+        words.append(name, el("small", "", s.species + " · " + g.name.split(" ")[1]));
+        koreanName(s.species).then(function (kor) { if (kor) name.textContent = kor; });
+        // 달마다 몇 번 기록됐는지 막대 (고른 달은 주황색)
+        const bars = el("span", "bars");
+        const most = Math.max.apply(null, s.months.slice(1));
+        for (let m = 1; m <= 12; m++) {
+          const bar = el("i", months.includes(m) ? "now" : "");
+          bar.style.height = Math.round(s.months[m] / most * 100) + "%";
+          bar.title = m + "월 " + s.months[m] + "번";
+          bars.append(bar);
+        }
+        words.append(bars);
+        item.append(el("span", "emo", g.name.split(" ")[0]), words, el("span", "num", s.now + "번"));
+        item.addEventListener("click", function () {
+          whereFocus = whereFocus === s.species ? null : s.species;
+          drawWhere();
+          bringIntoView($("mapWrap"));
+        });
+        box.append(item);
+      });
+    }
+
+    // 지도 위 기록 점 (캔버스에 한꺼번에 그려서 빨라요)
+    let whereFrame = 0;
+    let whereZooming = false;
+    function drawWhereLayer() {
+      cancelAnimationFrame(whereFrame);
+      whereFrame = requestAnimationFrame(paintWhere);
+    }
+    function paintWhere() {
+      const canvas = $("whereLayer");
+      const box = $("mapWrap");
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = box.clientWidth * ratio;
+      canvas.height = box.clientHeight * ratio;
+      canvas.style.width = box.clientWidth + "px";
+      canvas.style.height = box.clientHeight + "px";
+      const ctx = canvas.getContext("2d");
+      if (pane !== "where" || !map || !whereRecords || whereZooming) return;
+      ctx.scale(ratio, ratio);
+      const projection = map.getProjection();
+      const months = shownMonths();
+      whereRecords.forEach(function (r) {
+        if (!groupOn[r.group] || !months.includes(r.month)) return;
+        if (whereFocus && r.species !== whereFocus) return;
+        const p = projection.containerPointFromCoords(new kakao.maps.LatLng(r.lat, r.lng));
+        if (p.x < -5 || p.y < -5 || p.x > box.clientWidth + 5 || p.y > box.clientHeight + 5) return;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, whereFocus ? 6 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = groupById(r.group).color;
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+
     // ───────── 로그인 ─────────
     let signupMode = false;
     let needsCode = true;
@@ -1462,6 +1930,8 @@
     // ───────── 시작 ─────────
     async function start() {
       drawKindFilter();
+      $("whereDate").value = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10); // 오늘 (우리나라 시간)
+      drawWhereTools();
       drawSourceFilter();
       try {
         needsCode = (await call("info")).needsCode;
