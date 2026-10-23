@@ -891,7 +891,7 @@
     // 그 밖에 시·군이 정한 낚시 금지 구역이나 계절 금어기는 이 자료에 없어요.
     const FISH_BAN_FILE = "fishing-ban.json";
     const FISH_WORDS = ["바다낚시", "낚시공원", "낚시터", "방파제", "갯바위"]; // 낚시하는 곳을 찾을 때 카카오맵에 물어볼 말
-    const FISH_SKIP = ["카페", "실내", "저수지", "낚시방", "낚시점", "마트", "용품", "펜션", "식당", "민물"]; // 이름에 이 말이 있으면 빼요
+    const FISH_SKIP = ["카페", "실내", "저수지", "낚시방", "낚시점", "마트", "용품", "펜션", "식당", "민물", "기념", "주차장", "정류장"]; // 이름에 이 말이 있으면 빼요
     const FISH_RADIUS = 10000; // 고른 바닷가에서 몇 m 안을 찾을지
     let banZones = [];  // { who, name, place, note, rings, box }
     let fishSpots = []; // 찾은 낚시하는 곳 { name, address, lat, lng, km, ban }
