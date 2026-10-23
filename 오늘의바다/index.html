@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>씨그널</title>
+  <link rel="icon" href="lighthouse.svg">
   <!-- 카카오맵 불러오기 (appkey는 길찾기와 같은 JavaScript 키, services는 장소 검색 도구) -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
   <style>
@@ -294,9 +295,22 @@
     }
     .signal .light { font-size: 40px; line-height: 1; }
     .signal b { display: block; font-size: 18px; }
-    .signal ul { margin: 4px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+    .signal ul { margin: 4px 0 0; padding-left:  0; list-style: none; font-size: 14px; line-height: 1.5; }
     .signal.l1 { background: #fff6dc; }
     .signal.l2 { background: #fde8e6; }
+    .logo { width: 28px; height: 28px; vertical-align: -6px; }
+    .top .logo { width: 30px; height: 30px; background: #fff; border-radius: 8px; padding: 1px; }
+    .fishing { margin-top: 6px; }
+    .fish-here { margin: 0; padding: 8px 10px; border-radius: 10px; background: #e9f7ef; font-size: 14px; line-height: 1.5; }
+    .fish-here.no { background: #fde8e6; }
+    .fish-pin { position: relative; display: inline-block; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #1e9e6a; background: #fff; font-size: 18px; line-height: 28px; text-align: center; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); cursor: pointer; }
+    .fish-pin.small { width: 24px; height: 24px; font-size: 13px; line-height: 20px; box-shadow: none; vertical-align: -6px; cursor: default; }
+    .fish-pin.no { border-color: #e01b1b; }
+    .fish-pin.no::after { content: ""; position: absolute; left: 50%; top: 1px; bottom: 1px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: #e01b1b; transform: rotate(45deg); }
+    .fish-list { margin-top: 8px; }
+    .fish-item { display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 6px; padding: 7px 10px; border: 1px solid #d6e4ea; border-radius: 10px; background: #fff; text-align: left; font-size: 14px; }
+    .fish-item.no { border-color: #f3b4b0; background: #fff7f6; }
+    .fish-item small { display: block; font-size: 12px; color: #5b6272; }
     .numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
     .numbers div { padding: 8px 6px; border-radius: 10px; background: #f1f6f9; text-align: center; }
     .numbers small { display: block; font-size: 12px; color: #5b6272; }
@@ -318,7 +332,7 @@
 </head>
 <body>
   <header class="top">
-    <h1>🚦 씨그널</h1>
+    <h1><img class="logo" src="lighthouse.svg" alt=""> 씨그널</h1>
     <div class="me" id="meBox" hidden>
       <b id="meName"></b>
       <button type="button" id="logoutButton">로그아웃</button>
@@ -363,8 +377,8 @@
     <aside class="side" id="side">
     <section id="seaPane">
       <div id="seaInfoPane">
-        <h2>🚦 씨그널</h2>
-        <p class="intro">지도에서 바닷가를 누르면 그곳을 크게 보여 주고, 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 수영해도 되는지 신호등으로 알려 줘요.</p>
+        <h2><img class="logo" src="lighthouse.svg" alt=""> 씨그널</h2>
+        <p class="intro">지도에서 바닷가를 누르면 그곳을 크게 보여 주고, 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 수영해도 되는지 얼굴로 알려 주고, 낚시해도 되는 곳인지도 보여 줘요.</p>
         <div class="row">
           <button type="button" class="soft" id="seaMapButton">🗺️ 지도에서 바닷가 누르기</button>
           <button type="button" class="soft" id="seaHereButton">📍 지금 내 자리</button>
@@ -383,6 +397,17 @@
             <p class="note" id="tideNote"></p>
             <div id="tideChart"></div>
           </div>
+        </div>
+        <div class="fishing">
+          <h3>🎣 낚시해도 될까요?</h3>
+          <p class="fish-here" id="fishHere"></p>
+          <p class="note" id="fishNear"></p>
+          <div class="row" style="margin-top: 8px;">
+            <button type="button" class="soft on" id="fishToggle">🎣 지도에서 낚시 표시 끄기</button>
+          </div>
+          <p class="note">고른 곳에서 10km 안의 낚시하는 곳(카카오맵): <span class="fish-pin small">🎣</span> 공식 금지 구역이 아니에요 · <span class="fish-pin small no">🎣</span> 낚시 안 돼요</p>
+          <div class="fish-list" id="fishList"></div>
+          <p class="warn">국립해양조사원 낚시금지구역과 해양경찰청 출입통제구역(공공데이터포털)만 보여 줘요. 시·군이 정한 금지 구역, 물고기를 잡으면 안 되는 때(금어기), 사유지는 이 자료에 없어요. 현장 안내판을 꼭 확인하세요.</p>
         </div>
         <p class="error" id="seaError"></p>
         <p class="warn">이 숫자는 컴퓨터가 계산한 근처 바다의 <b>예상값</b>이에요. 바닷가에서는 꼭 안전요원과 어른 말을 따르세요.</p>
@@ -676,6 +701,7 @@
       $("seaPlaceNote").textContent = "📍 " + name + " (" + placeText(place) + ") · 알아보는 중…";
       $("seaError").textContent = "";
       drawSeaLayer();
+      checkFishing(seaPlace);
       const ask = ++seaAsk;
       try {
         const data = await fetchSea(place);
@@ -702,34 +728,49 @@
       }
     });
 
-    // 수영 신호등 정하기: level 0 🟢, 1 🟡, 2 🔴 와 그 까닭들
+    // 까닭마다 보여 줄 얼굴 (바꿔도 돼요). [조금 그럴 때, 많이 그럴 때]
+    const FACES = {
+      good: "😄",          // 수영하기 좋아요
+      cold: ["😬", "🥶"],   // 물이 차가워서 찡그린 얼굴, 너무 추워서 얼어붙은 얼굴
+      wave: ["😟", "😨"],   // 파도가 있어서 걱정, 파도가 높아서 무서워요
+      wind: ["😣", "😵‍💫"], // 바람에 눈을 질끈, 바람이 너무 세서 어지러워요
+      rain: ["☔", "☔"],    // 비가 와요
+      storm: ["😱", "😱"]   // 천둥번개
+    };
+
+    // 수영해도 되는지 정하기: level 0 좋아요, 1 조심해요, 2 들어가지 마세요 와 그 까닭(얼굴, 글)들
     function swimSignal(data, place) {
       let level = 0;
       const reasons = [];
-      function add(newLevel, text) { level = Math.max(level, newLevel); reasons.push(text); }
+      function add(newLevel, kind, text) {
+        level = Math.max(level, newLevel);
+        reasons.push({ level: newLevel, face: FACES[kind][newLevel - 1], text: text });
+      }
       const r = SWIM_RULES;
       if (typeof data.water === "number") {
-        if (data.water < r.coldWater) add(2, "물이 차가워요 (" + data.water.toFixed(1) + "°C)");
-        else if (data.water < r.warmWater) add(1, "물이 조금 차가워요 (" + data.water.toFixed(1) + "°C)");
+        if (data.water < r.coldWater) add(2, "cold", "물이 차가워요 (" + data.water.toFixed(1) + "°C)");
+        else if (data.water < r.warmWater) add(1, "cold", "물이 조금 차가워요 (" + data.water.toFixed(1) + "°C)");
       }
       if (typeof data.wave === "number") {
-        if (data.wave > r.hugeWave) add(2, "파도가 높아요 (" + data.wave.toFixed(1) + "m)");
-        else if (data.wave > r.bigWave) add(1, "파도가 조금 있어요 (" + data.wave.toFixed(1) + "m)");
+        if (data.wave > r.hugeWave) add(2, "wave", "파도가 높아요 (" + data.wave.toFixed(1) + "m)");
+        else if (data.wave > r.bigWave) add(1, "wave", "파도가 조금 있어요 (" + data.wave.toFixed(1) + "m)");
       }
       if (typeof data.wind === "number") {
-        if (data.wind > r.strongWind) add(2, "바람이 아주 세요 (" + data.wind.toFixed(1) + "m/s)");
-        else if (data.wind > r.wind) add(1, "바람이 세요 (" + data.wind.toFixed(1) + "m/s)");
+        if (data.wind > r.strongWind) add(2, "wind", "바람이 아주 세요 (" + data.wind.toFixed(1) + "m/s)");
+        else if (data.wind > r.wind) add(1, "wind", "바람이 세요 (" + data.wind.toFixed(1) + "m/s)");
       }
-      if (data.weather >= 95) add(2, "천둥번개가 쳐요");
-      else if (data.weather >= 51) add(1, "비가 와요");
-      if (!reasons.length) reasons.push("파도와 바람이 잔잔하고 물이 따뜻해요");
-      return { level: level, reasons: reasons };
+      if (data.weather >= 95) add(2, "storm", "천둥번개가 쳐요");
+      else if (data.weather >= 51) add(1, "rain", "비가 와요");
+      if (!reasons.length) reasons.push({ level: 0, face: FACES.good, text: "파도와 바람이 잔잔하고 물이 따뜻해요" });
+      // 큰 얼굴은 가장 나쁜 까닭의 얼굴이에요 (같으면 먼저 나온 것)
+      const worst = reasons.find(function (reason) { return reason.level === level; });
+      return { level: level, face: worst.face, reasons: reasons };
     }
 
     const SIGNAL_LOOK = [
-      { light: "🟢", text: "수영하기 괜찮아요" },
-      { light: "🟡", text: "조심해요" },
-      { light: "🔴", text: "오늘은 물에 들어가지 마세요" }
+      { text: "수영하기 괜찮아요" },
+      { text: "조심해요" },
+      { text: "오늘은 물에 들어가지 마세요" }
     ];
 
     function drawSea() {
@@ -738,11 +779,11 @@
       $("seaResult").hidden = false;
       const signal = swimSignal(data, seaPlace);
       $("seaSignal").className = "signal l" + signal.level;
-      $("seaLight").textContent = SIGNAL_LOOK[signal.level].light;
+      $("seaLight").textContent = signal.face;
       $("seaSignalText").textContent = SIGNAL_LOOK[signal.level].text;
       const reasons = $("seaReasons");
       reasons.textContent = "";
-      signal.reasons.forEach(function (text) { reasons.append(el("li", "", text)); });
+      signal.reasons.forEach(function (reason) { reasons.append(el("li", "", reason.face + " " + reason.text)); });
 
       function number(value, digits, unit) { return typeof value === "number" ? value.toFixed(digits) + unit : "모름"; }
       const boxes = [
@@ -833,7 +874,156 @@
       clearMarks();
       if (!map) return;
       if (seaPlace) addOverlay(seaPlace, el("div", "place-pin", "📍"), 5);
+      if (showFishing) {
+        fishSpots.forEach(function (spot) {
+          const pin = el("div", "fish-pin" + (spot.ban ? " no" : ""), "🎣");
+          pin.title = spot.name + (spot.ban ? " (낚시 안 돼요)" : " (낚시할 수 있어요)");
+          pin.addEventListener("click", function () { showHint(fishText(spot), 5000); });
+          addOverlay(spot, pin, 4);
+        });
+      }
     }
+
+    // ═════════ 낚시해도 될까요? ═════════
+    // fishing-ban.json: 공공데이터포털에서 받은 공식 자료 두 가지를 합친 것 (2026-10-23 받음, 이용 제한 없음)
+    //   khoa: 국립해양조사원 낚시금지구역 (전자해도의 낚시 금지 구역, 25곳)
+    //   kcg: 해양경찰청 연안 출입통제구역 (방파제 테트라포드·갯바위 등 들어가면 안 되는 곳, 43곳)
+    // 그 밖에 시·군이 정한 낚시 금지 구역이나 계절 금어기는 이 자료에 없어요.
+    const FISH_BAN_FILE = "fishing-ban.json";
+    const FISH_WORDS = ["바다낚시", "낚시공원", "낚시터", "방파제", "갯바위"]; // 낚시하는 곳을 찾을 때 카카오맵에 물어볼 말
+    const FISH_SKIP = ["카페", "실내", "저수지", "낚시방", "낚시점", "마트", "용품", "펜션", "식당", "민물"]; // 이름에 이 말이 있으면 빼요
+    const FISH_RADIUS = 10000; // 고른 바닷가에서 몇 m 안을 찾을지
+    let banZones = [];  // { who, name, place, note, rings, box }
+    let fishSpots = []; // 찾은 낚시하는 곳 { name, address, lat, lng, km, ban }
+    let showFishing = true;
+    let fishAsk = 0;
+    let banShapes = []; // 지도 위 빨간 금지 구역 모양
+
+    async function loadBans() {
+      try {
+        const data = await (await fetch(FISH_BAN_FILE)).json();
+        banZones = data.zones.map(function (zone) {
+          const box = { south: 90, north: -90, west: 180, east: -180 };
+          zone.rings.forEach(function (ring) {
+            ring.forEach(function (p) {
+              box.south = Math.min(box.south, p[0]); box.north = Math.max(box.north, p[0]);
+              box.west = Math.min(box.west, p[1]); box.east = Math.max(box.east, p[1]);
+            });
+          });
+          return Object.assign(zone, { box: box });
+        });
+      } catch (error) {
+        banZones = [];
+      }
+      drawBanShapes();
+      if (seaPlace) checkFishing(seaPlace);
+    }
+
+    // 한 곳이 금지 구역 안에 있는지 (안에 있으면 그 구역, 없으면 null)
+    function banZoneAt(place) {
+      return banZones.find(function (zone) {
+        const b = zone.box;
+        if (place.lat < b.south || place.lat > b.north || place.lng < b.west || place.lng > b.east) return false;
+        let inside = false; // 점에서 오른쪽으로 선을 그어 경계를 몇 번 넘는지 세요 (홀수면 안쪽)
+        zone.rings.forEach(function (ring) {
+          for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const a = ring[i], c = ring[j];
+            if ((a[0] > place.lat) !== (c[0] > place.lat) &&
+                place.lng < (c[1] - a[1]) * (place.lat - a[0]) / (c[0] - a[0]) + a[1]) inside = !inside;
+          }
+        });
+        return inside;
+      }) || null;
+    }
+    function zoneName(zone) {
+      return (zone.who === "khoa" ? "국립해양조사원 낚시금지구역" : "해양경찰청 출입통제구역") + (zone.name ? " · " + zone.name : "");
+    }
+    function fishText(spot) {
+      return (spot.ban ? "🚫 " : "🎣 ") + spot.name + (spot.ban ? ": 낚시 안 돼요 (" + zoneName(spot.ban) + ")" : ": 공식 금지 구역이 아니에요");
+    }
+
+    // 지도 위에 금지 구역을 빨갛게 칠해요
+    function drawBanShapes() {
+      banShapes.forEach(function (shape) { shape.setMap(null); });
+      banShapes = [];
+      if (!map || !showFishing) return;
+      banZones.forEach(function (zone) {
+        zone.rings.forEach(function (ring) {
+          const shape = new kakao.maps.Polygon({
+            path: ring.map(function (p) { return new kakao.maps.LatLng(p[0], p[1]); }),
+            strokeWeight: 2, strokeColor: "#e01b1b", strokeOpacity: 0.9, fillColor: "#e01b1b", fillOpacity: 0.25
+          });
+          shape.setMap(map);
+          banShapes.push(shape);
+        });
+      });
+    }
+
+    // 고른 바닷가가 낚시 금지 구역인지, 그리고 둘레 낚시하는 곳들
+    function checkFishing(place) {
+      const zone = banZoneAt(place);
+      $("fishHere").textContent = zone
+        ? "🚫 고른 곳은 낚시하면 안 되는 곳이에요 (" + zoneName(zone) + (zone.note ? ", " + zone.note : "") + ")"
+        : "🎣 고른 곳은 공식 낚시 금지 구역이 아니에요";
+      $("fishHere").className = "fish-here" + (zone ? " no" : "");
+      const near = banZones.filter(function (z) { return distanceKm(place, { lat: (z.box.south + z.box.north) / 2, lng: (z.box.west + z.box.east) / 2 }) < 30; });
+      $("fishNear").textContent = near.length ? "30km 안에 공식 금지·통제 구역이 " + near.length + "곳 있어요 (지도에 빨갛게 칠했어요)." : "30km 안에는 공식 낚시 금지·통제 구역 자료가 없어요.";
+      findFishSpots(place);
+    }
+
+    function findFishSpots(place) {
+      const ask = ++fishAsk;
+      const box = $("fishList");
+      box.textContent = "";
+      fishSpots = [];
+      if (!placeSearch) {
+        box.append(el("p", "note", "낚시하는 곳은 지도가 보이는 웹 주소에서 찾을 수 있어요."));
+        drawSeaLayer();
+        return;
+      }
+      box.append(el("p", "note", "낚시하는 곳을 찾는 중…"));
+      const found = {};
+      let left = FISH_WORDS.length;
+      FISH_WORDS.forEach(function (word) {
+        placeSearch.keywordSearch(word, function (results, status) {
+          if (ask !== fishAsk) return;
+          if (status === kakao.maps.services.Status.OK) {
+            results.forEach(function (item) {
+              if (FISH_SKIP.some(function (skip) { return item.place_name.includes(skip); })) return;
+              const spot = { name: item.place_name, address: item.road_address_name || item.address_name, lat: Number(item.y), lng: Number(item.x), km: Number(item.distance) / 1000 };
+              spot.ban = banZoneAt(spot);
+              found[item.id] = spot;
+            });
+          }
+          if (--left === 0) showFishSpots(Object.values(found));
+        }, { location: new kakao.maps.LatLng(place.lat, place.lng), radius: FISH_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE });
+      });
+    }
+    function showFishSpots(list) {
+      fishSpots = list.sort(function (a, b) { return a.km - b.km; }).slice(0, 15);
+      const box = $("fishList");
+      box.textContent = "";
+      fishSpots.forEach(function (spot) {
+        const button = el("button", "fish-item" + (spot.ban ? " no" : ""));
+        button.type = "button";
+        const icon = el("span", "fish-pin small" + (spot.ban ? " no" : ""), "🎣");
+        const words = el("span", "", spot.name + " · " + spot.km.toFixed(1) + "km");
+        words.append(el("small", "", spot.ban ? "낚시 안 돼요 · " + zoneName(spot.ban) : "공식 금지 구역 아님 · " + spot.address));
+        button.append(icon, words);
+        button.addEventListener("click", function () { moveMap(spot.lat, spot.lng, 4); showHint(fishText(spot), 5000); bringIntoView($("mapWrap")); });
+        box.append(button);
+      });
+      if (!fishSpots.length) box.append(el("p", "note", "10km 안에서 낚시하는 곳을 찾지 못했어요."));
+      drawSeaLayer();
+    }
+
+    $("fishToggle").addEventListener("click", function () {
+      showFishing = !showFishing;
+      this.classList.toggle("on", showFishing);
+      this.textContent = showFishing ? "🎣 지도에서 낚시 표시 끄기" : "🎣 지도에 낚시 표시 켜기";
+      drawBanShapes();
+      drawSeaLayer();
+    });
 
     // ───────── 로그인 ─────────
     let signupMode = false;
@@ -893,6 +1083,7 @@
       $("loginBox").hidden = true;
       $("appBox").hidden = false;
       setupMap();
+      if (!banZones.length) loadBans();
       const sent = placeFromAddress();
       if (sent) {
         moveMap(sent.lat, sent.lng, CLOSE_LEVEL);

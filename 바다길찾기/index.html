@@ -123,6 +123,9 @@
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     }
     .legend i { display: inline-block; width: 14px; height: 10px; margin-right: 4px; border-radius: 2px; vertical-align: -1px; }
+    .legend-row { display: flex; gap: 4px; margin: 4px 0; }
+    .legend-chip { padding: 2px 7px; border: 1px solid #b8c6cf; border-radius: 999px; background: #fff; font-size: 12px; }
+    .legend-chip.on { background: #0b6e8a; border-color: #0b6e8a; color: #fff; }
 
     .side {
       width: 400px;
@@ -647,6 +650,90 @@
       return paintedTiles.get(key);
     }
 
+    // ── 수심 등고선 (같은 깊이를 이은 선, 바다에서는 "등심선"이라고도 해요) ──
+    const CONTOUR_LEVELS = [5, 10, 20, 50, 100, 200, 500, 1000, 2000]; // 이 깊이(m)마다 선을 그어요
+    const CONTOUR_BOLD = [10, 50, 100, 500, 1000];                     // 이 깊이는 굵게
+    const CONTOUR_LABEL_GAP = 220; // 숫자를 몇 칸(px)마다 적을지
+    const CONTOUR_SMOOTH = 2;      // 선을 긋기 전에 둘레 몇 칸씩 평균을 내서 자잘한 잡음을 없애요
+    let showColors = true;
+    let showContours = true;
+    const contourTiles = new Map(); // "z/x/y" → 등고선을 그린 캔버스
+    function contourTile(z, x, y) {
+      const key = z + "/" + x + "/" + y;
+      if (!contourTiles.has(key)) {
+        contourTiles.set(key, "wait");
+        getTile(z, x, y).then(function (heights) {
+          if (!heights) { contourTiles.set(key, null); return; }
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = 256;
+          const ctx = canvas.getContext("2d");
+          ctx.lineJoin = "round";
+          // 바다 깊이 (땅은 0보다 작아요)를 둘레와 평균 내서 부드럽게 만들어요 (가로 한 번, 세로 한 번)
+          const n = CONTOUR_SMOOTH, across = new Float32Array(65536), smooth = new Float32Array(65536);
+          for (let py = 0; py < 256; py++) {
+            for (let px = 0; px < 256; px++) {
+              let sum = 0, count = 0;
+              for (let k = Math.max(0, px - n); k <= Math.min(255, px + n); k++) { sum += -heights[py * 256 + k]; count++; }
+              across[py * 256 + px] = sum / count;
+            }
+          }
+          for (let py = 0; py < 256; py++) {
+            for (let px = 0; px < 256; px++) {
+              let sum = 0, count = 0;
+              for (let k = Math.max(0, py - n); k <= Math.min(255, py + n); k++) { sum += across[k * 256 + px]; count++; }
+              smooth[py * 256 + px] = sum / count;
+            }
+          }
+          const depthAt = function (px, py) { return smooth[py * 256 + px]; };
+          const labels = [];
+          CONTOUR_LEVELS.forEach(function (level) {
+            ctx.beginPath();
+            let run = CONTOUR_LABEL_GAP * 0.5;
+            // 네모 칸(2×2 점)마다 그 깊이가 어디를 지나는지 찾아 짧은 선을 그어요 (마칭 스퀘어라는 방법)
+            for (let py = 0; py < 255; py++) {
+              for (let px = 0; px < 255; px++) {
+                const a = depthAt(px, py), b = depthAt(px + 1, py), c = depthAt(px + 1, py + 1), d = depthAt(px, py + 1);
+                const cut = (a >= level ? 8 : 0) | (b >= level ? 4 : 0) | (c >= level ? 2 : 0) | (d >= level ? 1 : 0);
+                if (cut === 0 || cut === 15) continue;
+                const t = function (p, q) { return (level - p) / (q - p); };
+                const top = [px + t(a, b), py], right = [px + 1, py + t(b, c)], bottom = [px + t(d, c), py + 1], left = [px, py + t(a, d)];
+                const pairs = {
+                  1: [[left, bottom]], 2: [[bottom, right]], 3: [[left, right]], 4: [[top, right]], 5: [[left, top], [bottom, right]],
+                  6: [[top, bottom]], 7: [[left, top]], 8: [[left, top]], 9: [[top, bottom]], 10: [[top, right], [left, bottom]],
+                  11: [[top, right]], 12: [[left, right]], 13: [[bottom, right]], 14: [[left, bottom]]
+                }[cut];
+                pairs.forEach(function (pair) {
+                  ctx.moveTo(pair[0][0] + 0.5, pair[0][1] + 0.5);
+                  ctx.lineTo(pair[1][0] + 0.5, pair[1][1] + 0.5);
+                  run += 1;
+                  if (run >= CONTOUR_LABEL_GAP) { run = 0; labels.push([pair[0][0] + 0.5, pair[0][1] + 0.5, level]); }
+                });
+              }
+            }
+            const bold = CONTOUR_BOLD.includes(level);
+            ctx.strokeStyle = bold ? "rgba(10, 60, 120, 0.9)" : "rgba(20, 90, 160, 0.6)";
+            ctx.lineWidth = bold ? 1.4 : 0.8;
+            ctx.stroke();
+          });
+          // 선 위에 깊이 숫자 적기 (흰 테두리를 둘러 잘 보이게)
+          ctx.font = "bold 10px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          labels.forEach(function (label) {
+            const text = label[2] + "m";
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.strokeText(text, label[0], label[1]);
+            ctx.fillStyle = "#0b3d6b";
+            ctx.fillText(text, label[0], label[1]);
+          });
+          contourTiles.set(key, canvas);
+          drawDepthLayer();
+        });
+      }
+      return contourTiles.get(key);
+    }
+
     function drawDepthLayer() {
       cancelAnimationFrame(depthFrame);
       depthFrame = requestAnimationFrame(paintDepth);
@@ -679,12 +766,15 @@
       const projection = map.getProjection();
       for (let ty = y0; ty <= y1; ty++) {
         for (let tx = x0; tx <= x1; tx++) {
-          const picture = paintedTile(z, tx, ty);
-          if (!picture || picture === "wait") continue;
           // 타일의 왼쪽 위·오른쪽 아래가 화면 어디인지 구해서 그 사이에 그림을 늘려 그려요
           const a = projection.containerPointFromCoords(new kakao.maps.LatLng(latOf(ty * 256, z), lngOf(tx * 256, z)));
           const b = projection.containerPointFromCoords(new kakao.maps.LatLng(latOf((ty + 1) * 256, z), lngOf((tx + 1) * 256, z)));
-          ctx.drawImage(picture, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
+          const pictures = [showColors ? paintedTile(z, tx, ty) : null, showContours ? contourTile(z, tx, ty) : null];
+          pictures.forEach(function (picture, i) {
+            if (!picture || picture === "wait") return;
+            ctx.imageSmoothingEnabled = i === 1; // 색칠은 또렷하게, 등고선은 부드럽게
+            ctx.drawImage(picture, a.x, a.y, b.x - a.x + 0.5, b.y - a.y + 0.5);
+          });
         }
       }
     }
@@ -699,7 +789,20 @@
         box.append(swatch, document.createTextNode(pair[0] > 1000 ? from + "m보다 깊어요" : from + "~" + pair[0] + "m"), el("br"));
         from = pair[0];
       });
-      box.append(el("small", "", "자료: Mapzen 지형 타일 (ETOPO1·SRTM)"));
+      // 색칠과 등고선을 따로 켜고 끌 수 있어요
+      const row = el("div", "legend-row");
+      [["🎨 색칠", function () { return showColors; }, function (on) { showColors = on; }],
+       ["〰️ 등고선", function () { return showContours; }, function (on) { showContours = on; }]].forEach(function (item) {
+        const button = el("button", "legend-chip" + (item[1]() ? " on" : ""), item[0]);
+        button.type = "button";
+        button.addEventListener("click", function () {
+          item[2](!item[1]());
+          drawLegend();
+          drawDepthLayer();
+        });
+        row.append(button);
+      });
+      box.append(row, el("small", "", "자료: Mapzen 지형 타일 (ETOPO1·SRTM)"));
     }
     $("depthButton").addEventListener("click", function () {
       showDepth = !showDepth;
