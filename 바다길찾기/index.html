@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>바다 길찾기</title>
+  <!-- 카카오맵 불러오기 (appkey는 길찾기와 같은 JavaScript 키, services는 장소 검색 도구) -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=16a7c42cb5992296881e99c8be99f7c1&libraries=services"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: #eef5f8;
+      color: #1f2430;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    [hidden] { display: none !important; }
+
+    /* 맨 위 줄 */
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 56px;
+      padding: 0 16px;
+      background: #0b6e8a;
+      color: #fff;
+    }
+    .top h1 { margin: 0; font-size: 20px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top a, .top button {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      text-decoration: none;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .top .me { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+    /* 로그인 */
+    .login {
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 24px;
+      background: #fff;
+      border-radius: 16px;
+      border: 2px solid #d6e4ea;
+    }
+    .login h2 { margin: 0 0 6px; }
+    .login p { margin: 0 0 16px; color: #5b6272; font-size: 14px; }
+    .login input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    .login .link { background: none; border: 0; color: #0b6e8a; padding: 8px 0; text-decoration: underline; }
+
+    /* 지도 + 옆 칸 */
+    .app { display: flex; height: calc(100vh - 56px); }
+    .map-wrap { position: relative; flex: 1; min-width: 0; }
+    #map { width: 100%; height: 100%; background: #cfe3ea; }
+    .no-map {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: #3d5866;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .map-tools {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 60px;
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .map-tools form { display: flex; gap: 4px; }
+    .map-tools input { width: 220px; max-width: 50vw; padding: 7px 10px; border: 1px solid #b8c6cf; border-radius: 8px; }
+    .map-tools button {
+      padding: 7px 10px;
+      border: 1px solid #b8c6cf;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+    }
+    .map-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 5;
+      width: max-content;
+      max-width: calc(100% - 32px);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #ff8c00;
+      color: #fff;
+      font-weight: bold;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .map-hint button { margin-left: 8px; border: 0; border-radius: 6px; padding: 3px 8px; background: rgba(255, 255, 255, 0.3); color: #fff; }
+
+    .side {
+      width: 400px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      padding: 16px;
+      background: #fff;
+      border-left: 1px solid #d6e4ea;
+    }
+    .side h2 { margin: 0 0 6px; font-size: 20px; }
+    .side h3 { margin: 16px 0 8px; font-size: 16px; }
+    .intro { margin: 0 0 12px; color: #5b6272; font-size: 14px; line-height: 1.5; }
+    .primary {
+      width: 100%;
+      padding: 12px;
+      border: 0;
+      border-radius: 10px;
+      background: #0b6e8a;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .primary:disabled { opacity: 0.5; cursor: default; }
+    .side input[type=search] { width: 100%; margin: 12px 0 4px; padding: 9px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    .count { margin: 4px 0 10px; color: #5b6272; font-size: 14px; }
+    .empty { color: #5b6272; line-height: 1.6; }
+    .row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .soft {
+      padding: 8px 10px;
+      border: 1px solid #b8c6cf;
+      border-radius: 8px;
+      background: #f6f9fb;
+      font-size: 14px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .soft.on { background: #ff8c00; border-color: #ff8c00; color: #fff; }
+    .soft:disabled { opacity: 0.5; cursor: default; }
+    label.soft { display: inline-block; cursor: pointer; }
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
+    .chips .soft { padding: 5px 9px; font-size: 13px; border-radius: 999px; }
+    .note { margin: 8px 0 0; font-size: 14px; color: #3d5866; line-height: 1.5; }
+    .warn { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: #fff4e0; color: #8a5300; font-size: 14px; line-height: 1.5; }
+    .field { display: block; width: 100%; padding: 9px 10px; border: 1px solid #c9d3dc; border-radius: 8px; }
+    textarea.field { height: 90px; resize: vertical; }
+    .letters { margin: 2px 0 0; text-align: right; font-size: 12px; color: #8a93a3; }
+    .step { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #e8eef2; }
+    .step h3 { margin: 0 0 8px; }
+    .step h3 .ok { color: #1e9e6a; }
+    .buttons { display: flex; gap: 8px; }
+    .buttons .primary { flex: 1; }
+    .buttons .soft { padding: 12px 16px; }
+    .error { min-height: 20px; margin: 8px 0 0; color: #c0392b; font-size: 14px; }
+
+    /* 지도 위 표시들 */
+    .pin {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      background: #0b6e8a;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+    .pin img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+    .pin .badge {
+      position: absolute;
+      right: -6px;
+      bottom: -6px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      font-size: 13px;
+      line-height: 22px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .pin.now { border-color: #ff8c00; }
+    .pin.draft { background: #ff8c00; border-color: #ff8c00; }
+    .alert-pin {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 3px solid #c0392b;
+      background: #fff;
+      font-size: 20px;
+      line-height: 32px;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+    .place-pin { font-size: 34px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+    .route-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      background: #ff8c00;
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 22px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+    .route-dot.end { background: #c0392b; }
+    .route-dot.start { background: #1e9e6a; }
+    .dock-pin {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #0b6e8a;
+      color: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+    }
+
+    /* 바다 길찾기 */
+    .legs { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
+    .legs li { padding: 6px 0; border-bottom: 1px solid #eef2f5; }
+    .total { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #e6f3f7; line-height: 1.6; }
+    .total b { font-size: 18px; }
+    .docks button { display: block; width: 100%; margin-bottom: 6px; padding: 8px 10px; border: 1px solid #d6e4ea; border-radius: 10px; background: #fff; text-align: left; }
+    .docks button span { display: block; font-size: 12px; color: #5b6272; }
+
+    /* 좁은 화면(핸드폰): 지도 위, 옆 칸 아래 */
+    @media (max-width: 800px) {
+      .app { display: block; height: auto; }
+      .map-wrap { height: 55vh; min-height: 320px; }
+      .side { width: auto; border-left: 0; }
+      .top h1 { font-size: 17px; }
+    }
+    @media (max-width: 480px) {
+      #meName { display: none; } /* 아주 좁으면 제목이 보이게 아이디를 숨겨요 */
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>⛵ 바다 길찾기</h1>
+    <a href="../">🏠 처음 화면</a>
+  </header>
+
+  <main class="app" id="appBox">
+    <div class="map-wrap" id="mapWrap">
+      <div id="map"></div>
+      <div class="no-map" id="noMap" hidden>
+        지도를 불러오지 못했어요.<br>지도는 웹 주소(rudghch.github.io)에서 열어야 보여요.
+      </div>
+      <div class="map-tools">
+        <form id="placeForm">
+          <input id="placeInput" placeholder="섬·바닷가 이름으로 지도 옮기기" maxlength="30">
+          <button type="submit">찾기</button>
+        </form>
+        <button type="button" id="mapTypeButton">🛰️ 위성지도</button>
+      </div>
+      <div class="map-hint" id="mapHint" hidden>
+        <span id="mapHintText"></span>
+        <button type="button" id="stopPickButton">그만</button>
+      </div>
+    </div>
+
+    <aside class="side" id="side">
+    <section id="routePane">
+      <h2>⛵ 바다 길찾기</h2>
+      <p class="intro">지도에서 출발하는 곳, 들르는 곳, 도착하는 곳을 차례로 누르면 거리와 걸리는 시간, 가는 방향을 알려 주고, 도착지 근처에 배를 댈 곳(정박할 곳)을 찾아 줘요.</p>
+
+      <h3>1. 무엇을 타나요?</h3>
+      <div class="chips" id="boatPick"></div>
+      <p class="note">빠르기: <input type="number" id="speedInput" min="1" max="60" step="1" style="width: 64px;"> 노트 (1노트 = 한 시간에 1.85km)</p>
+
+      <h3>2. 바닷길 찍기</h3>
+      <div class="row">
+        <button type="button" class="soft" id="routeDrawButton">🗺️ 지도에 길 찍기</button>
+        <button type="button" class="soft" id="routeUndoButton">↩ 하나 지우기</button>
+        <button type="button" class="soft" id="routeClearButton">모두 지우기</button>
+      </div>
+      <p class="note" id="routeNote">아직 찍은 곳이 없어요.</p>
+      <ol class="legs" id="routeLegs"></ol>
+      <div class="total" id="routeTotal" hidden></div>
+
+      <div id="routeEndBox" hidden>
+        <h3>3. 도착지 바다 상태</h3>
+        <p class="note" id="routeSea">알아보는 중…</p>
+        <button type="button" class="soft" id="routeSeaButton">🌊 도착지 바다 자세히 보기</button>
+
+        <h3>4. 배를 댈 곳 (도착지 근처 20km)</h3>
+        <div class="docks" id="dockList"></div>
+      </div>
+
+      <p class="warn">이 길은 곧은 선이라 섬, 바위, 얕은 곳을 피하지 않아요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
+    </section>
+    </aside>
+  </main>
+
+  <script>
+    const $ = function (id) { return document.getElementById(id); };
+
+    // 이 서비스는 로그인 없이 누구나 써요. 서버에 저장하는 것도 없어요.
+    const ERROR_TEXT = {};
+    function errorText(error) {
+      return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
+    }
+
+    // 지도가 처음 보여 줄 곳 (여수 바다)
+    const FIRST_PLACE = { lat: 34.62, lng: 127.74, level: 9 };
+
+    // 바다 정보는 무료 서버 Open-Meteo에서 받아요 (키가 필요 없어요). 약 5km 칸마다 계산한 예상값이에요.
+    // ───────── 작은 도구들 ─────────
+    // 화면 조각 만들기 (글은 textContent로 넣어서 안전해요)
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function dateText(sk) {
+      return new Date(Number(String(sk).slice(0, -6))).toLocaleDateString("ko-KR");
+    }
+    function timeOf(sk) { return Number(String(sk).slice(0, -6)); } // 올린 시각 (밀리초)
+
+    const DIRECTION_NAMES = ["북", "북동", "동", "남동", "남", "남서", "서", "북서"];
+    function directionName(dir) {
+      return DIRECTION_NAMES[Math.round(dir / 45) % 8] + "쪽";
+    }
+
+    // 두 곳(a에서 b)을 이었을 때 b가 어느 방향에 있는지 각도로 구하기 (북 0도, 동 90도)
+    function bearing(a, b) {
+      const r = Math.PI / 180;
+      const y = Math.sin((b.lng - a.lng) * r) * Math.cos(b.lat * r);
+      const x = Math.cos(a.lat * r) * Math.sin(b.lat * r) -
+        Math.sin(a.lat * r) * Math.cos(b.lat * r) * Math.cos((b.lng - a.lng) * r);
+      return (Math.round(Math.atan2(y, x) / r) + 360) % 360;
+    }
+
+    // 두 곳 사이의 거리 (km)
+    function distanceKm(a, b) {
+      const r = Math.PI / 180;
+      const h = Math.pow(Math.sin((b.lat - a.lat) * r / 2), 2) +
+        Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.pow(Math.sin((b.lng - a.lng) * r / 2), 2);
+      return 12742 * Math.asin(Math.sqrt(h));
+    }
+
+    function placeText(place) {
+      return "위도 " + place.lat.toFixed(4) + ", 경도 " + place.lng.toFixed(4);
+    }
+
+    // 지금 내 자리 (핸드폰·컴퓨터의 위치 기능)
+    function findMe() {
+      return new Promise(function (resolve, reject) {
+        if (!navigator.geolocation) { reject(new Error("NO_GPS")); return; }
+        navigator.geolocation.getCurrentPosition(
+          function (pos) { resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+          function () { reject(new Error("NO_GPS")); },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    }
+    ERROR_TEXT.NO_GPS = "내 자리를 알 수 없어요. 위치 허용을 눌렀는지 확인하거나 지도에서 눌러 주세요.";
+
+    const MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
+    const WEATHER_URL = "https://api.open-meteo.com/v1/forecast";
+
+    const WEATHER_NAMES = [
+      [0, "☀️ 맑음"], [3, "⛅ 구름"], [48, "🌫️ 안개"], [67, "🌧️ 비"], [77, "❄️ 눈"], [82, "🌦️ 소나기"], [99, "⛈️ 천둥번개"]
+    ];
+    function weatherName(code) {
+      const found = WEATHER_NAMES.find(function (pair) { return code <= pair[0]; });
+      return found ? found[1] : "";
+    }
+
+    async function getJson(url) {
+      for (let tryCount = 0; tryCount < 2; tryCount++) { // 가끔 대답을 못 하면 한 번 더 물어봐요
+        try {
+          const response = await fetch(url);
+          if (response.ok) return await response.json();
+        } catch (error) {
+          // 다시 해 봐요
+        }
+      }
+      throw new Error("NO_SEA_DATA");
+    }
+    ERROR_TEXT.NO_SEA_DATA = "바다 정보를 받지 못했어요. 잠시 뒤에 다시 해 주세요.";
+
+    // 한 곳의 바다 정보 받기 (수온·파도·물높이 + 바람·기온·날씨)
+    async function fetchSea(place) {
+      const where = "latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lng.toFixed(4) + "&timezone=Asia%2FSeoul";
+      const both = await Promise.all([
+        getJson(MARINE_URL + "?" + where + "&cell_selection=sea&forecast_days=2" +
+          "&current=wave_height,sea_surface_temperature&hourly=sea_level_height_msl"),
+        getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms" +
+          "&current=temperature_2m,wind_speed_10m,wind_gusts_10m,weather_code,uv_index")
+      ]);
+      const sea = both[0].current || {};
+      const air = both[1].current || {};
+      return {
+        water: sea.sea_surface_temperature,
+        wave: sea.wave_height,
+        wind: air.wind_speed_10m,
+        gust: air.wind_gusts_10m,
+        air: air.temperature_2m,
+        weather: air.weather_code,
+        uv: air.uv_index,
+        tideTimes: (both[0].hourly && both[0].hourly.time) || [],
+        tide: (both[0].hourly && both[0].hourly.sea_level_height_msl) || []
+      };
+    }
+
+    // ───────── 지도 ─────────
+    const hasMap = Boolean(window.kakao && kakao.maps && kakao.maps.Map);
+    let map = null;
+    let placeSearch = null;
+    let satellite = false;
+    let picking = null; // 지도를 누르면 정할 것 (null이면 안 정함)
+    let marks = [];     // 지도 위에 올린 표시들
+
+    function setupMap() {
+      if (!hasMap) { $("noMap").hidden = false; return; }
+      if (map) { map.relayout(); return; }
+      map = new kakao.maps.Map($("map"), {
+        center: new kakao.maps.LatLng(FIRST_PLACE.lat, FIRST_PLACE.lng),
+        level: FIRST_PLACE.level
+      });
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      if (kakao.maps.services) placeSearch = new kakao.maps.services.Places();
+      kakao.maps.event.addListener(map, "click", function (mouseEvent) {
+        mapClicked({ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() });
+      });
+      drawMap();
+    }
+
+    function moveMap(lat, lng, level) {
+      if (!map) return;
+      if (level) map.setLevel(level);
+      map.setCenter(new kakao.maps.LatLng(lat, lng));
+    }
+
+    // 지도 위에 내 모양(content)을 올리기
+    function addOverlay(place, content, zIndex) {
+      if (!map) return null;
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(place.lat, place.lng),
+        content: content, map: map, xAnchor: 0.5, yAnchor: 0.5, clickable: true, zIndex: zIndex || 3
+      });
+      marks.push(overlay);
+      return overlay;
+    }
+    function clearMarks() {
+      marks.forEach(function (overlay) { overlay.setMap(null); });
+      marks = [];
+    }
+
+    // 핸드폰처럼 지도가 위에 있는 화면에서는 지도가 보이게 올려 주기
+    function bringIntoView(element) {
+      if (window.innerWidth <= 800) element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // 그림지도 ↔ 위성지도
+    $("mapTypeButton").addEventListener("click", function () {
+      if (!map) return;
+      satellite = !satellite;
+      map.setMapTypeId(satellite ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP);
+      this.textContent = satellite ? "🗺️ 그림지도" : "🛰️ 위성지도";
+    });
+
+    // 이름으로 지도 옮기기
+    $("placeForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const words = $("placeInput").value.trim();
+      if (!words || !placeSearch) return;
+      placeSearch.keywordSearch(words, function (results, status) {
+        if (status === kakao.maps.services.Status.OK && results[0]) {
+          moveMap(Number(results[0].y), Number(results[0].x), 7);
+        } else {
+          showHint("'" + words + "'을(를) 찾지 못했어요. 이름을 다시 확인해 주세요.", 3000);
+        }
+      });
+    });
+
+    // 지도 아래 주황색 안내
+    let hintTimer = null;
+    function showHint(text, hideAfter) {
+      clearTimeout(hintTimer);
+      $("mapHintText").textContent = text;
+      $("stopPickButton").hidden = Boolean(hideAfter);
+      $("mapHint").hidden = false;
+      if (hideAfter) hintTimer = setTimeout(function () { $("mapHint").hidden = true; }, hideAfter);
+    }
+    function hideHint() {
+      clearTimeout(hintTimer);
+      $("mapHint").hidden = true;
+    }
+
+    // 지도 누르기 시작 (what: 무엇을 정할지, text: 안내 글)
+    function startPicking(what, text) {
+      if (!map) { showHint("지도가 없어서 누를 수 없어요. '📍 지금 내 자리'를 써 주세요.", 3000); return; }
+      picking = what;
+      showHint(text);
+      bringIntoView($("mapWrap"));
+    }
+    function stopPicking() {
+      picking = null;
+      hideHint();
+    }
+    $("stopPickButton").addEventListener("click", stopPicking);
+
+    function drawMap() { drawRoute(); }
+    function mapClicked(place) {
+      if (picking === "route") addRoutePoint(place);
+    }
+    $("stopPickButton").addEventListener("click", function () { $("routeDrawButton").classList.remove("on"); });
+
+    // ═════════ ③ 바다 길찾기 ═════════
+    // 탈것과 빠르기 (노트 = 한 시간에 갈 수 있는 해리. 1해리 = 1.852km)
+    const BOATS = [
+      { id: "kayak", name: "🛶 카약", knots: 3 },
+      { id: "yacht", name: "⛵ 요트", knots: 6 },
+      { id: "ferry", name: "🛳️ 여객선", knots: 15 },
+      { id: "speed", name: "🚤 모터보트", knots: 25 }
+    ];
+    // 배를 댈 곳을 찾을 때 카카오맵에 물어볼 말
+    const DOCK_WORDS = ["마리나", "요트", "선착장", "여객선터미널", "항구"];
+    const DOCK_RADIUS = 20000; // 도착지에서 몇 m 안을 찾을지 (카카오는 20000까지)
+    const DOCK_SKIP = ["주차장", "호텔", "리조트", "웨딩", "민원", "식당", "카페", "펜션", "편의점"]; // 이름에 이 말이 있으면 빼요
+
+    let boat = BOATS[1];
+    let routePoints = []; // 지도에서 찍은 곳들 (첫째는 출발, 마지막은 도착)
+    let routeLine = null;
+    let routeAsk = 0;
+
+    function drawBoatPick() {
+      const box = $("boatPick");
+      box.textContent = "";
+      BOATS.forEach(function (item) {
+        const button = el("button", "soft" + (boat === item ? " on" : ""), item.name);
+        button.type = "button";
+        button.addEventListener("click", function () {
+          boat = item;
+          $("speedInput").value = item.knots;
+          drawBoatPick();
+          drawRouteText();
+        });
+        box.append(button);
+      });
+    }
+    $("speedInput").addEventListener("input", drawRouteText);
+
+    $("routeDrawButton").addEventListener("click", function () {
+      if (picking === "route") { stopPicking(); this.classList.remove("on"); return; }
+      startPicking("route", routePoints.length ? "다음에 갈 곳을 차례로 눌러 주세요" : "출발하는 곳을 지도에서 눌러 주세요");
+      if (picking === "route") this.classList.add("on");
+    });
+    $("routeUndoButton").addEventListener("click", function () {
+      routePoints.pop();
+      routeChanged();
+    });
+    $("routeClearButton").addEventListener("click", function () {
+      routePoints = [];
+      routeChanged();
+    });
+
+    function addRoutePoint(place) {
+      routePoints.push(place);
+      showHint(routePoints.length === 1 ? "좋아요! 이제 들를 곳이나 도착하는 곳을 눌러 주세요" : "더 가려면 계속 누르고, 다 찍었으면 '그만'을 눌러요");
+      routeChanged();
+    }
+
+    function routeChanged() {
+      drawRoute();
+      drawRouteText();
+      const end = routePoints[routePoints.length - 1];
+      $("routeEndBox").hidden = routePoints.length < 2;
+      if (routePoints.length >= 2) checkRouteEnd(end);
+    }
+
+    function drawRoute() {
+      clearMarks();
+      if (routeLine) { routeLine.setMap(null); routeLine = null; }
+      if (!map) return;
+      if (routePoints.length >= 2) {
+        routeLine = new kakao.maps.Polyline({
+          path: routePoints.map(function (p) { return new kakao.maps.LatLng(p.lat, p.lng); }),
+          strokeWeight: 4, strokeColor: "#ff8c00", strokeOpacity: 0.9, strokeStyle: "shortdash"
+        });
+        routeLine.setMap(map);
+      }
+      routePoints.forEach(function (point, i) {
+        const last = i === routePoints.length - 1 && i > 0;
+        const dot = el("div", "route-dot" + (i === 0 ? " start" : last ? " end" : ""), i === 0 ? "출" : last ? "도" : String(i));
+        addOverlay(point, dot, 6);
+      });
+      docks.forEach(function (dock) {
+        const pin = el("div", "dock-pin", "⚓ " + dock.name);
+        addOverlay(dock, pin, 5);
+      });
+    }
+
+    function hoursText(hours) {
+      const minutes = Math.round(hours * 60);
+      if (minutes < 60) return minutes + "분";
+      return Math.floor(minutes / 60) + "시간" + (minutes % 60 ? " " + (minutes % 60) + "분" : "");
+    }
+
+    function drawRouteText() {
+      const knots = Math.max(1, Number($("speedInput").value) || boat.knots);
+      const kmPerHour = knots * 1.852;
+      const legs = $("routeLegs");
+      legs.textContent = "";
+      let total = 0;
+      for (let i = 1; i < routePoints.length; i++) {
+        const a = routePoints[i - 1], b = routePoints[i];
+        const km = distanceKm(a, b);
+        const dir = bearing(a, b);
+        total += km;
+        const from = i === 1 ? "출발" : (i - 1) + "번";
+        const to = i === routePoints.length - 1 ? "도착" : i + "번";
+        legs.append(el("li", "", from + " → " + to + ": " + directionName(dir) + "(" + dir + "°)으로 " +
+          km.toFixed(1) + "km · " + hoursText(km / kmPerHour)));
+      }
+      $("routeNote").textContent =
+        routePoints.length === 0 ? "아직 찍은 곳이 없어요." :
+        routePoints.length === 1 ? "출발하는 곳을 찍었어요. 도착하는 곳도 찍어 주세요." :
+        routePoints.length + "곳을 찍었어요.";
+      $("routeTotal").hidden = routePoints.length < 2;
+      $("routeTotal").textContent = "";
+      if (routePoints.length >= 2) {
+        $("routeTotal").append(
+          el("b", "", "모두 " + total.toFixed(1) + "km (" + (total / 1.852).toFixed(1) + "해리)"),
+          el("br"),
+          document.createTextNode(boat.name + " " + knots + "노트로 약 " + hoursText(total / kmPerHour) + " 걸려요")
+        );
+      }
+    }
+
+    // 도착지의 바다 상태와 배를 댈 곳
+    let docks = [];
+    async function checkRouteEnd(end) {
+      const ask = ++routeAsk;
+      $("routeSea").textContent = "알아보는 중…";
+      try {
+        const data = await fetchSea(end);
+        if (ask !== routeAsk) return;
+        const level = (data.wave > 1.5 || data.wind > 10) ? 2 : (data.wave > 1 || data.wind > 7) ? 1 : 0;
+        const look = ["🟢 잔잔해요", "🟡 조심해요", "🔴 배를 띄우기 위험해요"][level];
+        $("routeSea").textContent = look + " · 파도 " + (typeof data.wave === "number" ? data.wave.toFixed(1) + "m" : "모름") +
+          " · 바람 " + (typeof data.wind === "number" ? data.wind.toFixed(1) + "m/s" : "모름") + " · " + weatherName(data.weather);
+      } catch (error) {
+        if (ask === routeAsk) $("routeSea").textContent = errorText(error);
+      }
+      findDocks(end, ask);
+    }
+    $("routeSeaButton").addEventListener("click", function () {
+      const end = routePoints[routePoints.length - 1];
+      if (!end) return;
+      // 오늘의 바다 서비스를 새 창으로 열고, 주소 끝에 도착지(위도,경도)를 적어 보내요
+      window.open("../오늘의바다/#" + end.lat.toFixed(5) + "," + end.lng.toFixed(5), "_blank");
+    });
+
+    function findDocks(end, ask) {
+      const box = $("dockList");
+      box.textContent = "";
+      docks = [];
+      if (!placeSearch) {
+        box.append(el("p", "note", "배를 댈 곳은 지도가 보이는 웹 주소에서 찾을 수 있어요."));
+        drawRoute();
+        return;
+      }
+      box.append(el("p", "note", "찾는 중…"));
+      const found = {};
+      let left = DOCK_WORDS.length;
+      DOCK_WORDS.forEach(function (word) {
+        placeSearch.keywordSearch(word, function (results, status) {
+          if (ask !== routeAsk) return;
+          if (status === kakao.maps.services.Status.OK) {
+            results.forEach(function (item) {
+              if (DOCK_SKIP.some(function (word) { return item.place_name.includes(word); })) return;
+              found[item.id] = { name: item.place_name, address: item.road_address_name || item.address_name, lat: Number(item.y), lng: Number(item.x), km: Number(item.distance) / 1000 };
+            });
+          }
+          if (--left === 0) showDocks(Object.values(found));
+        }, { location: new kakao.maps.LatLng(end.lat, end.lng), radius: DOCK_RADIUS, sort: kakao.maps.services.SortBy.DISTANCE });
+      });
+    }
+    function showDocks(list) {
+      docks = list.sort(function (a, b) { return a.km - b.km; }).slice(0, 8);
+      const box = $("dockList");
+      box.textContent = "";
+      docks.forEach(function (dock) {
+        const button = el("button", "", "⚓ " + dock.name + " · " + dock.km.toFixed(1) + "km");
+        button.type = "button";
+        button.append(el("span", "", dock.address));
+        button.addEventListener("click", function () { moveMap(dock.lat, dock.lng, 4); bringIntoView($("mapWrap")); });
+        box.append(button);
+      });
+      if (!docks.length) box.append(el("p", "note", "도착지 근처 20km 안에서 배를 댈 곳을 찾지 못했어요."));
+      drawRoute();
+    }
+
+
+    // ───────── 시작 ─────────
+    drawBoatPick();
+    $("speedInput").value = boat.knots;
+    drawRouteText();
+    setupMap();
+  </script>
+</body>
+</html>
