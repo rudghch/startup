@@ -107,6 +107,32 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
     .map-hint button { margin-left: 8px; border: 0; border-radius: 6px; padding: 3px 8px; background: rgba(255, 255, 255, 0.3); color: #fff; }
+    .map-tools button.on { background: #0b6e8a; border-color: #0b6e8a; color: #fff; }
+    /* 지도 위 바람·파도 그림 (누르기는 지도로 그대로 가요) */
+    #weatherLayer, #particleLayer { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; }
+    .time-bar {
+      position: absolute;
+      left: 10px;
+      right: 60px;
+      bottom: 10px;
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      font-size: 14px;
+    }
+    .time-bar button { width: 36px; height: 32px; border: 1px solid #b8c6cf; border-radius: 8px; background: #fff; font-size: 15px; }
+    .time-bar input { flex: 1; min-width: 120px; accent-color: #0b6e8a; }
+    .time-bar b { min-width: 92px; }
+    .legend { display: flex; align-items: center; gap: 6px; width: 100%; font-size: 12px; color: #3d5866; }
+    .legend .scale { flex: 1; height: 10px; border-radius: 5px; }
+    .legend .ticks { display: flex; justify-content: space-between; flex: 1; }
+    .map-wrap.has-time .map-hint { bottom: 104px; }
 
     .side {
       width: 400px;
@@ -337,6 +363,29 @@
     .numbers b { font-size: 17px; }
     .tide svg { display: block; width: 100%; height: auto; margin-top: 6px; }
     .links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    /* 📅 바다 예보 */
+    .forecast { margin-top: 18px; padding-top: 4px; border-top: 2px dashed #b8d8e3; }
+    .best { margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: #e9f7ef; font-size: 14px; line-height: 1.6; }
+    .hours { position: relative; display: flex; gap: 4px; overflow-x: auto; margin-top: 8px; padding-bottom: 6px; }
+    .hour { flex: 0 0 56px; padding: 5px 2px; border: 2px solid transparent; border-radius: 10px; background: #e9f7ef; color: inherit; font-size: 12px; line-height: 1.35; text-align: center; }
+    .hour.l1 { background: #fff6dc; }
+    .hour.l2 { background: #fde8e6; }
+    .hour.on { border-color: #0b6e8a; }
+    .hour .day { display: block; font-weight: bold; color: #0b6e8a; }
+    .hour .face { display: block; font-size: 22px; line-height: 1.2; }
+    .hour .arrow { display: inline-block; }
+    .hour .doubt { display: block; font-size: 11px; color: #8a5300; }
+    .picked-hour { margin: 8px 0 0; font-size: 14px; line-height: 1.6; }
+    .compare h4 { margin: 10px 0 4px; font-size: 14px; }
+    .compare-row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 6px; margin: 3px 0; font-size: 13px; }
+    .compare-row .track { height: 12px; border-radius: 6px; background: #eef3f6; overflow: hidden; }
+    .compare-row .bar { height: 100%; border-radius: 6px; }
+    .verdict { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: #e9f7ef; font-size: 14px; line-height: 1.5; }
+    .verdict.no { background: #fff4e0; color: #8a5300; }
+    .gap-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+    .gap-compare div { padding: 8px; border-radius: 10px; background: #f1f6f9; font-size: 13px; line-height: 1.5; text-align: center; }
+    .gap-compare b { display: block; font-size: 16px; }
+    .gap-list { margin: 8px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
 
     /* 좁은 화면(핸드폰): 지도 위, 옆 칸 아래 */
     @media (max-width: 800px) {
@@ -378,6 +427,14 @@
   <main class="app" id="appBox" hidden>
     <div class="map-wrap" id="mapWrap">
       <div id="map"></div>
+      <canvas id="weatherLayer"></canvas>
+      <canvas id="particleLayer"></canvas>
+      <div class="time-bar" id="timeBar" hidden>
+        <button type="button" id="playButton" aria-label="예보 움직이기">▶</button>
+        <input type="range" id="timeRange" min="0" max="0" value="0" aria-label="예보 시각">
+        <b id="timeLabel"></b>
+        <div class="legend" id="legend"></div>
+      </div>
       <div class="no-map" id="noMap" hidden>
         지도를 불러오지 못했어요.<br>지도는 웹 주소(rudghch.github.io)에서 열어야 보여요.
       </div>
@@ -387,6 +444,8 @@
           <button type="submit">찾기</button>
         </form>
         <button type="button" id="mapTypeButton">🛰️ 위성지도</button>
+        <button type="button" id="windLayerButton">💨 바람</button>
+        <button type="button" id="waveLayerButton">🌊 파도</button>
       </div>
       <div class="map-hint" id="mapHint" hidden>
         <span id="mapHintText"></span>
@@ -398,7 +457,7 @@
     <section id="seaPane">
       <div id="seaInfoPane">
         <h2><img class="logo" src="lighthouse.svg" alt=""> 씨그널</h2>
-        <p class="intro">지도에서 바닷가를 누르면 그곳을 크게 보여 주고, 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 수영해도 되는지 얼굴로 알려 주고, 낚시해도 되는 곳인지도 보여 줘요.</p>
+        <p class="intro">지도에서 바닷가를 누르면 그곳을 크게 보여 주고, 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 수영해도 되는지 얼굴로 알려 주고, 낚시해도 되는 곳인지도 보여 줘요. 마을이 아닌 바다 위의 3일 예보를 여러 나라 예보와 견주어 보여 주고, 지도 위 💨 바람 · 🌊 파도 버튼으로 바람과 파도를 그림으로 볼 수 있어요.</p>
         <div class="row">
           <button type="button" class="soft" id="seaMapButton">🗺️ 지도에서 바닷가 누르기</button>
           <button type="button" class="soft" id="seaHereButton">📍 지금 내 자리</button>
@@ -418,6 +477,23 @@
             <div id="tideChart"></div>
           </div>
         </div>
+        <div class="forecast" id="forecastBox" hidden>
+          <h3>📅 3일 바다 예보</h3>
+          <p class="best" id="bestTimes"></p>
+          <p class="note">칸을 누르면 그 시각의 예보를 보여 주고, 지도의 💨 바람 · 🌊 파도도 그 시각으로 바뀌어요. ❓는 나라마다 예보가 엇갈리는 때예요.</p>
+          <div class="hours" id="hourStrip"></div>
+          <p class="picked-hour" id="pickedHour"></p>
+          <div class="compare">
+            <h3>🔍 예보끼리 비교</h3>
+            <p class="note">날씨 예보는 나라마다 다른 슈퍼컴퓨터가 계산해요. 씨그널은 여러 예보를 함께 보고 가운데 값을 써요.</p>
+            <div id="compareBox"></div>
+          </div>
+          <div class="app-gap">
+            <h3>📱 날씨 앱과 왜 다를까요?</h3>
+            <div id="appGap"></div>
+          </div>
+        </div>
+        <p class="error" id="forecastError"></p>
         <div class="fishing">
           <h3>🎣 낚시해도 될까요?</h3>
           <p class="fish-here" id="fishHere"></p>
@@ -629,6 +705,10 @@
       kakao.maps.event.addListener(map, "click", function (mouseEvent) {
         mapClicked({ lat: mouseEvent.latLng.getLat(), lng: mouseEvent.latLng.getLng() });
       });
+      // 지도 위 바람·파도 그림: 움직이면 다시 그리고, 확대·축소하는 동안은 숨겨요
+      kakao.maps.event.addListener(map, "bounds_changed", function () { drawWeatherLayer(); resetParticles(); });
+      kakao.maps.event.addListener(map, "zoom_start", function () { layerZooming = true; drawWeatherLayer(); resetParticles(); });
+      kakao.maps.event.addListener(map, "idle", function () { layerZooming = false; refreshWeatherLayer(); });
       drawMap();
     }
 
@@ -733,7 +813,12 @@
       bigWave: 0.5,   // 파도(m)가 이것보다 높으면 🟡
       hugeWave: 1.0,  // 파도(m)가 이것보다 높으면 🔴
       wind: 7,        // 바람(m/s)이 이것보다 세면 🟡
-      strongWind: 10  // 바람(m/s)이 이것보다 세면 🔴
+      strongWind: 10, // 바람(m/s)이 이것보다 세면 🔴
+      gust: 12,       // 돌풍(가끔 확 부는 바람, m/s)이 이것보다 세면 🟡
+      strongGust: 17, // 돌풍이 이것보다 세면 🔴
+      swell: 0.3,     // 너울(멀리서 온 큰 물결, m)이 이것보다 높으면 🟡
+      bigSwell: 0.8,  // 너울이 이것보다 높으면 🔴
+      swellPeriod: 8  // 물결이 이 초(s)보다 느리게 올 때만 너울로 봐요 (느릴수록 힘이 세요)
     };
 
     const WEATHER_NAMES = [
@@ -766,7 +851,7 @@
       const where = "latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lng.toFixed(4) + "&timezone=Asia%2FSeoul";
       const both = await Promise.all([
         getJson(MARINE_URL + "?" + where + "&cell_selection=sea&forecast_days=2" +
-          "&current=wave_height,sea_surface_temperature&hourly=sea_level_height_msl"),
+          "&current=wave_height,swell_wave_height,swell_wave_period,sea_surface_temperature&hourly=sea_level_height_msl"),
         getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms" +
           "&current=temperature_2m,wind_speed_10m,wind_gusts_10m,weather_code,uv_index")
       ]);
@@ -775,6 +860,8 @@
       return {
         water: sea.sea_surface_temperature,
         wave: sea.wave_height,
+        swell: sea.swell_wave_height,
+        swellPeriod: sea.swell_wave_period,
         wind: air.wind_speed_10m,
         gust: air.wind_gusts_10m,
         air: air.temperature_2m,
@@ -793,6 +880,7 @@
       drawReports(); // 가까운 위험 알림부터 다시 줄 세워요
       checkFishing(seaPlace);
       const ask = ++seaAsk;
+      loadForecast(seaPlace, ask); // 3일 예보는 따로 받아요 (기다리지 않아요)
       try {
         const data = await fetchSea(place);
         if (ask !== seaAsk) return;
@@ -849,6 +937,15 @@
       if (typeof data.wind === "number") {
         if (data.wind > r.strongWind) add(2, "wind", "바람이 아주 세요 (" + data.wind.toFixed(1) + "m/s)");
         else if (data.wind > r.wind) add(1, "wind", "바람이 세요 (" + data.wind.toFixed(1) + "m/s)");
+      }
+      if (typeof data.gust === "number") {
+        if (data.gust > r.strongGust) add(2, "wind", "돌풍(가끔 확 부는 바람)이 아주 세요 (" + data.gust.toFixed(0) + "m/s)");
+        else if (data.gust > r.gust) add(1, "wind", "가끔 센 바람(돌풍)이 불어요 (" + data.gust.toFixed(0) + "m/s)");
+      }
+      if (typeof data.swell === "number" && data.swellPeriod >= r.swellPeriod) {
+        const swellText = " (" + data.swell.toFixed(1) + "m, " + data.swellPeriod.toFixed(0) + "초마다)";
+        if (data.swell > r.bigSwell) add(2, "wave", "너울(멀리서 온 큰 물결)이 높아요" + swellText);
+        else if (data.swell > r.swell) add(1, "wave", "너울(멀리서 온 큰 물결)이 있어요" + swellText);
       }
       if (data.weather >= 95) add(2, "storm", "천둥번개가 쳐요");
       else if (data.weather >= 51) add(1, "rain", "비가 와요");
@@ -984,6 +1081,652 @@
         });
       }
       drawReportPins();
+    }
+
+    // ═════════ 📅 3일 바다 예보 ═════════
+    // 날씨 앱과 다른 점 (2026-10-28 선생님 요청 "날씨 앱과 괴리가 있어"):
+    //   ① 마을(땅)이 아니라 고른 바다 위 예보  ② 여러 나라 예보를 함께 보고 가운데 값을 써요 (엇갈리면 ❓)
+    //   ③ 파도·너울·돌풍·물때까지 1시간마다 보여 줘요.  모두 Open-Meteo에서 받아요 (키 필요 없음)
+    // 바람 예보 (기상청 모델 kma_*는 지금 Open-Meteo에서 값이 비어 있어서 뺐어요, 2026-10-28)
+    const WIND_MODELS = [
+      { id: "ecmwf_ifs025", name: "유럽" },
+      { id: "gfs_seamless", name: "미국" },
+      { id: "icon_seamless", name: "독일" },
+      { id: "jma_seamless", name: "일본" }
+    ];
+    // 파도 예보
+    const WAVE_MODELS = [
+      { id: "meteofrance_wave", name: "프랑스" },
+      { id: "ecmwf_wam025", name: "유럽" },
+      { id: "ncep_gfswave025", name: "미국" }
+    ];
+    const SAME_WIND = 2;        // 예보끼리 바람 차이가 이것(m/s) 안이면 "비슷해요"
+    const SAME_WAVE = 0.3;      // 파도 차이가 이것(m) 안이면 "비슷해요"
+    const GOOD_HOURS = [8, 18]; // "언제 가면 좋을까요?"는 이 시각 사이만 봐요
+    const DAY_NAMES = ["오늘", "내일", "모레", "글피"];
+    const HOUR = 3600000;
+
+    let forecast = null;   // { hours: [...], town }
+    let pickedTime = null; // 고른 시각(밀리초). 예보 칸, 지도 바람·파도, 시간 막대가 함께 써요
+
+    function timeFromText(text) { return new Date(text + ":00+09:00").getTime(); }
+    function nowHour() { const date = new Date(); date.setMinutes(0, 0, 0); return date.getTime(); }
+    function currentPicked() {
+      if (pickedTime === null || pickedTime < nowHour()) pickedTime = nowHour();
+      return pickedTime;
+    }
+    function dayIndex(time) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return Math.floor((time - start.getTime()) / (24 * HOUR));
+    }
+    function hourName(time) { return (DAY_NAMES[dayIndex(time)] || "") + " " + new Date(time).getHours() + "시"; }
+    function numbersOf(list) { return list.filter(function (value) { return typeof value === "number"; }); }
+    function median(list) {
+      const sorted = numbersOf(list).sort(function (a, b) { return a - b; });
+      if (!sorted.length) return null;
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+    function biggest(list) { const found = numbersOf(list); return found.length ? Math.max.apply(null, found) : null; }
+    function spread(list) { const found = numbersOf(list); return found.length > 1 ? Math.max.apply(null, found) - Math.min.apply(null, found) : null; }
+    // 방향 여러 개의 평균 (350°와 10°의 평균은 0°)
+    function meanDirection(list) {
+      let x = 0, y = 0;
+      numbersOf(list).forEach(function (degree) { x += Math.sin(degree * Math.PI / 180); y += Math.cos(degree * Math.PI / 180); });
+      if (!x && !y) return null;
+      return (Math.atan2(x, y) * 180 / Math.PI + 360) % 360;
+    }
+
+    // 고른 바다의 3일 예보 (1시간마다, 나라별 예보 + 가운데 값 + 가장 센 값)
+    async function fetchForecast(place) {
+      const where = "latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lng.toFixed(4) + "&timezone=Asia%2FSeoul&forecast_days=3";
+      const windIds = WIND_MODELS.map(function (model) { return model.id; });
+      const waveIds = WAVE_MODELS.map(function (model) { return model.id; });
+      const both = await Promise.all([
+        getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms&models=best_match," + windIds.join(",") +
+          "&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,weather_code,precipitation_probability"),
+        getJson(MARINE_URL + "?" + where + "&cell_selection=sea&models=best_match," + waveIds.join(",") +
+          "&hourly=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_period,sea_surface_temperature")
+      ]);
+      const air = both[0].hourly || {};
+      const sea = both[1].hourly || {};
+      function pick(source, name, ids, i) {
+        return ids.map(function (id) { const list = source[name + "_" + id]; return list && i >= 0 ? list[i] : null; });
+      }
+      function best(source, name, i) { // 바다 서버는 이름 끝이 _marine_best_match 예요
+        const list = source[name + "_best_match"] || source[name + "_marine_best_match"];
+        return list && i >= 0 ? list[i] : null;
+      }
+      const start = nowHour();
+      const hours = [];
+      (air.time || []).forEach(function (text, i) {
+        const time = timeFromText(text);
+        if (time < start) return;
+        const s = (sea.time || []).indexOf(text);
+        const winds = pick(air, "wind_speed_10m", windIds, i);
+        const gusts = pick(air, "wind_gusts_10m", windIds, i);
+        const waves = pick(sea, "wave_height", waveIds, s);
+        const swells = pick(sea, "swell_wave_height", waveIds, s);
+        const hour = {
+          time: time,
+          wind: median(winds), gust: median(gusts), windDir: meanDirection(pick(air, "wind_direction_10m", windIds, i)),
+          wave: median(waves), waveDir: meanDirection(pick(sea, "wave_direction", waveIds, s)), period: median(pick(sea, "wave_period", waveIds, s)),
+          swell: median(swells), swellPeriod: median(pick(sea, "swell_wave_period", waveIds, s)),
+          water: best(sea, "sea_surface_temperature", s),
+          air: best(air, "temperature_2m", i), weather: best(air, "weather_code", i), rain: best(air, "precipitation_probability", i),
+          windBest: best(air, "wind_speed_10m", i), gustBest: best(air, "wind_gusts_10m", i),
+          winds: winds, gusts: gusts, waves: waves
+        };
+        // 가장 센 예보로 본 모습 (이것이 더 나쁘면 ❓ 엇갈림)
+        hour.worst = Object.assign({}, hour, { wind: biggest(winds), gust: biggest(gusts), wave: biggest(waves), swell: biggest(swells) });
+        hours.push(hour);
+      });
+      if (!hours.length) throw new Error("NO_SEA_DATA");
+      return hours;
+    }
+
+    async function loadForecast(place, ask) {
+      $("forecastError").textContent = "";
+      try {
+        const hours = await fetchForecast(place);
+        if (ask !== seaAsk) return;
+        forecast = { hours: hours, town: null };
+        $("forecastBox").hidden = false;
+        drawForecast();
+        loadTown(place, ask);
+      } catch (error) {
+        if (ask !== seaAsk) return;
+        forecast = null;
+        $("forecastBox").hidden = true;
+        $("forecastError").textContent = "3일 예보: " + errorText(error);
+      }
+    }
+
+    // 날씨 앱이 보통 보여 주는 "마을" 찾기 (카카오맵 주소 → 그 동네의 가운데)
+    function findTown(place) {
+      return new Promise(function (resolve) {
+        if (!hasMap || !kakao.maps.services || !kakao.maps.services.Geocoder) { resolve(null); return; }
+        const geocoder = new kakao.maps.services.Geocoder();
+        const OK = kakao.maps.services.Status.OK;
+        geocoder.coord2RegionCode(place.lng, place.lat, function (result, status) {
+          if (status !== OK || !result || !result.length) { resolve(null); return; }
+          const region = result.find(function (item) { return item.region_type === "H"; }) || result[0];
+          const name = region.region_3depth_name || region.region_2depth_name || region.address_name;
+          if (region.x && region.y) { resolve({ name: name, lat: Number(region.y), lng: Number(region.x) }); return; }
+          geocoder.addressSearch(region.address_name, function (found, foundStatus) {
+            resolve(foundStatus === OK && found[0] ? { name: name, lat: Number(found[0].y), lng: Number(found[0].x) } : null);
+          });
+        });
+      });
+    }
+    async function loadTown(place, ask) {
+      try {
+        const town = await findTown(place);
+        if (!town || ask !== seaAsk) return;
+        const data = await getJson(WEATHER_URL + "?latitude=" + town.lat.toFixed(4) + "&longitude=" + town.lng.toFixed(4) +
+          "&timezone=Asia%2FSeoul&forecast_days=3&wind_speed_unit=ms&hourly=wind_speed_10m,wind_gusts_10m,temperature_2m");
+        if (ask !== seaAsk || !forecast) return;
+        const hourly = data.hourly || {};
+        town.times = (hourly.time || []).map(timeFromText);
+        town.wind = hourly.wind_speed_10m || [];
+        town.gust = hourly.wind_gusts_10m || [];
+        town.air = hourly.temperature_2m || [];
+        forecast.town = town;
+        drawForecast();
+      } catch (error) {
+        // 마을 비교는 없어도 돼요
+      }
+    }
+
+    function hourSignal(hour) {
+      const signal = swimSignal(hour, hour.time === nowHour() ? seaPlace : null); // 친구들의 위험 알림은 "지금"에만 넣어요
+      const worst = swimSignal(hour.worst, null);
+      return { level: signal.level, face: signal.face, reasons: signal.reasons, worstLevel: worst.level, doubt: worst.level > signal.level };
+    }
+    function arrowEl(from) {
+      const arrow = el("span", "arrow", typeof from === "number" ? "↑" : "");
+      if (typeof from === "number") arrow.style.transform = "rotate(" + Math.round((from + 180) % 360) + "deg)"; // 바람이 불어 가는 쪽
+      return arrow;
+    }
+    function fixed(value, digits, unit) { return typeof value === "number" ? value.toFixed(digits) + unit : "-"; }
+
+    function drawForecast() {
+      if (!forecast) return;
+      const hours = forecast.hours;
+      const signals = hours.map(hourSignal);
+      const picked = currentPicked();
+
+      // 😄 언제 가면 좋을까요? (해가 있는 때, 가운데 예보가 😄이고 가장 센 예보도 🔴가 아닐 때)
+      const days = [];
+      hours.forEach(function (hour, i) {
+        const d = dayIndex(hour.time), h = new Date(hour.time).getHours();
+        if (h < GOOD_HOURS[0] || h > GOOD_HOURS[1]) return;
+        if (!days[d]) days[d] = { name: DAY_NAMES[d], runs: [], careful: [] };
+        // runs: 😄 좋은 때, careful: 🟡 조심하면 괜찮은 때 (좋은 때가 없을 때 보여 줘요)
+        [["runs", signals[i].level === 0 && signals[i].worstLevel <= 1], ["careful", signals[i].level <= 1 && signals[i].worstLevel <= 1]].forEach(function (pair) {
+          const runs = days[d][pair[0]], last = runs[runs.length - 1];
+          if (pair[1] && last && last.open && last.to === h - 1) last.to = h;
+          else if (pair[1]) runs.push({ from: h, to: h, open: true });
+          else if (last) last.open = false;
+        });
+      });
+      function runText(runs) {
+        return runs.map(function (run) { return run.from === run.to ? run.from + "시" : run.from + "시~" + run.to + "시"; }).join(", ");
+      }
+      const box = $("bestTimes");
+      box.textContent = "";
+      box.append(el("b", "", "🏖️ 언제 물놀이하기 좋을까요? (" + GOOD_HOURS[0] + "시~" + GOOD_HOURS[1] + "시)"));
+      days.forEach(function (day) {
+        if (!day) return;
+        box.append(el("br"), day.name + ": " + (
+          day.runs.length ? "😄 " + runText(day.runs) :
+          day.careful.length ? "좋은 때는 없어요. 🟡 조심하면: " + runText(day.careful) :
+          "🔴 물에 들어가기 좋은 때가 없어요"));
+      });
+
+      // 1시간마다 칸
+      const strip = $("hourStrip");
+      const scroll = strip.scrollLeft;
+      strip.textContent = "";
+      hours.forEach(function (hour, i) {
+        const signal = signals[i];
+        const date = new Date(hour.time);
+        const button = el("button", "hour l" + signal.level + (hour.time === picked ? " on" : ""));
+        button.type = "button";
+        button.title = signal.reasons.map(function (reason) { return reason.face + " " + reason.text; }).join("\n");
+        button.append(el("span", "day", i === 0 || date.getHours() === 0 ? DAY_NAMES[dayIndex(hour.time)] || "" : " "));
+        button.append(el("span", "", i === 0 ? "지금" : date.getHours() + "시"));
+        button.append(el("span", "face", signal.face));
+        button.append(el("span", "", typeof hour.weather === "number" ? weatherName(hour.weather).split(" ")[0] : "-"));
+        const wind = el("span", "");
+        wind.style.display = "block";
+        wind.append("💨", arrowEl(hour.windDir), fixed(hour.wind, 0, ""));
+        button.append(wind);
+        const wave = el("span", "", "🌊" + fixed(hour.wave, 1, "m"));
+        wave.style.display = "block";
+        button.append(wave);
+        if (signal.doubt) button.append(el("span", "doubt", "❓엇갈림"));
+        button.addEventListener("click", function () { setHour(hour.time); });
+        strip.append(button);
+      });
+      strip.scrollLeft = scroll;
+      const on = strip.querySelector(".on");
+      if (on && (on.offsetLeft < strip.scrollLeft || on.offsetLeft + on.offsetWidth > strip.scrollLeft + strip.clientWidth)) {
+        strip.scrollLeft = on.offsetLeft - strip.clientWidth / 2;
+      }
+
+      const index = hours.findIndex(function (hour) { return hour.time === picked; });
+      const hour = hours[index >= 0 ? index : 0];
+      const signal = signals[index >= 0 ? index : 0];
+      // 고른 시각
+      const note = $("pickedHour");
+      note.textContent = "";
+      note.append(el("b", "", "🕑 " + hourName(hour.time) + (hour.time === nowHour() ? " (지금)" : "") + ": " + signal.face + " " + SIGNAL_LOOK[signal.level].text));
+      signal.reasons.forEach(function (reason) { note.append(el("br"), reason.face + " " + reason.text); });
+      note.append(el("br"), "🌡️ 기온 " + fixed(hour.air, 0, "°C") + " · 물 " + fixed(hour.water, 1, "°C") + " · ☔ 비 올 확률 " + fixed(hour.rain, 0, "%") +
+        " · 물결 " + fixed(hour.period, 0, "초") + "마다");
+      drawCompare(hour);
+      drawAppGap(hour);
+    }
+
+    // 🔍 예보끼리 비교
+    function levelColor(level) { return ["#5ccf8a", "#f5c542", "#e7685d"][level]; }
+    function drawCompare(hour) {
+      const box = $("compareBox");
+      box.textContent = "";
+      function rows(title, models, values, more, unit, top, levelOf) {
+        box.append(el("h4", "", title));
+        models.forEach(function (model, k) {
+          const value = values[k];
+          const row = el("div", "compare-row");
+          const track = el("div", "track");
+          const bar = el("div", "bar");
+          bar.style.width = typeof value === "number" ? Math.min(100, Math.max(3, value / top * 100)) + "%" : "0";
+          bar.style.background = levelColor(levelOf(value));
+          track.append(bar);
+          row.append(el("span", "", model.name), track, el("span", "", typeof value === "number" ? value.toFixed(1) + unit + more(k) : "없음"));
+          box.append(row);
+        });
+      }
+      const r = SWIM_RULES;
+      rows("💨 바람", WIND_MODELS, hour.winds, function (k) {
+        return typeof hour.gusts[k] === "number" ? " (돌풍 " + hour.gusts[k].toFixed(0) + ")" : "";
+      }, "m/s", Math.max(r.strongWind + 2, biggest(hour.winds) || 0), function (v) { return v > r.strongWind ? 2 : v > r.wind ? 1 : 0; });
+      rows("🌊 파도", WAVE_MODELS, hour.waves, function () { return ""; }, "m",
+        Math.max(r.hugeWave + 0.3, biggest(hour.waves) || 0), function (v) { return v > r.hugeWave ? 2 : v > r.bigWave ? 1 : 0; });
+      const windGap = spread(hour.winds), waveGap = spread(hour.waves);
+      const same = (windGap === null || windGap <= SAME_WIND) && (waveGap === null || waveGap <= SAME_WAVE);
+      box.append(el("p", "verdict" + (same ? "" : " no"), same
+        ? "✅ 예보들이 비슷해요. 믿을 만해요."
+        : "⚠️ 예보마다 달라요 (바람 " + fixed(windGap, 1, "m/s") + ", 파도 " + fixed(waveGap, 1, "m") + " 차이). 그래서 날씨 앱마다 다르게 나와요. 가장 센 예보에 맞춰 준비하세요."));
+    }
+
+    // 📱 날씨 앱과 왜 다를까요?
+    function drawAppGap(hour) {
+      const box = $("appGap");
+      box.textContent = "";
+      const town = forecast.town;
+      const t = town ? town.times.indexOf(hour.time) : -1;
+      if (t >= 0) {
+        const compare = el("div", "gap-compare");
+        const land = el("div");
+        land.append("🏘️ " + town.name + " 마을", el("br"), "(날씨 앱이 보통 보여 주는 곳)",
+          el("b", "", "바람 " + fixed(town.wind[t], 1, "m/s")), "돌풍 " + fixed(town.gust[t], 0, "m/s") + " · " + fixed(town.air[t], 0, "°C"));
+        const sea = el("div");
+        sea.append("🌊 고른 바다", el("br"), "(씨그널이 보여 주는 곳)",
+          el("b", "", "바람 " + fixed(hour.windBest, 1, "m/s")), "돌풍 " + fixed(hour.gustBest, 0, "m/s") + " · 파도 " + fixed(hour.wave, 1, "m"));
+        compare.append(land, sea);
+        box.append(compare);
+        const more = typeof hour.windBest === "number" && typeof town.wind[t] === "number" ? hour.windBest - town.wind[t] : 0;
+        if (more >= 0.5) box.append(el("p", "note", "같은 예보로 봐도 바다 위 바람이 마을보다 " + more.toFixed(1) + "m/s 더 세요."));
+      }
+      const list = el("ul", "gap-list");
+      [
+        "날씨 앱은 보통 마을(땅) 날씨예요. 땅에서는 건물·산·나무가 바람을 막아서 바다보다 바람이 약하게 나와요.",
+        "앱마다 쓰는 예보(나라)가 달라서 숫자가 달라요. 씨그널은 " + WIND_MODELS.map(function (m) { return m.name; }).join("·") + " 예보를 함께 보고 가운데 값을 써요.",
+        "날씨 앱은 파도·너울(멀리서 온 큰 물결)·돌풍·물때를 잘 안 보여 줘요. 바다에서는 이것이 더 중요해요.",
+        "기상청 바다 예보는 '여수 앞바다'처럼 넓은 바다 하나로 알려 줘요. 씨그널은 누른 곳 근처 예보예요.",
+        "예보는 컴퓨터 계산이라 틀릴 수 있어요. 날이 멀수록 더 많이 달라져요. 바닷가에서는 눈으로 보고 안전요원 말을 따라요."
+      ].forEach(function (text) { list.append(el("li", "", text)); });
+      box.append(list);
+    }
+
+    // 고른 시각 바꾸기 (예보 칸, 지도, 시간 막대가 함께 바뀌어요)
+    function setHour(time) {
+      pickedTime = time;
+      drawForecast();
+      drawTimeBar();
+      drawWeatherLayer();
+    }
+    function slotCount() { // 지금부터 3일째 밤 11시까지 몇 시간인지
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return Math.round((start.getTime() + 72 * HOUR - nowHour()) / HOUR);
+    }
+    function drawTimeBar() {
+      const time = currentPicked();
+      $("timeRange").max = slotCount() - 1;
+      $("timeRange").value = Math.round((time - nowHour()) / HOUR);
+      $("timeLabel").textContent = hourName(time) + (time === nowHour() ? " (지금)" : "");
+    }
+    $("timeRange").addEventListener("input", function () { setHour(nowHour() + Number(this.value) * HOUR); });
+    let playTimer = null;
+    function stopPlay() {
+      clearInterval(playTimer);
+      playTimer = null;
+      $("playButton").textContent = "▶";
+    }
+    $("playButton").addEventListener("click", function () {
+      if (playTimer) { stopPlay(); return; }
+      this.textContent = "■";
+      playTimer = setInterval(function () { // 1시간씩 앞으로, 끝나면 처음으로
+        const next = currentPicked() + HOUR;
+        setHour(next > nowHour() + (slotCount() - 1) * HOUR ? nowHour() : next);
+      }, 700);
+    });
+
+    // ═════════ 지도 위 💨 바람 · 🌊 파도 ═════════
+    // 지도에 보이는 곳을 5칸쯤으로 나눈 점마다 예보를 받아서, 색(세기)과 화살표(가는 쪽)로 그려요.
+    // 바람은 작은 선들이 바람을 따라 흘러가요. 예보는 점마다 한 번만 받아서 1시간 동안 다시 써요.
+    const GRID_STEPS = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2]; // 점 사이 거리(위도·경도). 보이는 곳이 GRID_CELLS칸쯤 되는 것을 골라요
+    const GRID_CELLS = 5;       // 한 줄에 몇 칸 (늘리면 촘촘하지만 무료 서버를 많이 써요: 하루 1만 번, 학교가 같이 씀)
+    const LAYER_COLORS = {      // [값, 색]: 바람(m/s), 파도(m)
+      wind: [[0, "#7fd3f0"], [4, "#5ccf8a"], [7, "#f5d142"], [10, "#f08c2e"], [14, "#d9342b"], [20, "#8e2a8e"]],
+      wave: [[0, "#9ad9f0"], [0.3, "#5ccf8a"], [0.5, "#f5d142"], [1, "#f08c2e"], [2, "#d9342b"], [3, "#8e2a8e"]]
+    };
+    const LAYER_ALPHA = 0.42;   // 색칠 진하기 (0~1)
+    const PARTICLE_MAX = 800;   // 흘러가는 선 개수
+    const PARTICLE_SPEED = 0.35; // 바람 1m/s에 한 번(1/60초)에 움직이는 거리(px)
+    let weatherLayer = null;    // null(끔) | "wind" | "wave"
+    let layerZooming = false;
+    let layerGrid = null;       // { kind, lats(위→아래), lngs(왼→오) }
+    let layerView = null;       // 화면에 그린 칸들 (흘러가는 선이 씀)
+    const gridCache = new Map(); // "wind|34.6|127.7" → { fetchedAt, t0, value[], dir[] }
+
+    function setWeatherLayer(kind) {
+      if (!map) { showHint("지도가 없어서 바람·파도를 그릴 수 없어요.", 3000); return; }
+      weatherLayer = weatherLayer === kind ? null : kind;
+      $("windLayerButton").classList.toggle("on", weatherLayer === "wind");
+      $("waveLayerButton").classList.toggle("on", weatherLayer === "wave");
+      $("timeBar").hidden = !weatherLayer;
+      $("mapWrap").classList.toggle("has-time", Boolean(weatherLayer));
+      layerGrid = null;
+      resetParticles();
+      if (!weatherLayer) {
+        stopPlay();
+        drawWeatherLayer();
+        return;
+      }
+      drawLegend();
+      drawTimeBar();
+      if (map.getLevel() < 8) { // 너무 가까우면 점이 화면 밖이라 멀리 보이게 해요
+        map.setLevel(9);
+        showHint("바람·파도가 잘 보이게 지도를 멀리 보이게 했어요", 3000);
+      }
+      refreshWeatherLayer();
+    }
+    $("windLayerButton").addEventListener("click", function () { setWeatherLayer("wind"); });
+    $("waveLayerButton").addEventListener("click", function () { setWeatherLayer("wave"); });
+
+    // 지금 보이는 곳의 점들을 정하고, 아직 없는 점의 예보를 한 번에 받아요
+    async function refreshWeatherLayer() {
+      if (!weatherLayer || !map) return;
+      const kind = weatherLayer;
+      const bounds = map.getBounds(), sw = bounds.getSouthWest(), ne = bounds.getNorthEast();
+      const span = Math.max(ne.getLng() - sw.getLng(), ne.getLat() - sw.getLat());
+      const step = GRID_STEPS.find(function (s) { return span / s <= GRID_CELLS; }) || GRID_STEPS[GRID_STEPS.length - 1];
+      function line(from, to) {
+        const list = [];
+        const first = Math.floor(from / step), last = Math.max(Math.ceil(to / step), first + 1);
+        for (let k = first; k <= last; k++) list.push(Number((k * step).toFixed(4)));
+        return list;
+      }
+      layerGrid = { kind: kind, lats: line(sw.getLat(), ne.getLat()).reverse(), lngs: line(sw.getLng(), ne.getLng()) };
+      const missing = [];
+      layerGrid.lats.forEach(function (lat) {
+        layerGrid.lngs.forEach(function (lng) {
+          const key = kind + "|" + lat + "|" + lng;
+          const saved = gridCache.get(key);
+          if (!saved || Date.now() - saved.fetchedAt > HOUR) missing.push({ lat: lat, lng: lng, key: key });
+        });
+      });
+      drawWeatherLayer();
+      if (!missing.length) return;
+      missing.forEach(function (point) { gridCache.set(point.key, { fetchedAt: Date.now(), pending: true }); }); // 같은 점을 두 번 묻지 않게
+      try {
+        const list = await fetchGrid(kind, missing);
+        list.forEach(function (data, k) { gridCache.set(missing[k].key, data); });
+      } catch (error) {
+        missing.forEach(function (point) { gridCache.delete(point.key); });
+        if (weatherLayer === kind) {
+          showHint(error.message === "TOO_MANY" ? "바람·파도 정보를 너무 많이 물어봤어요. 조금 뒤에 다시 해 주세요." : "바람·파도 정보를 받지 못했어요.", 4000);
+        }
+        return;
+      }
+      drawWeatherLayer();
+    }
+    async function fetchGrid(kind, points) {
+      const where = "latitude=" + points.map(function (p) { return p.lat; }).join(",") +
+        "&longitude=" + points.map(function (p) { return p.lng; }).join(",") + "&timezone=Asia%2FSeoul&forecast_days=3";
+      const url = kind === "wind"
+        ? WEATHER_URL + "?" + where + "&wind_speed_unit=ms&hourly=wind_speed_10m,wind_direction_10m"
+        : MARINE_URL + "?" + where + "&cell_selection=land&hourly=wave_height,wave_direction"; // 땅 위 점은 값이 비어서 파도를 안 그려요
+      let response;
+      try {
+        response = await fetch(url);
+      } catch (error) {
+        throw new Error("NO_SEA_DATA");
+      }
+      if (response.status === 429) throw new Error("TOO_MANY");
+      if (!response.ok) throw new Error("NO_SEA_DATA");
+      let data = await response.json();
+      if (!Array.isArray(data)) data = [data]; // 점이 하나면 목록이 아니라 하나로 와요
+      return data.map(function (one) {
+        const hourly = one.hourly || {};
+        return {
+          fetchedAt: Date.now(),
+          t0: hourly.time && hourly.time.length ? timeFromText(hourly.time[0]) : 0,
+          value: (kind === "wind" ? hourly.wind_speed_10m : hourly.wave_height) || [],
+          dir: (kind === "wind" ? hourly.wind_direction_10m : hourly.wave_direction) || []
+        };
+      });
+    }
+
+    // 값 → 색 (LAYER_COLORS 사이를 섞어요)
+    function hexColor(hex) { return [1, 3, 5].map(function (at) { return parseInt(hex.slice(at, at + 2), 16); }); }
+    function colorOf(kind, value) {
+      const stops = LAYER_COLORS[kind];
+      for (let i = 1; i < stops.length; i++) {
+        if (value <= stops[i][0]) {
+          const k = (value - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]);
+          const a = hexColor(stops[i - 1][1]), b = hexColor(stops[i][1]);
+          return a.map(function (part, j) { return Math.round(part + (b[j] - part) * Math.max(0, k)); });
+        }
+      }
+      return hexColor(stops[stops.length - 1][1]);
+    }
+    function drawLegend() {
+      const stops = LAYER_COLORS[weatherLayer];
+      const box = $("legend");
+      box.textContent = "";
+      const bar = el("div");
+      bar.style.flex = "1";
+      const scale = el("div", "scale");
+      scale.style.background = "linear-gradient(to right, " + stops.map(function (stop, i) {
+        return stop[1] + " " + Math.round(i / (stops.length - 1) * 100) + "%";
+      }).join(", ") + ")";
+      const ticks = el("div", "ticks");
+      stops.forEach(function (stop) { ticks.append(el("span", "", String(stop[0]))); });
+      bar.append(scale, ticks);
+      box.append(el("span", "", weatherLayer === "wind" ? "💨 바람 m/s" : "🌊 파도 m"), bar);
+    }
+
+    // 캔버스를 지도 크기에 맞추기 (선명하게 화면 배율만큼 크게)
+    function fitCanvas(canvas) {
+      const box = $("map"), ratio = window.devicePixelRatio || 1;
+      const width = Math.round(box.clientWidth * ratio), height = Math.round(box.clientHeight * ratio);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = box.clientWidth + "px";
+        canvas.style.height = box.clientHeight + "px";
+      }
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return ctx;
+    }
+    // 화면 위 점들의 자리와 고른 시각의 값
+    function layerCells() {
+      const grid = layerGrid;
+      if (!grid || grid.kind !== weatherLayer) return null;
+      const projection = map.getProjection();
+      const rows = grid.lats.length, cols = grid.lngs.length;
+      const a = projection.containerPointFromCoords(new kakao.maps.LatLng(grid.lats[0], grid.lngs[0]));
+      const b = projection.containerPointFromCoords(new kakao.maps.LatLng(grid.lats[rows - 1], grid.lngs[cols - 1]));
+      const time = currentPicked();
+      const cells = grid.lats.map(function (lat) {
+        return grid.lngs.map(function (lng) {
+          const saved = gridCache.get(grid.kind + "|" + lat + "|" + lng);
+          if (!saved || !saved.value) return null;
+          const i = Math.round((time - saved.t0) / HOUR);
+          return typeof saved.value[i] === "number" ? { v: saved.value[i], d: saved.dir[i] } : null;
+        });
+      });
+      return { cells: cells, rows: rows, cols: cols, x0: a.x, y0: a.y, dx: (b.x - a.x) / (cols - 1), dy: (b.y - a.y) / (rows - 1) };
+    }
+    // 화살표 (from: 바람·파도가 오는 쪽 각도 → 화살표는 가는 쪽을 가리켜요)
+    function drawArrow(ctx, x, y, from, size) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((from + 180) * Math.PI / 180);
+      ctx.beginPath();
+      ctx.moveTo(0, -size);
+      ctx.lineTo(size * 0.6, -size * 0.05);
+      ctx.lineTo(size * 0.2, -size * 0.05);
+      ctx.lineTo(size * 0.2, size);
+      ctx.lineTo(-size * 0.2, size);
+      ctx.lineTo(-size * 0.2, -size * 0.05);
+      ctx.lineTo(-size * 0.6, -size * 0.05);
+      ctx.closePath();
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "rgba(20, 40, 60, 0.85)";
+      ctx.lineWidth = 1.5;
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    function drawWeatherLayer() {
+      const canvas = $("weatherLayer");
+      const ctx = fitCanvas(canvas);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      layerView = null;
+      if (!weatherLayer || !map || layerZooming) return;
+      const view = layerCells();
+      if (!view) return;
+      layerView = view;
+      // 색칠: 점 하나 = 1칸인 작은 그림을 크게 늘려서 부드럽게 칠해요
+      const small = document.createElement("canvas");
+      small.width = view.cols;
+      small.height = view.rows;
+      const smallCtx = small.getContext("2d");
+      const image = smallCtx.createImageData(view.cols, view.rows);
+      view.cells.forEach(function (row, r) {
+        row.forEach(function (cell, c) {
+          if (!cell) return;
+          const color = colorOf(weatherLayer, cell.v), at = (r * view.cols + c) * 4;
+          image.data[at] = color[0];
+          image.data[at + 1] = color[1];
+          image.data[at + 2] = color[2];
+          image.data[at + 3] = Math.round(LAYER_ALPHA * 255);
+        });
+      });
+      smallCtx.putImageData(image, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(small, view.x0 - view.dx / 2, view.y0 - view.dy / 2, view.dx * view.cols, view.dy * view.rows);
+      // 화살표와 숫자
+      const width = $("map").clientWidth, height = $("map").clientHeight;
+      const top = weatherLayer === "wind" ? 12 : 1.5;
+      ctx.font = "bold 12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineJoin = "round";
+      view.cells.forEach(function (row, r) {
+        row.forEach(function (cell, c) {
+          if (!cell) return;
+          const x = view.x0 + c * view.dx, y = view.y0 + r * view.dy;
+          if (x < -30 || y < -30 || x > width + 30 || y > height + 30) return;
+          const size = 9 + Math.min(1, cell.v / top) * 9;
+          if (typeof cell.d === "number") drawArrow(ctx, x, y, cell.d, size);
+          const text = weatherLayer === "wind" ? cell.v.toFixed(0) + "m/s" : cell.v.toFixed(1) + "m";
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 3;
+          ctx.strokeText(text, x, y + size + 13);
+          ctx.fillStyle = "#1f2430";
+          ctx.fillText(text, x, y + size + 13);
+        });
+      });
+      if (weatherLayer === "wind") startParticles();
+    }
+
+    // 바람을 따라 흘러가는 선들
+    let particles = [];
+    let particleFrame = null;
+    function resetParticles() {
+      particles = [];
+      const canvas = $("particleLayer");
+      canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    }
+    function newParticle(width, height) { return { x: Math.random() * width, y: Math.random() * height, age: 0, life: 40 + Math.random() * 80 }; }
+    // 화면 점 (x, y)의 바람: 둘레 네 점의 바람을 섞어요. u는 오른쪽(동), v는 위쪽(북)
+    function windAt(x, y) {
+      const view = layerView;
+      if (!view) return null;
+      const gx = (x - view.x0) / view.dx, gy = (y - view.y0) / view.dy;
+      const c0 = Math.floor(gx), r0 = Math.floor(gy);
+      if (c0 < 0 || r0 < 0 || c0 >= view.cols - 1 || r0 >= view.rows - 1) return null;
+      const fx = gx - c0, fy = gy - r0;
+      let u = 0, v = 0, weight = 0;
+      [[0, 0, (1 - fx) * (1 - fy)], [1, 0, fx * (1 - fy)], [0, 1, (1 - fx) * fy], [1, 1, fx * fy]].forEach(function (corner) {
+        const cell = view.cells[r0 + corner[1]][c0 + corner[0]];
+        if (!cell || typeof cell.d !== "number") return;
+        const to = (cell.d + 180) * Math.PI / 180;
+        u += Math.sin(to) * cell.v * corner[2];
+        v += Math.cos(to) * cell.v * corner[2];
+        weight += corner[2];
+      });
+      return weight > 0 ? { u: u / weight, v: v / weight } : null;
+    }
+    function startParticles() {
+      if (!particleFrame) particleFrame = requestAnimationFrame(moveParticles);
+    }
+    function moveParticles() {
+      particleFrame = null;
+      if (weatherLayer !== "wind" || layerZooming || !layerView) return;
+      const ctx = fitCanvas($("particleLayer"));
+      const width = $("map").clientWidth, height = $("map").clientHeight;
+      const want = Math.min(PARTICLE_MAX, Math.round(width * height / 1500));
+      while (particles.length < want) particles.push(newParticle(width, height));
+      // 지난 선을 조금씩 흐리게 해서 꼬리처럼 보이게 해요
+      ctx.globalCompositeOperation = "destination-in";
+      ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = satellite ? "rgba(255, 255, 255, 0.9)" : "rgba(25, 45, 70, 0.75)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      particles.forEach(function (p) {
+        p.age++;
+        const wind = windAt(p.x, p.y);
+        if (!wind || p.age > p.life) { Object.assign(p, newParticle(width, height)); return; }
+        const x = p.x + wind.u * PARTICLE_SPEED, y = p.y - wind.v * PARTICLE_SPEED;
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(x, y);
+        p.x = x;
+        p.y = y;
+      });
+      ctx.stroke();
+      particleFrame = requestAnimationFrame(moveParticles);
     }
 
     // ═════════ 낚시해도 될까요? ═════════
@@ -1290,6 +2033,7 @@
       drawReports();
       drawSeaLayer();
       drawSea(); // 수영 얼굴에 새 알림을 넣어요
+      drawForecast();
     }
     function timeAgo(sk) {
       const minutes = Math.round((Date.now() - timeOf(sk)) / 60000);
@@ -1604,6 +2348,8 @@
       reportsKey = null;
       if (reportDraft) closeReportCompose();
       if ($("reportDialog").open) $("reportDialog").close();
+      if (weatherLayer) setWeatherLayer(weatherLayer); // 지도 위 바람·파도 끄기
+      stopPlay();
       $("meBox").hidden = true;
       $("appBox").hidden = true;
       $("loginBox").hidden = false;
