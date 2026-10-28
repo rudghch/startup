@@ -388,7 +388,10 @@
     #critterDialog .sci { color: #3d5866; font-style: italic; font-size: 14px; }
     #critterDialog .wiki { margin: 10px 0; line-height: 1.6; font-size: 15px; }
     #critterDialog .wiki img { float: right; width: 120px; max-height: 120px; object-fit: cover; margin: 0 0 6px 10px; border-radius: 10px; }
-    #critterDialog .bars { height: 40px; }
+    #critterDialog .bars { height: 44px; margin-top: 16px; }
+    #critterDialog .bars i { position: relative; }
+    #critterDialog .bars i::after { content: attr(data-n); position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 1px; font-size: 10px; font-style: normal; color: #1f2430; white-space: nowrap; }
+    #critterDialog .bars i.now::after { color: #c0392b; font-weight: bold; }
     .month-names { display: flex; gap: 1px; font-size: 10px; color: #5b6272; }
     .month-names span { flex: 1; text-align: center; }
 
@@ -617,7 +620,7 @@
       <h2 id="critterName"></h2>
       <div class="sci" id="critterSci"></div>
       <div class="wiki" id="critterWiki"></div>
-      <b>달마다 기록된 수</b>
+      <b>달마다 기록된 수 (막대 위 숫자 = 건수)</b>
       <span class="bars" id="critterBars"></span>
       <div class="month-names"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12월</span></div>
       <p class="meta" id="critterMeta"></p>
@@ -1737,13 +1740,15 @@
     const gbifNames = new Map(); // 학명 → 한국 이름 ("" 이면 없음)
     async function koreanName(species) {
       if (KOREAN_NAMES[species]) return KOREAN_NAMES[species];
+      const mine = (await loadCritterInfo())[species.replace(/ \([^)]*\)/, "")]; // 우리가 써 둔 설명의 한국 이름
+      if (mine && mine.kor) return mine.kor;
       if (!gbifNames.has(species)) {
         gbifNames.set(species, (async function () {
           try {
             const match = await (await fetch("https://api.gbif.org/v1/species/match?name=" + encodeURIComponent(species))).json();
             if (!match.usageKey) return "";
             const names = await (await fetch("https://api.gbif.org/v1/species/" + match.usageKey + "/vernacularNames?limit=100")).json();
-            const kor = (names.results || []).find(function (n) { return n.language === "kor"; });
+            const kor = (names.results || []).find(function (n) { return n.language === "kor" && /^[가-힣\s()·]+$/.test(n.vernacularName); }); // "Cham-seo-dae"처럼 영어 글자로 적힌 이름은 빼요
             return kor ? kor.vernacularName : "";
           } catch (error) {
             return "";
@@ -1819,18 +1824,20 @@
       const polygon = "POLYGON((" + [[area.west, area.south], [area.east, area.south], [area.east, area.north], [area.west, area.north], [area.west, area.south]]
         .map(function (p) { return f(p[0]) + " " + f(p[1]); }).join(",") + "))";
       const records = [];
+      const notSea = {}; // 뺀 강·민물 생물
       let total = 0;
       try {
         let after = "";
         for (let page = 0; page < WHERE_PAGES; page++) {
           const url = OBIS_URL + "?taxonid=2&size=" + WHERE_PAGE + "&geometry=" + encodeURIComponent(polygon) +
-            "&fields=id,species,eventDate,decimalLatitude,decimalLongitude,phylum,class,order,family" + (after ? "&after=" + after : "");
+            "&fields=id,species,eventDate,decimalLatitude,decimalLongitude,phylum,class,order,family,marine" + (after ? "&after=" + after : "");
           const data = await (await fetch(url)).json();
           if (ask !== whereAsk) return;
           total = data.total || 0;
           (data.results || []).forEach(function (r) {
             const month = Number(String(r.eventDate || "").slice(5, 7));
             if (!r.species || !(month >= 1 && month <= 12)) return; // 종 이름이나 달을 모르는 기록은 빼요
+            if (r.marine !== true) { notSea[r.species] = true; return; } // 바다에 살지 않는 생물(강·민물·땅에 사는 것)은 빼요 (WoRMS의 "바다 생물" 표시)
             const group = groupOf(r);
             records.push({ species: r.species, month: month, lat: r.decimalLatitude, lng: r.decimalLongitude, group: group, emoji: emojiOf(r, group) });
           });
@@ -1845,7 +1852,8 @@
       }
       $("whereSearch").disabled = false;
       whereRecords = records;
-      whereRecords.note = note + (total > records.length + 500 ? " 기록이 너무 많아서 " + records.length + "개만 살펴봤어요." : "");
+      const dropped = Object.keys(notSea).length;
+      whereRecords.note = note + (dropped ? " 바다에 살지 않는 생물(강·민물 등) " + dropped + "가지는 뺐어요." : "") + (total > records.length + 500 ? " 기록이 너무 많아서 " + records.length + "개만 살펴봤어요." : "");
       drawWhere();
     }
     $("whereSearch").addEventListener("click", function () { whereFocus = null; searchWhere(); });
@@ -1868,7 +1876,7 @@
       $("whereCount").textContent = list.length ? list.length + "가지 생물, 기록 " + shownCount + "개" + (whereRecords.note || "") : "이 바다·이때에 기록된 생물이 없어요. 지도를 옮기거나 \"1년 내내\"로 바꿔 봐요." + (whereRecords.note || "");
       const box = $("whereList");
       box.textContent = "";
-      list.slice(0, 40).forEach(function (s) {
+      list.forEach(function (s) { // 찾은 생물을 모두 보여 줘요
         const g = groupById(s.group);
         const item = el("button", "critter" + (whereFocus === s.species ? " on" : ""));
         item.type = "button";
@@ -1886,7 +1894,7 @@
           bars.append(bar);
         }
         words.append(bars);
-        item.append(el("span", "emo", g.name.split(" ")[0]), words, el("span", "num", s.now + "번"));
+        item.append(el("span", "emo", g.name.split(" ")[0]), words, el("span", "num", s.now + "건"));
         item.addEventListener("click", function () {
           whereFocus = whereFocus === s.species ? null : s.species;
           drawWhere();
@@ -1963,34 +1971,65 @@
       return "🦐";
     }
 
-    const CRITTER_CELL = 70; // 화면을 이 크기(px) 칸으로 나눠서, 칸마다 가장 많이 기록된 생물 그림을 하나씩 띄워요
+    // 확대하든 축소하든 찾은 생물이 모두 지도에 보이게 해요. 축소하면 그림을 작게 해서 더 많이 놓아요.
+    const CRITTER_SIZES = [[4, 40], [6, 34], [7, 28], [8, 24], [9, 20], [99, 16]]; // [지도 단계가 이것 이하일 때, 그림 크기 px]
+    const CRITTER_MAX_PINS = 700; // 지도에 한 번에 놓을 그림 수 (너무 많으면 느려져요). 생물마다 적어도 1개는 놓아요
+    function critterSize() {
+      const level = map.getLevel();
+      return CRITTER_SIZES.find(function (pair) { return level <= pair[0]; })[1];
+    }
     function drawCritterPins() {
       clearMarks();
       drawTalkPins(); // 👀 사람들이 본 생물 그림 (고른 섬·바다가 있을 때)
       if (pane !== "where" || !map || !whereRecords) return;
       const projection = map.getProjection();
-      const box = $("mapWrap");
       const months = shownMonths();
-      const cells = {};
+      const size = critterSize();
+      const cellPx = size * 1.6; // 같은 생물은 이 크기 칸마다 그림 하나로 모아요
+      // 화면 1px이 위도·경도로 얼마인지 (그림이 겹치지 않게 조금씩 비켜 놓을 때 써요)
+      const c = map.getCenter ? map.getCenter() : new kakao.maps.LatLng(FIRST_PLACE.lat, FIRST_PLACE.lng);
+      const p0 = projection.containerPointFromCoords(c);
+      const p1 = projection.containerPointFromCoords(new kakao.maps.LatLng(c.getLat() + 0.01, c.getLng() + 0.01));
+      const latPerPx = 0.01 / Math.max(0.0001, Math.abs(p0.y - p1.y)), lngPerPx = 0.01 / Math.max(0.0001, Math.abs(p1.x - p0.x));
+      const bySpecies = {};
       whereRecords.forEach(function (r) {
         if (!groupOn[r.group] || !months.includes(r.month)) return;
         if (whereFocus && r.species !== whereFocus) return;
         const p = projection.containerPointFromCoords(new kakao.maps.LatLng(r.lat, r.lng));
-        if (p.x < 0 || p.y < 0 || p.x > box.clientWidth || p.y > box.clientHeight) return;
-        const key = Math.floor(p.x / CRITTER_CELL) + "," + Math.floor(p.y / CRITTER_CELL);
-        const cell = cells[key] || (cells[key] = { species: {}, all: 0 });
-        const s = cell.species[r.species] || (cell.species[r.species] = { n: 0, lat: 0, lng: 0, emoji: r.emoji });
-        s.n++; s.lat += r.lat; s.lng += r.lng; cell.all++;
+        const key = Math.floor(p.x / cellPx) + "," + Math.floor(p.y / cellPx);
+        const s = bySpecies[r.species] || (bySpecies[r.species] = { emoji: r.emoji, cells: {} });
+        const cell = s.cells[key] || (s.cells[key] = { n: 0, lat: 0, lng: 0 });
+        cell.n++; cell.lat += r.lat; cell.lng += r.lng;
       });
-      Object.values(cells).forEach(function (cell) {
-        const names = Object.keys(cell.species).sort(function (a, b) { return cell.species[b].n - cell.species[a].n; });
-        const top = names[0], s = cell.species[top];
-        const pin = el("div", "critter-pin" + (whereFocus === top ? " on" : ""), s.emoji);
-        if (names.length > 1) pin.append(el("small", "", "+" + (names.length - 1)));
-        pin.title = top;
-        koreanName(top).then(function (kor) { pin.title = (kor || top) + (names.length > 1 ? " 외 " + (names.length - 1) + "가지" : ""); });
-        pin.addEventListener("click", function () { openCritter(top, names.slice(1, 6)); });
-        addOverlay({ lat: s.lat / s.n, lng: s.lng / s.n }, pin, 4);
+      const names = Object.keys(bySpecies);
+      const perSpecies = Math.max(1, Math.floor(CRITTER_MAX_PINS / Math.max(1, names.length)));
+      // 같은 칸에 여러 생물이 있으면 해바라기 씨처럼 둥글게 비켜 놓아요
+      const crowd = {};
+      names.forEach(function (name) {
+        const cells = Object.keys(bySpecies[name].cells).sort(function (a, b) { return bySpecies[name].cells[b].n - bySpecies[name].cells[a].n; });
+        cells.slice(0, perSpecies).forEach(function (key) { (crowd[key] = crowd[key] || []).push({ name: name, cell: bySpecies[name].cells[key] }); });
+      });
+      Object.values(crowd).forEach(function (list) {
+        list.sort(function (a, b) { return b.cell.n - a.cell.n; });
+        list.forEach(function (item, k) {
+          const angle = k * 2.4, radius = size * 0.75 * Math.sqrt(k);
+          const spot = {
+            lat: item.cell.lat / item.cell.n - Math.sin(angle) * radius * latPerPx,
+            lng: item.cell.lng / item.cell.n + Math.cos(angle) * radius * lngPerPx
+          };
+          const pin = el("div", "critter-pin" + (whereFocus === item.name ? " on" : ""), bySpecies[item.name].emoji);
+          pin.style.width = pin.style.height = size + "px";
+          pin.style.fontSize = Math.round(size * 0.6) + "px";
+          pin.style.lineHeight = (size - 4) + "px";
+          if (size < 24) pin.style.borderWidth = "1px";
+          pin.title = item.name + " · " + item.cell.n + "건";
+          pin.addEventListener("mouseenter", function () { koreanName(item.name).then(function (kor) { pin.title = (kor || item.name) + " · 이곳 기록 " + item.cell.n + "건"; }); });
+          const others = list.filter(function (o) { return o !== item; }).slice(0, 5).map(function (o) { return o.name; });
+          pin.addEventListener("click", function () { openCritter(item.name, others); });
+          const holder = el("div"); // 지도가 바깥 상자의 모양을 바꿔도 그림 크기는 그대로 있게 한 겹 감싸요
+          holder.append(pin);
+          addOverlay(spot, holder, 4);
+        });
       });
     }
 
@@ -2000,11 +2039,123 @@
     function wikiSummary(title) {
       if (!wikiCache.has(title)) {
         wikiCache.set(title, fetch("https://ko.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")))
-          .then(function (response) { return response.ok ? response.json() : null; })
+          .then(function (response) {
+            if (response.status === 404) return null;
+            if (!response.ok) throw new Error("WIKI_BUSY"); // 너무 많이 물어봐서 잠깐 막혔을 때는 "없음"으로 기억하지 않아요
+            return response.json();
+          })
           .then(function (data) { return data && data.type !== "disambiguation" && data.extract ? data : null; })
-          .catch(function () { return null; }));
+          .catch(function () { wikiCache.delete(title); return null; }));
       }
       return wikiCache.get(title);
+    }
+    // 위키백과에서 글 제목이 달라 못 찾을 때: 학명으로 위키백과 안을 검색해서 첫 글을 가져와요
+    const wikiSearchCache = new Map();
+    function wikiSearch(words) {
+      if (!wikiSearchCache.has(words)) {
+        wikiSearchCache.set(words, fetch("https://ko.wikipedia.org/w/api.php?action=query&list=search&srlimit=1&format=json&origin=*&srsearch=" + encodeURIComponent('"' + words + '"'))
+          .then(function (response) { return response.ok ? response.json() : null; })
+          .then(function (data) {
+            const hit = data && data.query && data.query.search && data.query.search[0];
+            if (!hit || /목록/.test(hit.title)) return null;
+            // 그 학명이 글 첫머리에 나오는 글만 써요 (다른 글이 걸리지 않게)
+            return wikiSummary(hit.title).then(function (summary) {
+              return summary && summary.extract.toLowerCase().includes(words.toLowerCase()) ? summary : null;
+            });
+          })
+          .catch(function () { return null; }));
+      }
+      return wikiSearchCache.get(words);
+    }
+    // critter-info.json: 위키백과에 한국어 설명이 없는 생물을 백과사전·나무위키·수산 자료 등을 읽고 우리 말로 짧게 써 둔 것 (학명으로 찾아요)
+    let critterInfo = null;
+    function loadCritterInfo() {
+      if (!critterInfo) {
+        critterInfo = fetch("critter-info.json").then(function (response) { return response.ok ? response.json() : {}; })
+          .then(function (data) { return data.species || {}; }).catch(function () { return {}; });
+      }
+      return critterInfo;
+    }
+    // 위키데이터: 학명(P225)으로 그 생물을 정확히 찾아서, 한국어 위키백과 글 제목·한국 이름·위 무리(P171)를 알아내요
+    const WIKIDATA = "https://www.wikidata.org/w/api.php?format=json&origin=*&";
+    const wikidataCache = new Map();
+    function wikidataEntity(id) {
+      if (!wikidataCache.has(id)) {
+        wikidataCache.set(id, fetch(WIKIDATA + "action=wbgetentities&props=claims|sitelinks|labels&sitefilter=kowiki&languages=ko&ids=" + id)
+          .then(function (response) { return response.ok ? response.json() : null; })
+          .then(function (data) {
+            const item = data && data.entities && data.entities[id];
+            if (!item) return null;
+            const claim = function (p) { const c = item.claims && item.claims[p] && item.claims[p][0]; return c && c.mainsnak.datavalue ? c.mainsnak.datavalue.value : null; };
+            const parent = claim("P171");
+            return {
+              ko: item.sitelinks && item.sitelinks.kowiki ? item.sitelinks.kowiki.title : null,
+              label: item.labels && item.labels.ko ? item.labels.ko.value : null,
+              name: claim("P225"), parent: parent ? parent.id : null
+            };
+          })
+          .catch(function () { wikidataCache.delete(id); return null; }));
+      }
+      return wikidataCache.get(id);
+    }
+    async function wikidataTaxon(species) {
+      try {
+        const data = await (await fetch(WIKIDATA + "action=query&list=search&srlimit=1&srsearch=" + encodeURIComponent('haswbstatement:"P225=' + species + '"'))).json();
+        const hit = data.query && data.query.search && data.query.search[0];
+        return hit ? { id: hit.title, item: await wikidataEntity(hit.title) } : null;
+      } catch (error) {
+        return null;
+      }
+    }
+    // 위키백과 글이 정말 그 생물 이야기인지 확인해요 (예: "대수리"로 찾으면 고둥이 아니라 마을 이름이 나와요)
+    function aboutTaxon(summary, species) {
+      const text = summary ? summary.extract.toLowerCase() : "";
+      return text.includes(species.split(" ")[0].toLowerCase());
+    }
+    // 설명 찾는 차례: ① 우리가 써 둔 설명 ② 위키데이터로 찾은 한국어 위키백과 ③ 한국 이름 위키백과(학명이 나오는 글만)
+    // ④ 학명 위키백과 ⑤ 위키백과 안에서 학명 검색 ⑥ 위 무리(속·과·목)의 한국어 위키백과
+    async function critterAbout(species, kor) {
+      species = species.replace(/ \([^)]*\)/, ""); // "Macrophthalmus (Mareotis) japonicus"처럼 괄호 속 무리 이름은 빼요
+      const mine = (await loadCritterInfo())[species];
+      if (mine) return { mine: mine };
+      const taxon = await wikidataTaxon(species);
+      const label = taxon && taxon.item && taxon.item.label;
+      if (taxon && taxon.item && taxon.item.ko) {
+        const wiki = await wikiSummary(taxon.item.ko);
+        if (wiki) return { wiki: wiki, label: label };
+      }
+      const plain = kor ? kor.replace(/\(.*\)/, "").trim() : "";
+      const byName = plain && await wikiSummary(plain);
+      if (byName && aboutTaxon(byName, species)) return { wiki: byName, label: label };
+      const bySci = (await wikiSummary(species)) || await wikiSearch(species);
+      if (bySci) return { wiki: bySci, label: label };
+      // 위 무리로 올라가며 한국어 위키백과 글이 있는 첫 무리를 찾아요 (6단계까지). 가장 가까운 무리의 한국 이름도 기억해요
+      let parent = taxon && taxon.item && taxon.item.parent;
+      let near = null; // 가장 가까운 한국 이름이 있는 무리 (예: 뿔소라과)
+      for (let step = 0; parent && step < 6; step++) {
+        const up = await wikidataEntity(parent);
+        if (!up) break;
+        if (!near && up.label) near = up.label;
+        if (up.ko) {
+          const wiki = await wikiSummary(up.ko);
+          if (wiki) return { wiki: wiki, label: label, group: up.label || up.name || up.ko, near: near };
+        }
+        parent = up.parent;
+      }
+      return { label: label, near: near };
+    }
+    function moreLinks(name) {
+      // 더 알아보기: 나무위키, 네이버 지식백과(두산백과 등) 검색을 새 창으로 열어요
+      const row = el("div", "row");
+      row.style.marginTop = "6px";
+      [["📚 나무위키", "https://namu.wiki/w/" + encodeURIComponent(name)], ["📖 네이버 지식백과", "https://terms.naver.com/search.naver?query=" + encodeURIComponent(name)]].forEach(function (pair) {
+        const link = el("a", "soft", pair[0]);
+        link.href = pair[1];
+        link.target = "_blank";
+        link.rel = "noopener";
+        row.append(link);
+      });
+      return row;
     }
     let critterOpen = null;
     async function openCritter(species, others) {
@@ -2023,11 +2174,13 @@
       for (let m = 1; m <= 12; m++) {
         const bar = el("i", now.includes(m) ? "now" : "");
         bar.style.height = Math.round(months[m] / most * 100) + "%";
-        bar.title = m + "월 " + months[m] + "번";
+        bar.title = m + "월 " + months[m] + "건";
+        bar.dataset.n = months[m]; // 막대 위에 건수를 적어요
         bars.append(bar);
       }
       const total = months.reduce(function (a, b) { return a + b; }, 0);
-      $("critterMeta").textContent = "이 바다에서 1년 동안 " + total + "번 기록됐어요." + (others && others.length ? " 같은 자리의 다른 생물도 있어요." : "");
+      const picked = now.reduce(function (sum, m) { return sum + months[m]; }, 0);
+      $("critterMeta").textContent = "이 바다에서 1년 동안 모두 " + total + "건 기록됐어요. 고른 때(" + (now.length === 12 ? "1년 내내" : now.join("·") + "월") + ")에는 " + picked + "건이에요." + (others && others.length ? " 같은 자리의 다른 생물도 있어요." : "");
       const wiki = $("critterWiki");
       wiki.textContent = "설명을 찾는 중…";
       if (!$("critterDialog").open) $("critterDialog").showModal();
@@ -2047,12 +2200,36 @@
         });
         $("critterMeta").append(row);
       }
-      const data = (kor && await wikiSummary(kor.replace(/\(.*\)/, "").trim())) || await wikiSummary(species);
+      const about = await critterAbout(species, kor);
       if (critterOpen !== species) return;
       wiki.textContent = "";
-      if (!data) {
-        wiki.append(document.createTextNode("아직 이 생물의 설명을 찾지 못했어요. 사진을 찍었다면 🤖 AI에게 물어보세요."));
+      if (!kor && about.label) $("critterName").textContent = about.label; // 한국 이름을 몰랐으면 위키데이터의 한국 이름으로
+      const searchName = kor ? kor.replace(/\(.*\)/, "").trim() : (about.mine && about.mine.kor) || about.label || species;
+      if (about.mine) {
+        // 우리가 백과사전·나무위키 등을 읽고 써 둔 설명
+        if (about.mine.kor && !kor) $("critterName").textContent = about.mine.kor;
+        wiki.append(document.createTextNode(about.mine.text), el("br"));
+        const from = el("small", "", "출처(읽고 다시 씀): ");
+        (about.mine.src || []).forEach(function (s, i) {
+          const link = el("a", "", s.title);
+          link.href = s.url;
+          link.target = "_blank";
+          link.rel = "noopener";
+          if (i) from.append(document.createTextNode(" · "));
+          from.append(link);
+        });
+        wiki.append(from, moreLinks(searchName));
         return;
+      }
+      const data = about.wiki;
+      if (!data) {
+        wiki.append(document.createTextNode((about.near ? "이 생물은 '" + about.near + "' 무리에 속해요. " : "") +
+          "아직 자세한 설명을 찾지 못했어요. 아래 버튼으로 더 찾아보거나, 사진을 찍었다면 🤖 AI에게 물어보세요."), moreLinks(searchName));
+        return;
+      }
+      if (about.group) {
+        wiki.append(el("b", "", "이 생물만의 설명은 아직 없어서, 이 생물이 속한 큰 무리(" + about.group + ") 설명을 보여 줘요." +
+          (about.near && about.near !== about.group ? " 더 가까운 무리는 '" + about.near + "'예요." : "")), el("br"));
       }
       if (data.thumbnail && data.thumbnail.source) {
         const img = el("img");
@@ -2065,7 +2242,7 @@
       link.href = (data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page) || "https://ko.wikipedia.org";
       link.target = "_blank";
       link.rel = "noopener";
-      wiki.append(link);
+      wiki.append(link, moreLinks(searchName));
     }
     $("critterClose").addEventListener("click", function () { $("critterDialog").close(); });
     $("critterDialog").addEventListener("click", function (event) { if (event.target === this) this.close(); });
