@@ -1,0 +1,2049 @@
+{
+ "note" : "ë¸ë¡ê·¸Â·ì íë¸Â·ì¹´íÂ·ê¸°ì¬Â·ê³µì ëë¦¬ì§ ê¸ì ì½ê³  ì§§ê² ì°ë¦¬ ë§ë¡ ì ë¦¬í¨. ê¸ì ê·¸ëë¡ ì®ê¸°ì§ ìì.",
+ "places" : [
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      9,
+      10,
+      11
+     ],
+     "name" : "감성돔",
+     "note" : "돌산 바다에서 낚시꾼에게 인기 최고인 물고기예요",
+     "src" : [
+      0,
+      1,
+      2,
+      3,
+      4
+     ],
+     "where" : "방파제·갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      8,
+      9,
+      10,
+      11
+     ],
+     "name" : "갈치",
+     "note" : "가을밤에 많이 올라오는 길고 반짝이는 물고기",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [
+      5,
+      6,
+      9,
+      10,
+      11
+     ],
+     "name" : "갑오징어",
+     "note" : "봄과 가을에 잘 잡혀요. 먹물을 쏘니 조심!",
+     "src" : [
+      0,
+      1,
+      3
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      12,
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "name" : "볼락",
+     "note" : "해초 사이에 숨어 살고 밤에 잘 물어요",
+     "src" : [
+      0,
+      1,
+      2,
+      3,
+      4
+     ],
+     "where" : "해초 많은 방파제·갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "농어",
+     "note" : "힘이 아주 센 물고기예요. 늦가을에도 나와요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "방파제·갯바위"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "무늬오징어",
+     "note" : "몸에 무늬가 있는 큰 오징어예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      12
+     ],
+     "name" : "학꽁치",
+     "note" : "입이 바늘처럼 뾰족하고 몸이 가늘어요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "도다리",
+     "note" : "납작한 몸으로 바닥에 붙어 지내요",
+     "src" : [
+      0,
+      1,
+      3
+     ],
+     "where" : "모래 바닥 방파제"
+    },
+    {
+     "emoji" : "🦪",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "굴",
+     "note" : "바위에 붙어 사는 자연산 굴. 껍데기가 날카로워요",
+     "src" : [
+      2
+     ],
+     "where" : "봉화산 아래 바닷가 바위"
+    },
+    {
+     "emoji" : "🪼",
+     "how" : "관찰",
+     "months" : [
+      7
+     ],
+     "name" : "보름달물해파리",
+     "note" : "여름에 떼로 나타나요. 만지지 말고 구경만!",
+     "src" : [
+      5
+     ],
+     "where" : "가막만 쪽 바다"
+    }
+   ],
+   "kind" : "island",
+   "name" : "돌산도",
+   "sources" : [
+    {
+     "title" : "갈치와 갑오징어의 고장 돌산도 가을 포인트 10",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=13625"
+    },
+    {
+     "title" : "온라인낚시지도 돌산(방죽포)",
+     "type" : "blog",
+     "url" : "http://fishingmap.co.kr/mobile/m_map_view.php?no=3816"
+    },
+    {
+     "title" : "박상건의 섬과 등대이야기 돌산도",
+     "type" : "official",
+     "url" : "https://www.korea.kr/news/policyNewsView.do?newsId=65053288"
+    },
+    {
+     "title" : "여수관광문화 돌산도",
+     "type" : "official",
+     "url" : "https://www.yeosu.go.kr/tour/travel/island_beach?mode=view&idx=285"
+    },
+    {
+     "title" : "여수 돌산 신기방파제 낚시 포인트",
+     "type" : "blog",
+     "url" : "https://www.bfg-fishing.com/fishing-spots/yeosu-dolsan-singi-breakwater"
+    },
+    {
+     "title" : "여수 가막만 해파리 주의보 (2012)",
+     "type" : "news",
+     "url" : "https://edaily.co.kr/News/Read?mediaCodeNo=257&newsId=02909366599592880"
+    }
+   ],
+   "summary" : "갯바위와 방파제가 많은 큰 섬이에요. 가을에는 갈치와 갑오징어, 겨울에는 볼락을 잡으러 사람들이 와요.",
+   "thin" : false
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "갑오징어",
+     "note" : "가짜 새우 미끼로 많이 노리는 오징어",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "임포(향일암) 방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "볼락",
+     "note" : "바위 틈에 사는 눈 큰 물고기예요",
+     "src" : [
+      1
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "감성돔",
+     "note" : "작은 것은 자주 보이지만 큰 건 드물대요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제·갯바위"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "무늬오징어",
+     "note" : "돌산에서 이 오징어를 노릴 수 있는 곳 중 하나",
+     "src" : [
+      0
+     ],
+     "where" : "향일암 방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "갈치",
+     "note" : "은빛 띠처럼 생긴 물고기예요",
+     "src" : [
+      0
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "노래미",
+     "note" : "바닥 가까이 사는 물고기예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "항구 안쪽·바닥"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "보리멸",
+     "note" : "모래 바닥을 좋아하는 날씬한 물고기",
+     "src" : [
+      0
+     ],
+     "where" : "항구 안쪽 모래 바닥"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "도다리",
+     "note" : "멀리 던지는 낚시로 잡혀요",
+     "src" : [
+      1
+     ],
+     "where" : "바닥"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "붕장어",
+     "note" : "뱀처럼 긴 물고기. 물 수 있어 조심해요",
+     "src" : [
+      1
+     ],
+     "where" : "바닥"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "조피볼락",
+     "note" : "우럭이라고도 불러요. 바위 근처 바닥에 살아요",
+     "src" : [
+      1
+     ],
+     "where" : "바닥"
+    }
+   ],
+   "kind" : "island",
+   "name" : "향일암",
+   "sources" : [
+    {
+     "title" : "돌산도 가을 포인트 10 (임포방파제)",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=13625"
+    },
+    {
+     "title" : "온라인낚시지도 향일암 포인트",
+     "type" : "blog",
+     "url" : "http://m.fishingmap.co.kr/m_map_view.php?no=3812"
+    },
+    {
+     "title" : "박상건의 섬과 등대이야기 돌산도",
+     "type" : "official",
+     "url" : "https://www.korea.kr/news/policyNewsView.do?newsId=65053288"
+    }
+   ],
+   "summary" : "향일암 아래 임포 방파제와 갯바위는 낚시하기 좋은 곳이에요. 갑오징어와 볼락이 대표예요.",
+   "thin" : false,
+   "warn" : "갯바위 중에는 걸어가기 위험한 곳이 있어서 배로 가라는 글이 있어요. 어른과 함께 가요."
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [
+      2,
+      3,
+      4,
+      5
+     ],
+     "name" : "도다리",
+     "note" : "봄에 가장 많이 잡혔던 납작한 물고기",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제 모래 바닥"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [],
+     "name" : "감성돔",
+     "note" : "남해에서 인기 많은 검은 줄무늬 물고기",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [],
+     "name" : "볼락",
+     "note" : "눈이 크고 바위 근처에 사는 물고기",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [],
+     "name" : "노래미",
+     "note" : "바닥 근처에서 지내는 물고기예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [
+      9,
+      10,
+      11
+     ],
+     "name" : "갈치",
+     "note" : "가을 밤낚시로 알려졌던 물고기예요",
+     "src" : [
+      1
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [
+      6
+     ],
+     "name" : "양태",
+     "note" : "머리가 납작하고 넓어요. 6월부터 나와요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "모래 바닥"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시 (예전)",
+     "months" : [
+      6
+     ],
+     "name" : "보리멸",
+     "note" : "여름이 시작될 때 나오는 날씬한 물고기",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "모래 바닥"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "소라",
+     "note" : "국립공원이라 규칙을 꼭 지켜야 해요",
+     "src" : [
+      2
+     ],
+     "where" : "섬 둘레 바위 틈"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "고둥",
+     "note" : "물이 빠지면 바위에서 쉽게 보여요",
+     "src" : [
+      2
+     ],
+     "where" : "바위 위"
+    },
+    {
+     "emoji" : "⭐",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "해삼",
+     "note" : "웅덩이 바닥에 숨어 있어요. 보기만 해요",
+     "src" : [
+      2
+     ],
+     "where" : "바위 웅덩이 바닥"
+    }
+   ],
+   "kind" : "island",
+   "name" : "오동도",
+   "sources" : [
+    {
+     "title" : "여수 바다낚시 포인트 오동도 방파제",
+     "type" : "cafe",
+     "url" : "https://m.cafe.daum.net/rlfdn/RimG/39?listURI=%2Frlfdn%2FRimG"
+    },
+    {
+     "title" : "여수 오동도 방파제 낚시 포인트",
+     "type" : "blog",
+     "url" : "https://www.bfg-fishing.com/fishing-spots/yeosu-odongdo-breakwater"
+    },
+    {
+     "title" : "여수 오동도 해안 해루질 포인트",
+     "type" : "blog",
+     "url" : "https://www.bfg-fishing.com/fishing-spots/tidepooling-yeosu-odongdo"
+    }
+   ],
+   "summary" : "긴 방파제로 이어진 동백섬이에요. 예전에는 봄에 도다리 낚시를 많이 했고, 바위 해안에는 고둥과 해삼이 살아요.",
+   "thin" : false,
+   "warn" : "오동도 방파제는 지금 낚시가 금지됐다는 글이 있어요(벌금, CCTV). 아래 물고기는 예전 기록이에요. 한려해상국립공원이라 전복 같은 생물을 따면 안 돼요."
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐦",
+     "how" : "관찰",
+     "months" : [
+      1
+     ],
+     "name" : "바다가마우지",
+     "note" : "아주 많이 몰려와서 똥 때문에 나무가 하얘졌대요",
+     "src" : [
+      1
+     ],
+     "where" : "섬 나무 위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "감성돔",
+     "note" : "섬 맞은편 바다에서 잘 잡힌대요",
+     "src" : [
+      0
+     ],
+     "where" : "장군도 맞은편 중앙동 선착장"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "볼락",
+     "note" : "바위 근처에 사는 눈 큰 물고기",
+     "src" : [
+      0
+     ],
+     "where" : "장군도 맞은편 중앙동 선착장"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "도다리",
+     "note" : "바닥에 납작 붙어 사는 물고기",
+     "src" : [
+      0
+     ],
+     "where" : "장군도 맞은편 중앙동 선착장"
+    },
+    {
+     "emoji" : "🐠",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "놀래기",
+     "note" : "알록달록한 색을 가진 물고기예요",
+     "src" : [
+      0
+     ],
+     "where" : "장군도 맞은편 중앙동 선착장"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "갑오징어",
+     "note" : "등에 단단한 뼈가 있는 오징어예요",
+     "src" : [
+      0
+     ],
+     "where" : "장군도 맞은편 중앙동 선착장"
+    }
+   ],
+   "kind" : "island",
+   "name" : "장군도",
+   "sources" : [
+    {
+     "title" : "여수관광문화 돌산도 (중앙동 선착장 낚시)",
+     "type" : "official",
+     "url" : "https://www.yeosu.go.kr/tour/travel/island_beach?mode=view&idx=285"
+    },
+    {
+     "title" : "장군도가 아파요, 바다가마우지떼의 습격",
+     "type" : "news",
+     "url" : "https://www.netongs.com/news/articleView.html?idxno=317733"
+    },
+    {
+     "title" : "여수 바닷속 국내 유일의 수중성 장군성",
+     "type" : "news",
+     "url" : "http://www.atlasnews.co.kr/news/articleView.html?idxno=1772"
+    }
+   ],
+   "summary" : "돌산대교 밑 작은 무인도예요. 물이 빠지면 옛 바닷속 돌성이 보이고, 겨울에는 가마우지 떼가 와요.",
+   "thin" : true
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐚",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "조개",
+     "note" : "웅천 해변에서 조개 캐기를 해 본 후기가 있어요",
+     "src" : [
+      0
+     ],
+     "where" : "장도 앞 웅천친수공원 모래 해변"
+    },
+    {
+     "emoji" : "🪼",
+     "how" : "관찰",
+     "months" : [
+      7
+     ],
+     "name" : "보름달물해파리",
+     "note" : "장도가 있는 가막만에 여름에 떼로 나왔어요",
+     "src" : [
+      1,
+      2
+     ],
+     "where" : "가막만 바다"
+    }
+   ],
+   "kind" : "island",
+   "name" : "장도",
+   "sources" : [
+    {
+     "title" : "웅천친수공원 아이와 갈 곳",
+     "type" : "cafe",
+     "url" : "https://mom-mom.net/travel/places/64e59d5bed38876c4776045a"
+    },
+    {
+     "title" : "여수 가막만 해파리 주의보 (2012)",
+     "type" : "news",
+     "url" : "https://edaily.co.kr/News/Read?mediaCodeNo=257&newsId=02909366599592880"
+    },
+    {
+     "title" : "만조엔 바다 위 걷는 듯, 진섬다리 건너면 예술가의 섬",
+     "type" : "news",
+     "url" : "https://v.daum.net/v/20260402043354379"
+    }
+   ],
+   "summary" : "진섬다리를 건너는 예술섬이에요. 섬 자체의 바다 생물 이야기는 거의 없고, 앞 웅천 바닷가에서 조개를 캐요.",
+   "thin" : true
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+     ],
+     "name" : "감성돔",
+     "note" : "금오도의 대표 물고기예요. 5월은 잡으면 안 되는 달(금어기)이에요",
+     "src" : [
+      0,
+      2,
+      3,
+      4
+     ],
+     "where" : "갯바위·방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      12,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+     ],
+     "name" : "볼락",
+     "note" : "밤에 해초 근처에서 잘 물어요",
+     "src" : [
+      0,
+      1,
+      2,
+      5
+     ],
+     "where" : "방파제·해초 있는 곳"
+    },
+    {
+     "emoji" : "🐠",
+     "how" : "낚시",
+     "months" : [
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "벵에돔",
+     "note" : "초여름부터 갯바위에서 잡히기 시작해요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐠",
+     "how" : "낚시",
+     "months" : [
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "돌돔",
+     "note" : "줄무늬가 있는 힘센 물고기예요",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [
+      6
+     ],
+     "name" : "무늬오징어",
+     "note" : "가짜 새우 미끼로 잡아요. 6월쯤 큰 것이 들어와요",
+     "src" : [
+      1,
+      5
+     ],
+     "where" : "방파제·갯바위"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [
+      6,
+      11
+     ],
+     "name" : "갑오징어",
+     "note" : "몸 안에 넓적한 뼈가 있는 오징어예요",
+     "src" : [
+      1,
+      2,
+      7
+     ],
+     "where" : "방파제·배"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "학꽁치",
+     "note" : "주둥이가 바늘처럼 긴 물고기. 떼로 몰려다녀요",
+     "src" : [
+      0,
+      2
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      6
+     ],
+     "name" : "전갱이",
+     "note" : "고등어와 함께 떼로 와서 초보도 쉽게 잡아요",
+     "src" : [
+      1,
+      2
+     ],
+     "where" : "방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "농어",
+     "note" : "몸이 길고 은빛인 빠른 물고기예요",
+     "src" : [
+      1
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "⭐",
+     "how" : "관찰",
+     "months" : [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+     ],
+     "name" : "성게",
+     "note" : "가시가 뾰족해 맨손은 아파요. 국립공원이라 따면 안 돼요",
+     "src" : [
+      6
+     ],
+     "where" : "바위 해안"
+    }
+   ],
+   "kind" : "island",
+   "name" : "금오도",
+   "sources" : [
+    {
+     "title" : "금오도 잡어 속 감성돔 낚는 비결 (월간 낚시춘추)",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=12835"
+    },
+    {
+     "title" : "섬 낚시여행 가이드 여수 금오도·안도",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=15382"
+    },
+    {
+     "title" : "섬으로 떠나는 낚시와 여행 금오도와 안도",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=13906"
+    },
+    {
+     "title" : "[조황] 여수 금오도 50㎝ 감성돔 (국제신문)",
+     "type" : "news",
+     "url" : "https://www.kookje.co.kr/news2011/asp/newsbody.asp?code=1600&key=20230216.22013003529"
+    },
+    {
+     "title" : "금오열도 출조 감성돔 조황 게시판",
+     "type" : "cafe",
+     "url" : "http://www.ybada.co.kr/technote6/board.php?board=ybada011&page=37&shwhere=subject&command=body&no=34006"
+    },
+    {
+     "title" : "금오도 우학리 방파제 낚시 포인트",
+     "type" : "blog",
+     "url" : "https://www.bfg-fishing.com/fishing-spots/yeosu-geumodo-uhakri-breakwater"
+    },
+    {
+     "title" : "여수 금오도 해안 해루질 포인트",
+     "type" : "blog",
+     "url" : "https://www.bfg-fishing.com/fishing-spots/tidepooling-yeosu-geumodo"
+    },
+    {
+     "title" : "여수바다 갑오징어 낚시 조황 (인터넷바다낚시)",
+     "type" : "cafe",
+     "url" : "https://www.innak.kr/bbs/board.php?bo_table=D13_2021&wr_id=50849"
+    }
+   ],
+   "summary" : "비렁길 아래 갯바위와 방파제가 이름난 낚시터예요. 감성돔, 볼락, 오징어 무리가 많이 잡혀요.",
+   "thin" : false
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      3,
+      4,
+      9,
+      10,
+      11
+     ],
+     "name" : "감성돔",
+     "note" : "봄과 가을에 잘 잡혀요. 5월은 잡으면 안 되는 달이에요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐡",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "복어",
+     "note" : "요즘 많이 늘었어요. 독이 있어서 절대 먹거나 맨손으로 만지면 안 돼요",
+     "src" : [
+      2
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      10
+     ],
+     "name" : "고등어",
+     "note" : "가을에 떼로 몰려와 미끼를 먼저 먹어 버려요",
+     "src" : [
+      1
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [
+      11
+     ],
+     "name" : "갑오징어",
+     "note" : "가을에 낚싯배를 타고 섬 둘레를 돌며 잡아요",
+     "src" : [
+      3
+     ],
+     "where" : "섬 둘레 바다(배)"
+    },
+    {
+     "emoji" : "🐙",
+     "how" : "낚시",
+     "months" : [
+      11
+     ],
+     "name" : "돌문어",
+     "note" : "바위 틈에 숨어 사는 문어예요. 빨판 힘이 세요",
+     "src" : [
+      3
+     ],
+     "where" : "섬 둘레 바다(배)"
+    },
+    {
+     "emoji" : "🐙",
+     "how" : "낚시",
+     "months" : [
+      9,
+      10,
+      11
+     ],
+     "name" : "주꾸미",
+     "note" : "손바닥만 한 작은 문어 친구예요. 여름에는 잡으면 안 되는 때가 있어요",
+     "src" : [
+      3
+     ],
+     "where" : "섬 둘레 바다(배)"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "양식",
+     "months" : [],
+     "name" : "참전복",
+     "note" : "미역과 다시마를 먹고 자라는 개도 특산물이에요",
+     "src" : [
+      4
+     ],
+     "where" : "앞바다 양식장"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "멸치",
+     "note" : "옛날 주민들이 몽돌 위에 멸치를 널어 말렸대요",
+     "src" : [
+      4
+     ],
+     "where" : "모전 몽돌해변"
+    }
+   ],
+   "kind" : "island",
+   "name" : "개도",
+   "sources" : [
+    {
+     "title" : "바낚포 여수 개도 포인트 정보",
+     "type" : "blog",
+     "url" : "http://www.banakpo.co.kr/point/pointList.do?point_seq_desc=292&c_latitude=34.55819320678711&c_longitude=127.63845825195313&point_level=8&mapmode=3&cate1=1&cate2=1"
+    },
+    {
+     "title" : "여수 개도 갯바위 감성돔 낚시 조황 정보",
+     "type" : "blog",
+     "url" : "https://fishingpoint.kr/seafishing/%EC%97%AC%EC%88%98-%EA%B0%9C%EB%8F%84-%EA%B0%AF%EB%B0%94%EC%9C%84-%EA%B0%90%EC%84%B1%EB%8F%94-%EB%82%9A%EC%8B%9C-%EC%A1%B0%ED%99%A9-%EC%A0%95%EB%B3%B4/"
+    },
+    {
+     "title" : "여수 근해 감성돔낚시 개도 대타로 찾아간 대두라도",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=16239"
+    },
+    {
+     "title" : "여수바다 갑오징어 낚시 조황 (인터넷바다낚시)",
+     "type" : "cafe",
+     "url" : "https://www.innak.kr/bbs/board.php?bo_table=D13_2021&wr_id=50849"
+    },
+    {
+     "title" : "다시 갈 수밖에, 개도 여행 (트래비)",
+     "type" : "news",
+     "url" : "https://www.travie.com/news/articleView.html?idxno=53148"
+    }
+   ],
+   "summary" : "가을과 봄에 감성돔 낚시로 알려진 섬이에요. 앞바다에서 키우는 참전복도 유명해요.",
+   "thin" : false
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "감성돔",
+     "note" : "섬 둘레 갯바위에서 잡혀요. 대부분 낚싯배로 들어가요",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "볼락",
+     "note" : "마을 방파제에서도 낚을 수 있어요",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위·방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "참돔",
+     "note" : "몸이 분홍빛인 도미예요",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "조피볼락",
+     "note" : "우럭이라고도 해요. 바위 밑에 숨어 사는 통통한 물고기",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "무늬오징어",
+     "note" : "갑오징어와 함께 이 섬 근처에서 잡혀요",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위·방파제"
+    },
+    {
+     "emoji" : "🌿",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "미역",
+     "note" : "바닷가에서 미역을 널어 말리는 모습을 볼 수 있어요",
+     "src" : [
+      1,
+      2
+     ],
+     "where" : "바닷가"
+    },
+    {
+     "emoji" : "🌿",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "톳",
+     "note" : "작은 열매처럼 오톨도톨한 바다풀이에요",
+     "src" : [
+      1
+     ],
+     "where" : "바닷가"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "멸치",
+     "note" : "선착장에서 주민들이 멸치를 말려요",
+     "src" : [
+      3
+     ],
+     "where" : "선착장"
+    }
+   ],
+   "kind" : "island",
+   "name" : "하화도",
+   "sources" : [
+    {
+     "title" : "피싱맵 조발수도-상화도, 하화도",
+     "type" : "blog",
+     "url" : "http://www.fishingmap.co.kr/fish_map_view.php?no=4375&wher=13"
+    },
+    {
+     "title" : "봄에는 꽃섬, 여수 하화도 (여행신문)",
+     "type" : "news",
+     "url" : "https://www.traveltimes.co.kr/news/articleView.html?idxno=408286"
+    },
+    {
+     "title" : "꽃섬 하화도, 봄바람 타고 걷는 바닷길 (여수넷통뉴스)",
+     "type" : "news",
+     "url" : "https://www.netongs.com/news/articleView.html?idxno=332191"
+    },
+    {
+     "title" : "바다에 떠있는 숨겨진 화원, 하화도 (오마이뉴스)",
+     "type" : "news",
+     "url" : "https://www.ohmynews.com/NWS_Web/View/at_pg.aspx?CNTN_CD=A0001870548"
+    }
+   ],
+   "summary" : "꽃섬으로 유명한 작은 섬이에요. 둘레 갯바위는 배로 가는 낚시터이고, 주민들은 미역과 멸치를 말려요.",
+   "thin" : true
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "⭐",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "해삼",
+     "note" : "바닷길이 열리는 날 주민과 여행객이 함께 주워요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "바닷길 뻘"
+    },
+    {
+     "emoji" : "🐙",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "낙지",
+     "note" : "뻘 구멍 속에 숨어 있어요. 다리 힘이 세요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "바닷길 뻘"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "고둥",
+     "note" : "돌돌 말린 껍데기를 가진 바다 달팽이예요",
+     "src" : [
+      0,
+      1,
+      2,
+      3
+     ],
+     "where" : "바닷길·바위"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "개불",
+     "note" : "뻘 속에 사는 길쭉한 분홍색 동물이에요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "바닷길 뻘"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "따개비",
+     "note" : "바위를 빽빽하게 덮고 있어요. 껍데기가 날카로워요",
+     "src" : [
+      3
+     ],
+     "where" : "용꼬리바위 근처 바위"
+    },
+    {
+     "emoji" : "🌿",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "미역",
+     "note" : "파래와 함께 물 빠진 바위에 붙어 있어요",
+     "src" : [
+      2
+     ],
+     "where" : "바닷길 바위"
+    }
+   ],
+   "kind" : "island",
+   "name" : "사도",
+   "sources" : [
+    {
+     "title" : "7월 추천여행, 섬과 섬으로 이어진 신비의 섬 여수 사도 (아주경제)",
+     "type" : "news",
+     "url" : "https://www.ajunews.com/view/20120624000226"
+    },
+    {
+     "title" : "섬과 섬으로 이어진 신비의 섬, 여수 사도",
+     "type" : "news",
+     "url" : "https://www.sateconomy.co.kr/news/view/179590849106603"
+    },
+    {
+     "title" : "여수 사도 바닷길 열리는 날 (경향신문 2015)",
+     "type" : "news",
+     "url" : "https://www.khan.co.kr/article/201503181223051"
+    },
+    {
+     "title" : "올망졸망 5개섬, 여수앞바다 모래섬 사도 (한국일보)",
+     "type" : "news",
+     "url" : "https://www.hankookilbo.com/news/article/200712100524376952"
+    },
+    {
+     "title" : "여수관광문화 추도 안내",
+     "type" : "official",
+     "url" : "https://www.yeosu.go.kr/tour/travel/island_beach?mode=view&idx=526"
+    }
+   ],
+   "summary" : "물이 크게 빠지는 날(1년에 몇 번) 섬들 사이에 바닷길이 열려요. 드러난 뻘과 바위에서 해삼, 낙지, 고둥을 만나요.",
+   "thin" : false,
+   "warn" : "바닷길은 물이 다시 들어오면 금방 잠겨요. 열리는 날과 시각을 꼭 확인하고 어른과 함께 걸어요."
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+     ],
+     "name" : "감성돔",
+     "note" : "여름엔 작은 것이, 가을엔 큰 것이 나와요. 5월은 금어기예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "규포리 갯바위·방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      12,
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "name" : "볼락",
+     "note" : "겨울엔 파도가 갑자기 올라오니 조심해요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "규포리 방파제·해초 근처"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "농어",
+     "note" : "작은 농어가 방파제 근처에서 잡혀요",
+     "src" : [
+      0
+     ],
+     "where" : "갯바위·방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      7,
+      8,
+      9,
+      10,
+      11
+     ],
+     "name" : "조피볼락",
+     "note" : "우럭이라고도 해요. 물이 차면 바위가 잠기니 일찍 나와요",
+     "src" : [
+      1
+     ],
+     "where" : "넙덕여 갯바위"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "해루질",
+     "months" : [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+     ],
+     "name" : "소라",
+     "note" : "마을이 관리하는 곳에서는 따면 안 돼요",
+     "src" : [
+      3
+     ],
+     "where" : "바위 틈"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "해루질",
+     "months" : [],
+     "name" : "고둥",
+     "note" : "물이 빠진 뒤 바위 위에서 쉽게 볼 수 있어요",
+     "src" : [
+      3
+     ],
+     "where" : "바위 표면"
+    },
+    {
+     "emoji" : "⭐",
+     "how" : "해루질",
+     "months" : [],
+     "name" : "해삼",
+     "note" : "물웅덩이 바닥에 조용히 붙어 있어요",
+     "src" : [
+      3
+     ],
+     "where" : "바위 웅덩이 바닥"
+    },
+    {
+     "emoji" : "🌿",
+     "how" : "관찰",
+     "months" : [
+      2,
+      3,
+      4,
+      5
+     ],
+     "name" : "톳",
+     "note" : "봄에 바위를 덮는 오톨도톨한 바다풀이에요",
+     "src" : [
+      3
+     ],
+     "where" : "바위"
+    },
+    {
+     "emoji" : "🐙",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "돌문어",
+     "note" : "섬 앞바다에서 잡힌 돌문어를 마을에서 볼 수 있어요",
+     "src" : [
+      4
+     ],
+     "where" : "섬 둘레 바다"
+    }
+   ],
+   "kind" : "island",
+   "name" : "낭도",
+   "sources" : [
+    {
+     "title" : "겨울바다 연안명당 여수·고흥 낚시터 (연육교 건너 섬 방파제)",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=15987"
+    },
+    {
+     "title" : "바낚포 여수 조발수도 낭도 넙덕여 포인트 정보",
+     "type" : "blog",
+     "url" : "http://www.banakpo.co.kr/point/pointList.do?point_seq_desc=284&c_latitude=34.59091567993164&c_longitude=127.53843688964844&point_level=8&mapmode=3&cate1=1&cate2=1"
+    },
+    {
+     "title" : "낭도 규포리에서 만난 탱글탱글 봄볼락",
+     "type" : "news",
+     "url" : "http://fishingseasons.co.kr/contents_view_detail.asp?b_no=13142"
+    },
+    {
+     "title" : "여수 낭도 해안 해루질 포인트",
+     "type" : "blog",
+     "url" : "https://www.bfg-fishing.com/fishing-spots/tidepooling-yeosu-nangdo"
+    },
+    {
+     "title" : "백리섬섬길 달려 여수 낭도 여행 (대한민국 구석구석)",
+     "type" : "official",
+     "url" : "https://korean.visitkorea.or.kr/detail/rem_detail.do?cotid=05fba8e9-622d-490d-b181-1d98772b72cd"
+    }
+   ],
+   "summary" : "다리로 차를 타고 가는 섬이에요. 방파제와 갯바위에서 감성돔과 볼락을 낚고, 물 빠진 바위에서 고둥과 소라를 찾아요.",
+   "thin" : false
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      4,
+      5,
+      6,
+      10,
+      11
+     ],
+     "name" : "참돔",
+     "note" : "붉은빛 큰 돔. 봄에 아주 큰 녀석이 잡혀요",
+     "src" : [
+      0,
+      1,
+      7
+     ],
+     "where" : "갯바위·선상"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "벵에돔",
+     "note" : "거문도 대표 물고기. 방파제에서도 많이 낚여요",
+     "src" : [
+      0,
+      1,
+      2
+     ],
+     "where" : "갯바위·방파제"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "돌돔",
+     "note" : "줄무늬가 있는 힘센 물고기. 여름에 잘 잡혀요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      10,
+      11,
+      12,
+      1,
+      2,
+      3
+     ],
+     "name" : "감성돔",
+     "note" : "검은 은빛 돔. 가을부터 겨울까지 인기예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "갯바위"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      7,
+      8,
+      9,
+      10,
+      11
+     ],
+     "name" : "갈치",
+     "note" : "밤에 불을 켜면 올라와요. 이빨이 날카로워 조심!",
+     "src" : [
+      3,
+      8
+     ],
+     "where" : "선상"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      12,
+      1,
+      2,
+      3
+     ],
+     "name" : "삼치",
+     "note" : "가짜 미끼를 배로 끌어 잡아요. 섬 축제도 열려요",
+     "src" : [
+      4,
+      5,
+      6
+     ],
+     "where" : "선상"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "부시리",
+     "note" : "빠르고 힘이 센 큰 물고기예요",
+     "src" : [
+      0,
+      7
+     ],
+     "where" : "선상·방파제"
+    },
+    {
+     "emoji" : "🦑",
+     "how" : "낚시",
+     "months" : [
+      9
+     ],
+     "name" : "무늬오징어",
+     "note" : "새우 모양 가짜 미끼로 잡는 큰 오징어예요",
+     "src" : [
+      8
+     ],
+     "where" : "갯바위·방파제"
+    }
+   ],
+   "kind" : "island",
+   "lat" : 34.0269,
+   "lng" : 127.3162,
+   "name" : "거문도",
+   "sources" : [
+    {
+     "title" : "바다타임 거문도 낚시 포인트·계절 어종",
+     "type" : "blog",
+     "url" : "https://www.badatime.com/51/spots"
+    },
+    {
+     "title" : "낚시춘추 특집 거문도 참돔 명당",
+     "type" : "news",
+     "url" : "https://m.fishingseasons.co.kr/news_Detail.asp?b_no=4694"
+    },
+    {
+     "title" : "낚시춘추 거문도의 명품 방파제들",
+     "type" : "news",
+     "url" : "https://fishingseasons.co.kr/contents_view_detail.asp?b_no=4870"
+    },
+    {
+     "title" : "제철 맞은 거문도 갈치잡이 (2007)",
+     "type" : "news",
+     "url" : "https://www.seoul.co.kr/news/2007/08/30/20070830022001"
+    },
+    {
+     "title" : "여수 삼치 납시오 (끌낚시 이야기)",
+     "type" : "blog",
+     "url" : "https://brunch.co.kr/@tnp/14"
+    },
+    {
+     "title" : "거문도 삼치축제 기사 (2023)",
+     "type" : "news",
+     "url" : "https://www.metroseoul.co.kr/article/20230406500368"
+    },
+    {
+     "title" : "KBS 거문도 삼치 어부들의 겨울",
+     "type" : "youtube",
+     "url" : "https://www.youtube.com/watch?v=-bQf2zlKAKU"
+    },
+    {
+     "title" : "대물이 바글바글한 거문도 낚시",
+     "type" : "youtube",
+     "url" : "https://www.youtube.com/watch?v=AIKF2Lv4B1E"
+    },
+    {
+     "title" : "2026년 10월 낚시 지역·어종 정리",
+     "type" : "blog",
+     "url" : "https://nakpick.com/monthly-fishing-2026-10/"
+    }
+   ],
+   "summary" : "먼바다 섬이라 물이 맑고 돔 종류가 많이 잡혀요. 밤 갈치와 겨울 삼치로도 유명해요.",
+   "thin" : false
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🪸",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "큰붉은산호",
+     "note" : "바닷속 바위에 붙어 사는 붉은 산호예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "바닷속"
+    },
+    {
+     "emoji" : "🪸",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "꽃산호",
+     "note" : "꽃처럼 생긴 산호. 백도 바닷속 보물이에요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "바닷속"
+    },
+    {
+     "emoji" : "🪸",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "해면",
+     "note" : "스펀지처럼 구멍이 숭숭 난 동물이에요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "바닷속"
+    },
+    {
+     "emoji" : "🪸",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "자색수지맨드라미",
+     "note" : "보라색 부드러운 산호. 멸종위기라 꼭 지켜야 해요",
+     "src" : [
+      3
+     ],
+     "where" : "바닷속"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "오분자기",
+     "note" : "작은 전복을 닮은 조개. 바다 온도 변화를 알려 줘요",
+     "src" : [
+      3
+     ],
+     "where" : "바닷속 바위"
+    },
+    {
+     "emoji" : "⭐",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "빨강불가사리",
+     "note" : "새빨간 별 모양 동물. 바다 변화를 살피는 생물이에요",
+     "src" : [
+      3
+     ],
+     "where" : "바닷속 바위"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "검은큰따개비",
+     "note" : "바위에 딱 붙어 사는 검은 따개비예요",
+     "src" : [
+      3
+     ],
+     "where" : "바위 물가"
+    },
+    {
+     "emoji" : "🐦",
+     "how" : "관찰",
+     "months" : [
+      3,
+      4,
+      5
+     ],
+     "name" : "뿔쇠오리",
+     "note" : "멸종위기 작은 바닷새. 백도 절벽에서 새끼를 키워요",
+     "src" : [
+      2
+     ],
+     "where" : "섬 둘레 바다"
+    },
+    {
+     "emoji" : "🐦",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "가마우지",
+     "note" : "잠수해서 물고기를 잡는 검은 바닷새예요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "바위섬"
+    }
+   ],
+   "kind" : "island",
+   "lat" : 34.05,
+   "lng" : 127.6,
+   "name" : "백도",
+   "sources" : [
+    {
+     "title" : "여수시 여수10경 거문도·백도",
+     "type" : "official",
+     "url" : "https://www.yeosu.go.kr/tour/travel/10tour/geomundo?print=true&page=1"
+    },
+    {
+     "title" : "디지털여수문화대전 백도",
+     "type" : "official",
+     "url" : "https://yeosu.grandculture.net/yeosu/toc/GC01300945"
+    },
+    {
+     "title" : "여수 백도 멸종위기 뿔쇠오리 집단 번식",
+     "type" : "news",
+     "url" : "https://www.hankookilbo.com/news/article/201606131553688077"
+    },
+    {
+     "title" : "해상국립공원 6개 섬 생태 비밀 밝힌다",
+     "type" : "official",
+     "url" : "https://www.korea.kr/news/examPassView.do?newsId=148768099"
+    }
+   ],
+   "summary" : "사람이 내릴 수 없는 보호 섬이라, 바닷속 산호와 바닷새가 잘 지켜지고 있어요. 유람선으로만 구경해요.",
+   "thin" : false
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🦪",
+     "how" : "양식",
+     "months" : [
+      11,
+      12,
+      1,
+      2
+     ],
+     "name" : "굴",
+     "note" : "물이 깨끗해서 굴이 달다고 해요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "양식장"
+    },
+    {
+     "emoji" : "🦪",
+     "how" : "양식",
+     "months" : [],
+     "name" : "홍합",
+     "note" : "굴보다 먼저 키우던 조개예요",
+     "src" : [
+      0
+     ],
+     "where" : "양식장"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [
+      12,
+      1,
+      2
+     ],
+     "name" : "새조개",
+     "note" : "속살이 새 부리를 닮은 조개. 키울 수 없어 해마다 양이 달라요",
+     "src" : [
+      2,
+      3,
+      4
+     ],
+     "where" : "바다 밑"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [
+      4,
+      5,
+      6
+     ],
+     "name" : "감성돔",
+     "note" : "봄에 알 낳으러 해초밭에 모여요",
+     "src" : [
+      5
+     ],
+     "where" : "해초밭·갯바위"
+    },
+    {
+     "emoji" : "🪼",
+     "how" : "관찰",
+     "months" : [
+      7
+     ],
+     "name" : "보름달물해파리",
+     "note" : "여름에 떼로 나타난 적이 있어요. 만지지 말아요",
+     "src" : [
+      7
+     ],
+     "where" : "만 안쪽 바다"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "양식",
+     "months" : [],
+     "name" : "벤자리",
+     "note" : "따뜻한 바다 물고기를 시험으로 키워 보려고 해요",
+     "src" : [
+      6
+     ],
+     "where" : "양식장"
+    }
+   ],
+   "kind" : "sea",
+   "lat" : 34.68,
+   "lng" : 127.65,
+   "name" : "가막만",
+   "sources" : [
+    {
+     "title" : "여수 가막만 청정 굴 제철",
+     "type" : "news",
+     "url" : "https://www.netongs.com/news/articleView.html?idxno=317711"
+    },
+    {
+     "title" : "여수 가막만 굴 대풍년 (뉴스데스크)",
+     "type" : "youtube",
+     "url" : "https://www.youtube.com/watch?v=hALicQ-igKo"
+    },
+    {
+     "title" : "청정해역 가막만의 새조개",
+     "type" : "news",
+     "url" : "https://www.dbltv.com/news/articleView.html?idxno=7865"
+    },
+    {
+     "title" : "여수 가막만 새조개 출하 한창",
+     "type" : "news",
+     "url" : "http://www.isusanin.com/news/articleView.html?idxno=6265"
+    },
+    {
+     "title" : "새부리를 닮은 귀족조개 새조개",
+     "type" : "official",
+     "url" : "https://fsis.go.kr/front/contents/cmsView.do?cate_id=0301&cnts_id=28541&select_list_no=9"
+    },
+    {
+     "title" : "가막만 등대섬 몰밭 감성돔",
+     "type" : "youtube",
+     "url" : "https://www.youtube.com/watch?v=C83erym7Im4"
+    },
+    {
+     "title" : "여수시 벤자리·개체굴 시범 양식",
+     "type" : "news",
+     "url" : "https://www.namdonews.com/news/articleView.html?idxno=831490"
+    },
+    {
+     "title" : "여수 가막만 해파리 주의보 (2012)",
+     "type" : "news",
+     "url" : "https://edaily.co.kr/News/Read?mediaCodeNo=257&newsId=02909366599592880"
+    }
+   ],
+   "summary" : "파도가 잔잔한 안쪽 바다라 굴·홍합 양식장이 많고, 겨울에는 새조개가 나요.",
+   "thin" : true
+  },
+  {
+   "creatures" : [
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [
+      11,
+      12,
+      1,
+      2,
+      3
+     ],
+     "name" : "새꼬막",
+     "note" : "여자만 대표 조개. 여름에 씨를 붙여 2년 키워요",
+     "src" : [
+      0,
+      1,
+      2,
+      8
+     ],
+     "where" : "갯벌"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "꼬막",
+     "note" : "참꼬막은 다 크는 데 4년쯤 걸려요",
+     "src" : [
+      0,
+      1
+     ],
+     "where" : "갯벌"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "관찰",
+     "months" : [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "name" : "짱뚱어",
+     "note" : "눈이 툭 튀어나온 물고기. 겁이 많아 금방 구멍에 숨어요",
+     "src" : [
+      5,
+      7
+     ],
+     "where" : "펄 갯벌"
+    },
+    {
+     "emoji" : "🐟",
+     "how" : "낚시",
+     "months" : [],
+     "name" : "망둥어",
+     "note" : "가을 갯벌 행사에서 대나무 낚싯대로 잡아 봐요",
+     "src" : [
+      3,
+      4
+     ],
+     "where" : "갯벌 물가"
+    },
+    {
+     "emoji" : "🐚",
+     "how" : "갯벌 체험",
+     "months" : [],
+     "name" : "바지락",
+     "note" : "호미로 갯벌을 살살 파면 나와요",
+     "src" : [
+      0,
+      3,
+      4
+     ],
+     "where" : "갯벌"
+    },
+    {
+     "emoji" : "🐙",
+     "how" : "관찰",
+     "months" : [
+      3,
+      4,
+      5
+     ],
+     "name" : "낙지",
+     "note" : "봄에 통발로 잡아요. 요즘은 줄었다고 해요",
+     "src" : [
+      6
+     ],
+     "where" : "갯벌·얕은 바다"
+    },
+    {
+     "emoji" : "🦪",
+     "how" : "관찰",
+     "months" : [
+      12,
+      1,
+      2
+     ],
+     "name" : "굴",
+     "note" : "갯벌 바닥에서도 자라요. 겨울에 손으로 따요",
+     "src" : [
+      0,
+      6
+     ],
+     "where" : "갯벌"
+    },
+    {
+     "emoji" : "🌿",
+     "how" : "관찰",
+     "months" : [],
+     "name" : "꼬시래기",
+     "note" : "꼬막 사는 곳에 함께 자라는 바다풀이에요",
+     "src" : [
+      1
+     ],
+     "where" : "갯벌"
+    }
+   ],
+   "kind" : "sea",
+   "lat" : 34.8,
+   "lng" : 127.45,
+   "name" : "여자만",
+   "sources" : [
+    {
+     "title" : "여자만 갯벌을 끌어안은 어촌 섬달천",
+     "type" : "official",
+     "url" : "https://korean.visitkorea.or.kr/detail/rem_detail.do?cotid=0b1f7bfc-5d54-4f15-b402-da1e738f5adc"
+    },
+    {
+     "title" : "여자만 꼬막 종패 채묘작업 한창",
+     "type" : "news",
+     "url" : "http://www.namdonews.com/news/articleView.html?idxno=388177"
+    },
+    {
+     "title" : "여수 여자만마을 새꼬막·갯벌체험 소개",
+     "type" : "youtube",
+     "url" : "https://www.youtube.com/watch?v=6RL0a_wH-dA"
+    },
+    {
+     "title" : "여수시 여자만 갯벌노을체험행사 안내",
+     "type" : "official",
+     "url" : "https://www.yeosu.go.kr/tour/culture_festa/yeojaman/information?print=true&page=1"
+    },
+    {
+     "title" : "갯벌에서 놀고 노을에 물드는 여자만의 가을",
+     "type" : "news",
+     "url" : "https://www.newscj.com/news/articleView.html?idxno=3431723"
+    },
+    {
+     "title" : "김준의 맛과 섬 벌교 짱뚱어",
+     "type" : "news",
+     "url" : "https://v.daum.net/v/ugZYytvapV?f=p"
+    },
+    {
+     "title" : "여수 달천마을과 섬달천마을 갯가 풍경",
+     "type" : "news",
+     "url" : "https://www.netongs.com/news/articleView.html?idxno=312884"
+    },
+    {
+     "title" : "짱뚱어 갯벌을 날다 (호남학산책)",
+     "type" : "official",
+     "url" : "https://www.hiks.or.kr/HonamHeritage/17/read/858"
+    },
+    {
+     "title" : "여수의 보물 여자만 새꼬막",
+     "type" : "cafe",
+     "url" : "https://m.cafe.daum.net/ynhasu0509/8mzO/6179?svc=cafeapi"
+    }
+   ],
+   "summary" : "넓은 펄 갯벌에 새꼬막과 짱뚱어가 살아요. 가을에는 갯벌 체험 행사도 열려요.",
+   "thin" : false,
+   "warn" : "갯벌에 들어갈 때는 물때(물이 들어오는 시각)를 꼭 확인하고 어른과 함께 가요."
+  }
+ ],
+ "updated" : "2026-10-28"
+}

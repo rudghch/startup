@@ -361,6 +361,27 @@
     .bars i.now { background: #ff8c00; }
     .critter-pin { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff; background: rgba(255, 255, 255, 0.92); font-size: 24px; line-height: 36px; text-align: center; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35); cursor: pointer; }
     .critter-pin.on { border-color: #ff8c00; transform: scale(1.15); }
+    /* 👀 사람들이 본 생물 */
+    .talk { padding: 10px 12px; border-radius: 12px; background: #fff8ee; }
+    .talk h3 { margin-top: 0; }
+    .talk-sum { margin: 8px 0; font-size: 14px; line-height: 1.6; }
+    .talk-card { margin-bottom: 6px; border: 1px solid #f0d9b5; border-radius: 10px; background: #fff; }
+    .talk-card > button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; background: none; text-align: left; }
+    .talk-card .emo { font-size: 24px; }
+    .talk-card .words { flex: 1; min-width: 0; }
+    .talk-card .words b { font-size: 15px; }
+    .talk-card .words small { display: block; color: #5b6272; font-size: 12px; line-height: 1.5; }
+    .talk-card .season { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: #eef3f6; color: #3d5866; font-size: 12px; }
+    .talk-card .season.now { background: #ff8c00; color: #fff; }
+    .talk-card.on { border-color: #ff8c00; }
+    .talk-more { padding: 0 10px 10px; font-size: 14px; line-height: 1.6; }
+    .talk-more img { float: right; width: 96px; max-height: 96px; margin: 0 0 6px 8px; border-radius: 8px; object-fit: cover; }
+    .talk-more a { color: #0b6e8a; }
+    .src-list { margin: 6px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.7; clear: both; }
+    .video-box { position: relative; margin-top: 6px; padding-top: 56.25%; border-radius: 10px; overflow: hidden; background: #000; }
+    .video-box iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .critter-pin.heard { border-color: #ff8c00; }
+    .critter-pin.heard small { background: #ff8c00; }
     .critter-pin small { position: absolute; right: -6px; bottom: -4px; min-width: 18px; padding: 0 4px; border-radius: 999px; background: #0b6e8a; color: #fff; font-size: 10px; line-height: 16px; }
     #critterDialog .big-emoji { font-size: 54px; line-height: 1; }
     #critterDialog h2 { margin: 4px 0 0; }
@@ -459,6 +480,13 @@
     <!-- 언제 어디에 살까? -->
     <section id="wherePane" hidden>
       <h2>🗺️ 언제 어디에 살까?</h2>
+      <div class="talk">
+        <h3>👀 사람들이 본 생물 (블로그·유튜브·카페 이야기)</h3>
+        <p class="note">섬이나 바다를 고르면, 사람들이 블로그·유튜브·카페·기사에 남긴 이야기를 모아 정리한 생물을 보여 줘요. 글은 그대로 옮기지 않고 짧게 정리했어요. 원래 글은 출처 링크로, 유튜브는 화면에서 바로 볼 수 있어요.</p>
+        <div class="chips" id="talkPlaces"></div>
+        <div id="talkBox"></div>
+      </div>
+      <h3 style="margin-top: 18px;">🔬 조사 기록으로 찾기 (OBIS)</h3>
       <p class="intro">지금 지도에 보이는 바다에서, 고른 날짜의 달(또는 계절)에 사람들이 실제로 만나 기록한 바다 생물을 보여 줘요. 국립해양생물자원관 해양생물 공간정보시스템도 쓰는 세계 바다 생물 기록(OBIS)이에요.</p>
       <div class="where-tools">
         <label>📅 날짜 <input type="date" id="whereDate"></label>
@@ -479,6 +507,7 @@
       <p class="intro">섬을 고르거나, 지도에 보이는 <b>파란 선</b>(로드뷰를 볼 수 있는 길)을 누르면 그 자리의 로드뷰가 나와요. 로드뷰 안에서 화살표를 누르면 길을 따라 걸어가요.</p>
       <div class="chips" id="islandList"></div>
       <p class="note" id="islandNote">섬을 고르거나 지도의 파란 선을 눌러 주세요.</p>
+      <button type="button" class="soft" id="islandTalkButton" hidden></button>
       <div class="roadview" id="roadview"></div>
       <div class="row" style="margin-top: 8px;">
         <a class="soft" id="naverLink" href="https://map.naver.com" target="_blank" rel="noopener">🟢 네이버 지도 거리뷰로 보기</a>
@@ -1746,7 +1775,7 @@
       [["month", month + "월만"], ["season", seasonOf(month) + " (" + SEASONS[seasonOf(month)].join("·") + "월)"], ["year", "1년 내내"]].forEach(function (pair) {
         const button = el("button", "soft" + (whereSpan === pair[0] ? " on" : ""), pair[1]);
         button.type = "button";
-        button.addEventListener("click", function () { whereSpan = pair[0]; drawWhereTools(); drawWhere(); });
+        button.addEventListener("click", function () { whereSpan = pair[0]; drawWhereTools(); drawWhere(); drawTalk(); });
         spanBox.append(button);
       });
       const groupBox = $("whereGroups");
@@ -1760,7 +1789,7 @@
       $("whereWhen").textContent = "📅 " + whereDate().toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) + "은 " + seasonOf(month) + "이에요. " +
         (whereSpan === "month" ? month + "월" : whereSpan === "season" ? seasonOf(month) : "1년 내내") + "에 기록된 생물을 보여 줘요.";
     }
-    $("whereDate").addEventListener("change", function () { drawWhereTools(); drawWhere(); });
+    $("whereDate").addEventListener("change", function () { drawWhereTools(); drawWhere(); drawTalk(); });
 
     // 지도에 보이는 바다의 기록 받기
     async function searchWhere() {
@@ -1937,6 +1966,7 @@
     const CRITTER_CELL = 70; // 화면을 이 크기(px) 칸으로 나눠서, 칸마다 가장 많이 기록된 생물 그림을 하나씩 띄워요
     function drawCritterPins() {
       clearMarks();
+      drawTalkPins(); // 👀 사람들이 본 생물 그림 (고른 섬·바다가 있을 때)
       if (pane !== "where" || !map || !whereRecords) return;
       const projection = map.getProjection();
       const box = $("mapWrap");
@@ -2047,6 +2077,191 @@
       bringIntoView($("mapWrap"));
     });
 
+    // ═════════ 👀 사람들이 본 생물 (블로그·유튜브·카페 이야기) ═════════
+    // island-life.json: 섬·바다마다 사람들이 블로그, 유튜브, 카페(커뮤니티), 기사, 공식 누리집에 남긴 글을 찾아 읽고
+    // 그곳에서 보거나 잡은 생물을 짧게 "우리 말로" 정리한 것이에요 (글을 그대로 옮기면 저작권 문제가 있어서요).
+    // 생물마다 src에 출처 번호가 있어서, 원래 글을 링크로 볼 수 있어요. 유튜브는 유튜브가 허락하는 퍼가기(embed)로 보여 줘요.
+    const TALK_FILE = "island-life.json";
+    const SOURCE_LOOKS = { blog: "📝 블로그", youtube: "▶️ 유튜브", cafe: "💬 카페·커뮤니티", news: "📰 기사", official: "🏛️ 공식 누리집" };
+    // 더 찾아보기 (새 창으로 검색만 열어요. 검색 결과를 가져오려면 네이버·유튜브 키와 서버가 필요해요)
+    const SEARCH_LINKS = [
+      ["📝 네이버 블로그", "https://search.naver.com/search.naver?where=blog&query="],
+      ["▶️ 유튜브", "https://www.youtube.com/results?search_query="],
+      ["💬 네이버 카페", "https://search.naver.com/search.naver?where=article&query="]
+    ];
+    let talkPlaces = [];
+    let talkPlace = null;  // 고른 섬·바다
+    let talkOpen = null;   // 펼친 생물 이름
+    async function loadTalk() {
+      try {
+        const data = await (await fetch(TALK_FILE)).json();
+        talkPlaces = data.places || [];
+      } catch (error) {
+        talkPlaces = [];
+      }
+      drawTalkPlaces();
+    }
+    function drawTalkPlaces() {
+      const box = $("talkPlaces");
+      box.textContent = "";
+      talkPlaces.forEach(function (place) {
+        const button = el("button", "soft" + (talkPlace === place ? " on" : ""), (place.kind === "sea" ? "🌊 " : "🏝️ ") + place.name);
+        button.type = "button";
+        button.addEventListener("click", function () { pickTalkPlace(talkPlace === place ? null : place); });
+        box.append(button);
+      });
+      if (!talkPlaces.length) box.append(el("p", "note", "정리한 이야기를 불러오지 못했어요."));
+    }
+    function pickTalkPlace(place) {
+      talkPlace = place;
+      talkOpen = null;
+      drawTalkPlaces();
+      drawTalk();
+      if (place) { moveMap(place.lat, place.lng, place.kind === "sea" ? 8 : 7); bringIntoView($("mapWrap")); }
+      drawCritterPins();
+    }
+    function monthsText(months) {
+      if (!months || !months.length) return "때 모름";
+      if (months.length >= 12) return "1년 내내";
+      // 이어진 달은 묶어요: [9,10,11] → 9~11월, [11,12,1,2] → 11~2월
+      const sorted = Array.from(new Set(months)).sort(function (a, b) { return a - b; });
+      const runs = [];
+      sorted.forEach(function (m) {
+        const last = runs[runs.length - 1];
+        if (last && last[1] === m - 1) last[1] = m; else runs.push([m, m]);
+      });
+      if (runs.length > 1 && runs[0][0] === 1 && runs[runs.length - 1][1] === 12) runs[0][0] = runs.pop()[0]; // 12월과 1월을 잇기
+      return runs.map(function (r) { return r[0] === r[1] ? r[0] + "월" : r[0] + "~" + r[1] + "월"; }).join(", ");
+    }
+    function youtubeId(url) {
+      const found = String(url).match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+      return found ? found[1] : null;
+    }
+    function sourceLink(source) {
+      const li = el("li");
+      const link = el("a", "", (SOURCE_LOOKS[source.type] || "🔗 글") + " · " + source.title);
+      link.href = source.url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      li.append(link);
+      const id = source.type === "youtube" && youtubeId(source.url);
+      if (id) {
+        const play = el("button", "soft", "▶ 여기서 보기");
+        play.type = "button";
+        play.style.marginLeft = "6px";
+        play.addEventListener("click", function () {
+          if (li.querySelector(".video-box")) return;
+          const box = el("div", "video-box");
+          const frame = document.createElement("iframe");
+          frame.src = "https://www.youtube-nocookie.com/embed/" + id; // 유튜브가 허락하는 퍼가기 주소 (기록을 덜 남겨요)
+          frame.title = source.title;
+          frame.allow = "encrypted-media; picture-in-picture";
+          frame.allowFullscreen = true;
+          box.append(frame);
+          li.append(box);
+        });
+        li.append(play);
+      }
+      return li;
+    }
+    function searchRow(words) {
+      const row = el("div", "row");
+      row.style.marginTop = "6px";
+      SEARCH_LINKS.forEach(function (pair) {
+        const link = el("a", "soft", pair[0]);
+        link.href = pair[1] + encodeURIComponent(words);
+        link.target = "_blank";
+        link.rel = "noopener";
+        row.append(link);
+      });
+      return row;
+    }
+    function talkCreatures(place) {
+      // 고른 날짜의 달(또는 계절)에 보이는 생물을 먼저 보여 줘요
+      const now = shownMonths();
+      return place.creatures.map(function (c) {
+        return Object.assign({ inSeason: (c.months || []).some(function (m) { return now.includes(m); }) }, c);
+      }).sort(function (a, b) { return (b.inSeason ? 1 : 0) - (a.inSeason ? 1 : 0); });
+    }
+    function drawTalk() {
+      const box = $("talkBox");
+      box.textContent = "";
+      const place = talkPlace;
+      if (!place) return;
+      box.append(el("p", "talk-sum", place.summary));
+      if (place.warn) box.append(el("p", "warn", "⚠️ " + place.warn));
+      const list = talkCreatures(place);
+      list.forEach(function (c) {
+        const card = el("div", "talk-card" + (talkOpen === c.name ? " on" : ""));
+        card.id = "talk-" + c.name;
+        const head = el("button");
+        head.type = "button";
+        const words = el("span", "words");
+        words.append(el("b", "", c.name), el("small", "", [c.how, c.where].filter(Boolean).join(" · ") + (c.note ? " — " + c.note : "")));
+        head.append(el("span", "emo", c.emoji || "🐟"), words, el("span", "season" + (c.inSeason ? " now" : ""), monthsText(c.months)));
+        head.addEventListener("click", function () { talkOpen = talkOpen === c.name ? null : c.name; drawTalk(); drawCritterPins(); });
+        card.append(head);
+        if (talkOpen === c.name) card.append(talkMore(place, c));
+        box.append(card);
+      });
+      const tell = el("p", "note", "주황색은 아래 📅 날짜에서 고른 때(달·계절)에 보이는 생물이에요. 더 찾아보기:");
+      box.append(tell, searchRow("여수 " + place.name + " 바다 생물"));
+      if (place.thin) box.append(el("p", "note", "이곳은 찾은 이야기가 적어요. 다녀왔다면 📸 이야기에 사진을 올려 주세요!"));
+    }
+    function talkMore(place, c) {
+      const more = el("div", "talk-more");
+      const wiki = el("div", "", "위키백과 설명을 찾는 중…");
+      more.append(wiki);
+      wikiSummary(c.name).then(function (data) {
+        wiki.textContent = "";
+        if (!data) return;
+        if (data.thumbnail && data.thumbnail.source) {
+          const img = el("img");
+          img.src = data.thumbnail.source;
+          img.alt = "";
+          wiki.append(img);
+        }
+        wiki.append(document.createTextNode(data.extract.length > 200 ? data.extract.slice(0, 200) + "…" : data.extract), el("br"));
+        const link = el("a", "", "출처: 위키백과");
+        link.href = (data.content_urls && data.content_urls.desktop && data.content_urls.desktop.page) || "https://ko.wikipedia.org";
+        link.target = "_blank";
+        link.rel = "noopener";
+        wiki.append(link);
+      });
+      more.append(el("b", "", "이 이야기를 찾은 곳"));
+      const sources = el("ul", "src-list");
+      (c.src || []).forEach(function (i) { if (place.sources[i]) sources.append(sourceLink(place.sources[i])); });
+      more.append(sources, searchRow("여수 " + place.name + " " + c.name));
+      return more;
+    }
+    // 지도: 고른 섬·바다 둘레에 동그랗게 생물 그림을 놓아요 (주황 테두리 = 사람들이 본 것)
+    function drawTalkPins() {
+      if (pane !== "where" || !map || !talkPlace) return;
+      const list = talkCreatures(talkPlace);
+      const projection = map.getProjection();
+      const center = projection.containerPointFromCoords(new kakao.maps.LatLng(talkPlace.lat, talkPlace.lng));
+      const radius = Math.max(60, Math.min(140, list.length * 14)); // 화면에서 몇 px 둘레에 놓을지
+      list.forEach(function (c, i) {
+        const angle = (i / list.length) * Math.PI * 2 - Math.PI / 2;
+        let spot = { lat: talkPlace.lat + 0.01 * Math.sin(-angle), lng: talkPlace.lng + 0.012 * Math.cos(angle) };
+        if (projection.coordsFromContainerPoint && kakao.maps.Point) {
+          const ll = projection.coordsFromContainerPoint(new kakao.maps.Point(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle)));
+          spot = { lat: ll.getLat(), lng: ll.getLng() };
+        }
+        const pin = el("div", "critter-pin heard" + (talkOpen === c.name ? " on" : ""), c.emoji || "🐟");
+        pin.append(el("small", "", "👀"));
+        pin.title = c.name + " (사람들이 본 생물)";
+        pin.addEventListener("click", function () {
+          talkOpen = c.name;
+          drawTalk();
+          drawCritterPins();
+          const card = document.getElementById("talk-" + c.name);
+          if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        addOverlay(spot, pin, 5);
+      });
+    }
+
     // ═════════ 🏝️ 섬 보기 (카카오 로드뷰) ═════════
     // 카카오 로드뷰는 지금 쓰는 카카오맵 키로 볼 수 있어요. 로드뷰가 있는 길은 지도에 파란 선으로 보여요.
     const ISLANDS = [ // [이름, 위도, 경도] (카카오맵에서 찾은 섬 자리)
@@ -2067,6 +2282,13 @@
           box.querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b === button); });
           moveMap(island[1], island[2], 6);
           showRoadviewAt({ lat: island[1], lng: island[2] }, island[0]);
+          // 이 섬에서 사람들이 본 생물이 있으면 바로 가는 버튼을 보여 줘요
+          const place = talkPlaces.find(function (p) { return p.name === island[0]; });
+          $("islandTalkButton").hidden = !place;
+          if (place) {
+            $("islandTalkButton").textContent = "👀 " + place.name + "에서 사람들이 본 생물 " + place.creatures.length + "가지 보기";
+            $("islandTalkButton").onclick = function () { setPane("where"); pickTalkPlace(place); };
+          }
         });
         box.append(button);
       });
@@ -2222,6 +2444,7 @@
       setupMap();
       loadStories();
       if (!webPhotos.length) loadWebPhotos();
+      if (!talkPlaces.length) loadTalk();
       clearInterval(refreshTimer);
       refreshTimer = setInterval(loadStories, 60000); // 1분마다 새 글이 있는지 보기
     }
