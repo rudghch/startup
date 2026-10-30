@@ -218,6 +218,38 @@
     .glance-grid b { font-size: 18px; }
     .glance-signal { margin: 8px 2px 0; font-size: 14px; font-weight: bold; }
     .glance-signal:empty { display: none; }
+    /* 길을 찾으면: 오른쪽 칸을 숨기고 지도 가운데 아래에 요약 카드 */
+    .trip-card {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 6;
+      width: min(640px, calc(100% - 24px));
+      max-height: min(60%, calc(100% - 80px)); /* 펼쳐도 지도가 보이게, 넘치면 카드 안에서 굴려 봐요 */
+      overflow-y: auto;
+      padding: 10px;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .trip-card .glance { margin: 0; }
+    .card-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+    .card-tabs button { min-width: 0; padding: 6px 8px; border: 1px solid #d6e4ea; border-radius: 10px; background: #f6f9fb; text-align: left; color: inherit; }
+    .card-tabs button.on { border-color: #ff8c00; background: #fff4e6; }
+    .card-tabs b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-tabs small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; color: #3d5866; line-height: 1.4; }
+    .card-pane { margin-top: 8px; padding: 4px 4px 0; border-top: 1px solid #eef2f5; }
+    .card-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
+    .card-actions .soft { padding: 5px 10px; font-size: 13px; }
+    .routing .side { display: none; }
+    .routing.side-open .side { display: block; position: fixed; top: 56px; right: 0; bottom: 0; z-index: 30; width: min(400px, 100%); box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2); }
+    .side-close { display: none; margin-bottom: 10px; }
+    .routing .side-close { display: inline-block; }
+    .routing .map-hint { top: 60px; bottom: auto; } /* 카드와 겹치지 않게 위로 */
+    @media (max-width: 640px) {
+      .card-tabs { grid-template-columns: repeat(2, 1fr); }
+    }
     /* 접었다 펴는 칸: 제목 옆에 한 줄 요약, 누르면 자세히 */
     .fold { margin-top: 10px; border: 1px solid #d6e4ea; border-radius: 12px; background: #fff; }
     .fold > summary { padding: 10px 12px; font-size: 15px; font-weight: bold; cursor: pointer; list-style: none; }
@@ -280,6 +312,7 @@
       .app { display: block; height: auto; }
       .map-wrap { height: 55vh; min-height: 320px; }
       .side { width: auto; border-left: 0; }
+      .routing .map-wrap { height: calc(100vh - 56px); } /* 길을 찾으면 지도를 화면 가득 */
       .top h1 { font-size: 17px; }
     }
     @media (max-width: 480px) {
@@ -332,15 +365,49 @@
         <span id="mapHintText"></span>
         <button type="button" id="stopPickButton">그만</button>
       </div>
+
+      <!-- 길을 찾으면 오른쪽 칸 대신 지도 가운데 아래에 나오는 카드: 가장 궁금한 것만 크게, 나머지는 눌러서 펼쳐 봐요 -->
+      <div class="trip-card" id="tripCard" hidden>
+        <div class="glance" id="glance">
+          <div class="glance-grid" id="glanceGrid"></div>
+          <p class="glance-signal" id="glanceSignal"></p>
+        </div>
+        <div class="card-tabs" id="cardTabs">
+          <button type="button" data-pane="routePane"><b>🧭 바닷길·기름</b><small id="routeSum"></small></button>
+          <button type="button" data-pane="tripPane"><b>🌦️ 가는 길 날씨</b><small id="tripSum">알아보는 중…</small></button>
+          <button type="button" data-pane="dockPane"><b>⚓ 배 댈 곳</b><small id="dockSum">찾는 중…</small></button>
+          <button type="button" data-pane="nearPane"><b>🏪 주변 편의시설</b><small id="nearSum">찾는 중…</small></button>
+        </div>
+        <div class="card-pane" id="routePane" hidden>
+          <ol class="legs" id="routeLegs"></ol>
+          <div class="box" id="routeTotal" hidden></div>
+        </div>
+        <div class="card-pane" id="tripPane" hidden>
+          <p class="note">출발 시각 <select id="departSelect"></select> · 바닷길 위 여러 곳에서, 배가 그곳을 지날 때의 예보를 봐요.</p>
+          <div id="tripWeather"><p class="note">바닷길을 다 찾으면 알려 줘요.</p></div>
+          <button type="button" class="soft" id="routeSeaButton" style="margin-top: 8px;">🚦 씨그널에서 도착지 바다 자세히 보기</button>
+        </div>
+        <div class="card-pane" id="dockPane" hidden>
+          <p class="note">도착지 근처 20km. 눌러서 자리 수, 요금, 위험한 점, 리뷰를 보고, 다녀왔으면 리뷰를 남겨 주세요.</p>
+          <div class="docks" id="dockList"></div>
+        </div>
+        <div class="card-pane" id="nearPane" hidden>
+          <div class="chips" id="nearWherePick"></div>
+          <div class="chips" id="nearKindPick"></div>
+          <p class="note" id="nearNote"></p>
+          <div class="docks" id="nearList"></div>
+        </div>
+        <div class="card-actions">
+          <button type="button" class="soft" id="cardUndo">↩ 하나 지우기</button>
+          <button type="button" class="soft" id="cardClear">✕ 길 지우기</button>
+          <button type="button" class="soft" id="cardMenu">☰ 배·내 위치 설정</button>
+        </div>
+      </div>
     </div>
 
     <aside class="side" id="side">
       <h2>⚓ dockmap</h2>
-      <!-- 길을 찍으면 가장 궁금한 것만 크게 보여 줘요. 나머지는 아래에서 눌러서 펼쳐 봐요 -->
-      <div class="glance" id="glance" hidden>
-        <div class="glance-grid" id="glanceGrid"></div>
-        <p class="glance-signal" id="glanceSignal"></p>
-      </div>
+      <button type="button" class="soft side-close" id="sideClose">✕ 닫고 지도 보기</button>
       <p class="intro" id="intro">지도에서 출발하는 곳과 도착하는 곳을 누르면 땅을 피해 가는 바닷길과 걸리는 시간, 기름값, 가는 길의 날씨(바람·파도·물살·안개 등)를 알려 주고, 도착지 근처 배 댈 곳의 자리 수·요금·위험한 점·리뷰와 둘레 편의점·화장실·음식점·숙소를 보여 줘요. 길을 찍지 않을 때 지도를 누르면 그곳 수심을 알려 줘요.</p>
 
       <h3>1. 무엇을 타나요?</h3>
@@ -358,35 +425,6 @@
         <button type="button" class="soft" id="routeClearButton">모두 지우기</button>
       </div>
       <p class="note" id="routeNote">아직 찍은 곳이 없어요.</p>
-      <details class="fold" id="routeFold" hidden>
-        <summary>🧭 바닷길·기름 자세히 <small id="routeSum"></small></summary>
-        <ol class="legs" id="routeLegs"></ol>
-        <div class="box" id="routeTotal" hidden></div>
-      </details>
-
-      <div id="routeEndBox" hidden>
-        <details class="fold">
-          <summary>🌦️ 3. 가는 길 날씨 <small id="tripSum">알아보는 중…</small></summary>
-          <p class="note">출발 시각 <select id="departSelect"></select> · 바닷길 위 여러 곳에서, 배가 그곳을 지날 때의 예보를 봐요.</p>
-          <div id="tripWeather"><p class="note">바닷길을 다 찾으면 알려 줘요.</p></div>
-          <button type="button" class="soft" id="routeSeaButton" style="margin-top: 8px;">🚦 씨그널에서 도착지 바다 자세히 보기</button>
-        </details>
-
-        <details class="fold">
-          <summary>⚓ 4. 배를 댈 곳 (도착지 근처 20km) <small id="dockSum">찾는 중…</small></summary>
-          <p class="note">눌러서 자리 수, 요금, 위험한 점, 리뷰를 보고, 다녀왔으면 리뷰를 남겨 주세요.</p>
-          <div class="docks" id="dockList"></div>
-        </details>
-
-        <details class="fold" id="nearFold">
-          <summary id="nearTitle">🏪 5. 주변 편의시설 <small id="nearSum">찾는 중…</small></summary>
-          <div class="chips" id="nearWherePick"></div>
-          <div class="chips" id="nearKindPick"></div>
-          <p class="note" id="nearNote"></p>
-          <div class="docks" id="nearList"></div>
-        </details>
-      </div>
-
       <h3>📡 내 배 위치</h3>
       <p class="note">핸드폰의 위치 기능으로 지금 내 배가 어디 있는지 지도에 보여 주고, 둘레의 수심과 바다 상태를 알려 줘요. 내 위치는 이 화면에서만 보이고 서버에 올리지 않아요.</p>
       <div class="row" style="margin-top: 8px;">
@@ -1490,7 +1528,6 @@
       if (points.length < 2) { docks = []; nearPlaces = []; nearAsk++; } // 도착지가 없으면 배 댈 곳 ⚓와 편의시설도 지워요
       drawRoute();
       drawRouteText();
-      $("routeEndBox").hidden = points.length < 2;
       if (points.length < 2) return;
       fillDepartSelect();
       $("tripWeather").textContent = "";
@@ -1600,7 +1637,7 @@
       const box = $("routeTotal");
       box.hidden = routePoints.length < 2;
       box.textContent = "";
-      $("routeFold").hidden = routePoints.length < 2;
+      setRouting(routePoints.length >= 2);
       $("intro").hidden = routePoints.length >= 2; // 길을 찍으면 설명은 숨기고 한눈에 보기를 보여 줘요
       $("boatSum").textContent = boat.name + " " + knots + "노트 · 한 시간에 기름 " + fuelPerHour + "L";
       routeKm = total;
@@ -1622,6 +1659,35 @@
       );
       if (routeLegs.some(function (leg) { return leg.waiting; })) box.append(el("br"), el("small", "", "바닷길을 찾는 중이라 숫자가 바뀔 수 있어요."));
     }
+
+    // ───────── 길을 찾으면: 오른쪽 칸 대신 지도 위 카드 ─────────
+    function setRouting(on) {
+      $("tripCard").hidden = !on;
+      if (document.body.classList.contains("routing") === on) return;
+      document.body.classList.toggle("routing", on);
+      if (!on) document.body.classList.remove("side-open");
+      if (map) { // 지도 크기가 바뀌었으니 다시 맞춰요 (가운데는 그대로)
+        const center = map.getCenter();
+        map.relayout();
+        map.setCenter(center);
+        drawDepthLayer();
+      }
+    }
+    // 카드의 칸 버튼: 누르면 그 칸이 펼쳐지고, 한 번 더 누르면 접혀요 (한 번에 하나만)
+    function openPane(id, keepOpen) {
+      document.querySelectorAll("#cardTabs button").forEach(function (button) {
+        const on = button.dataset.pane === id && (keepOpen || !button.classList.contains("on"));
+        button.classList.toggle("on", on);
+        $(button.dataset.pane).hidden = !on;
+      });
+    }
+    document.querySelectorAll("#cardTabs button").forEach(function (button) {
+      button.addEventListener("click", function () { openPane(button.dataset.pane); });
+    });
+    $("cardUndo").addEventListener("click", function () { $("routeUndoButton").click(); });
+    $("cardClear").addEventListener("click", function () { $("routeClearButton").click(); });
+    $("cardMenu").addEventListener("click", function () { document.body.classList.toggle("side-open"); });
+    $("sideClose").addEventListener("click", function () { document.body.classList.remove("side-open"); });
 
     // ───────── 한눈에 보기 ─────────
     // 걸리는 시간, 남은 거리, 도착 예상 시각, 날씨 신호만 크게 보여 줘요.
@@ -1657,8 +1723,8 @@
         grid.append(cell);
       });
       $("glanceSignal").textContent = finding ? "🔎 바닷길을 찾는 중이에요" :
-        trip ? ["🟢 날씨 좋아요", "🟡 날씨 조심", "🔴 이 시각에는 나가지 마세요"][trip.level] + " · " + (trip.factors.filter(function (f) { return f.level === trip.level && trip.level > 0; })
-          .map(function (f) { return f.icon + " " + f.name.split(" ")[0]; }).join(", ") || "자세한 날씨는 아래 3번") : "";
+        trip ? ["🟢 날씨 좋아요", "🟡 날씨 조심", "🔴 이 시각에는 나가지 마세요"][trip.level] + trip.factors.filter(function (f) { return f.level === trip.level && trip.level > 0; })
+          .map(function (f) { return " · " + f.icon + " " + f.name.split(" ")[0]; }).join("") : "";
     }
 
     // 도착지의 바다 상태와 배를 댈 곳
@@ -2075,10 +2141,9 @@
       nearDock = openedDock;
       nearWhere = "dock";
       $("dockDialog").close();
-      $("nearFold").open = true; // 접혀 있으면 펼쳐서 보여 줘요
+      openPane("nearPane", true); // 카드의 편의시설 칸을 펼쳐서 보여 줘요
       drawNearPicks();
       findNear();
-      $("nearTitle").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     // ═════════ 배 댈 곳: 자리 수와 리뷰 ═════════
