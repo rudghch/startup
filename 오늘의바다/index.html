@@ -362,6 +362,10 @@
     .numbers small { display: block; font-size: 12px; color: #5b6272; }
     .numbers b { font-size: 17px; }
     .tide svg { display: block; width: 100%; height: auto; margin-top: 6px; }
+    .tide-danger { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: #e9f7ef; font-size: 14px; line-height: 1.6; }
+    .tide-danger.l1 { background: #fff6dc; }
+    .tide-danger.l2 { background: #fde8e6; }
+    .tide-danger ul { margin: 4px 0 0; padding-left: 0; list-style: none; }
     .links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     /* 📅 바다 예보 */
     .forecast { margin-top: 18px; padding-top: 4px; border-top: 2px dashed #b8d8e3; }
@@ -475,6 +479,7 @@
             <h3>🌊 물때 (오늘과 내일)</h3>
             <p class="note" id="tideNote"></p>
             <div id="tideChart"></div>
+            <div class="tide-danger" id="tideDanger"></div>
           </div>
         </div>
         <div class="forecast" id="forecastBox" hidden>
@@ -821,6 +826,32 @@
       swellPeriod: 8  // 물결이 이 초(s)보다 느리게 올 때만 너울로 봐요 (느릴수록 힘이 세요)
     };
 
+    // 밀물·썰물이 셀 때 기준 (물높이가 빨리 바뀔수록 물살이 세고, 갯벌·바위에서 물에 갇히기 쉬워요)
+    const TIDE_RULES = {
+      fast: 0.5,     // 물높이가 1시간에 이것(m)보다 많이 바뀌면 🟡
+      veryFast: 1.0, // 이것보다 많이 바뀌면 🔴
+      bigRange: 2,   // 하루 물 높이 차이(m)가 이것보다 크면 "차이가 커요"
+      hugeRange: 4   // 이것보다 크면 "차이가 아주 커요"
+    };
+
+    // 물높이가 1시간 동안 얼마나 바뀌는지 (m, +는 들어와요 / -는 빠져요). times는 밀리초 목록
+    function tideRateAt(times, heights, time) {
+      const i = Math.floor((time - times[0]) / 3600000);
+      if (i < 0 || i + 1 >= heights.length) return null;
+      const a = heights[i], b = heights[i + 1];
+      return typeof a === "number" && typeof b === "number" ? b - a : null;
+    }
+    function tideLevel(rate) {
+      const speed = Math.abs(rate);
+      return speed > TIDE_RULES.veryFast ? 2 : speed > TIDE_RULES.fast ? 1 : 0;
+    }
+    function tideText(rate, level) {
+      const amount = "1시간에 " + Math.abs(rate).toFixed(1) + "m씩";
+      return rate > 0
+        ? "밀물이 " + (level === 2 ? "아주 " : "") + "세요: 물이 " + amount + " 차올라요. 갯벌·바위에서 물에 갇힐 수 있어요"
+        : "썰물이 " + (level === 2 ? "아주 " : "") + "세요: 물이 " + amount + " 빠져요. 물살이 바다 쪽으로 끌고 갈 수 있어요";
+    }
+
     const WEATHER_NAMES = [
       [0, "☀️ 맑음"], [3, "⛅ 구름"], [48, "🌫️ 안개"], [67, "🌧️ 비"], [77, "❄️ 눈"], [82, "🌦️ 소나기"], [99, "⛈️ 천둥번개"]
     ];
@@ -857,6 +888,8 @@
       ]);
       const sea = both[0].current || {};
       const air = both[1].current || {};
+      const tideTimes = (both[0].hourly && both[0].hourly.time) || [];
+      const tide = (both[0].hourly && both[0].hourly.sea_level_height_msl) || [];
       return {
         water: sea.sea_surface_temperature,
         wave: sea.wave_height,
@@ -867,8 +900,9 @@
         air: air.temperature_2m,
         weather: air.weather_code,
         uv: air.uv_index,
-        tideTimes: (both[0].hourly && both[0].hourly.time) || [],
-        tide: (both[0].hourly && both[0].hourly.sea_level_height_msl) || []
+        tideTimes: tideTimes,
+        tide: tide,
+        tideRate: tideRateAt(tideTimes.map(timeFromText), tide, Date.now())
       };
     }
 
@@ -914,6 +948,7 @@
       wind: ["😣", "😵‍💫"], // 바람에 눈을 질끈, 바람이 너무 세서 어지러워요
       rain: ["☔", "☔"],    // 비가 와요
       storm: ["😱", "😱"],  // 천둥번개
+      tide: ["😧", "😰"],   // 밀물·썰물이 세서 놀란 얼굴, 아주 세서 식은땀
       danger: ["😯", "😱"]  // 친구가 사진으로 알린 위험이 가까이 있어요
     };
 
@@ -946,6 +981,9 @@
         const swellText = " (" + data.swell.toFixed(1) + "m, " + data.swellPeriod.toFixed(0) + "초마다)";
         if (data.swell > r.bigSwell) add(2, "wave", "너울(멀리서 온 큰 물결)이 높아요" + swellText);
         else if (data.swell > r.swell) add(1, "wave", "너울(멀리서 온 큰 물결)이 있어요" + swellText);
+      }
+      if (typeof data.tideRate === "number" && tideLevel(data.tideRate)) {
+        add(tideLevel(data.tideRate), "tide", tideText(data.tideRate, tideLevel(data.tideRate)));
       }
       if (data.weather >= 95) add(2, "storm", "천둥번개가 쳐요");
       else if (data.weather >= 51) add(1, "rain", "비가 와요");
@@ -1008,6 +1046,7 @@
       const times = data.tideTimes.map(function (text) { return new Date(text + ":00+09:00"); });
       const box = $("tideChart");
       box.textContent = "";
+      $("tideDanger").hidden = heights.length < 3;
       if (heights.length < 3) { $("tideNote").textContent = "이곳은 물때 정보가 없어요."; return; }
 
       const marks = [];
@@ -1021,7 +1060,8 @@
       const nextHigh = marks.find(function (m) { return m.high && times[m.i] > now; });
       const nextLow = marks.find(function (m) { return !m.high && times[m.i] > now; });
       function clock(date) { return date.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" }); }
-      $("tideNote").textContent = (rising ? "⬆️ 지금은 물이 들어오고 있어요 (밀물). 갯벌·바위에 오래 있지 마세요." : "⬇️ 지금은 물이 빠지고 있어요 (썰물).") +
+      const speedNow = Math.abs(heights[hourNow + 1] - heights[hourNow]).toFixed(1) + "m";
+      $("tideNote").textContent = (rising ? "⬆️ 지금은 물이 들어오고 있어요 (밀물, 1시간에 " + speedNow + "). 갯벌·바위에 오래 있지 마세요." : "⬇️ 지금은 물이 빠지고 있어요 (썰물, 1시간에 " + speedNow + ").") +
         (nextHigh ? " 다음 만조(물이 가득): " + clock(times[nextHigh.i]) + "." : "") +
         (nextLow ? " 다음 간조(물이 빠짐): " + clock(times[nextLow.i]) + "." : "");
 
@@ -1045,6 +1085,11 @@
       const line = heights.map(function (h, i) { return x(i).toFixed(1) + "," + y(h).toFixed(1); }).join(" ");
       shape("polygon", { points: "0," + (H - bottom) + " " + line + " " + W + "," + (H - bottom), fill: "#cfe8f1" });
       shape("polyline", { points: line, fill: "none", stroke: "#0b6e8a", "stroke-width": 2 });
+      // 물이 빨리 움직이는 때는 주황(🟡)·빨강(🔴) 굵은 선
+      for (let i = 0; i < heights.length - 1; i++) {
+        const level = tideLevel(heights[i + 1] - heights[i]);
+        if (level) shape("line", { x1: x(i), y1: y(heights[i]), x2: x(i + 1), y2: y(heights[i + 1]), stroke: level === 2 ? "#d63031" : "#f39c12", "stroke-width": 4, "stroke-linecap": "round" });
+      }
       // 날짜가 바뀌는 곳(자정)과 시간 눈금
       times.forEach(function (time, i) {
         if (time.getHours() % 6 === 0) {
@@ -1065,6 +1110,72 @@
         shape("text", { x: nowX, y: 10, "font-size": 10, fill: "#c0392b", "text-anchor": "middle" }, "지금");
       }
       box.append(svg);
+      drawTideDanger(times, heights, now);
+    }
+
+    // 달 모양으로 사리(물 차이가 가장 큰 때)·조금(가장 작은 때) 알아보기. 바닷물은 달이 끌어당겨서 움직여요
+    function moonTide(time) {
+      const MONTH = 29.530588; // 달 모양이 한 바퀴 도는 날 수
+      const age = (((time - Date.UTC(2000, 0, 6, 18, 14)) / 86400000) % MONTH + MONTH) % MONTH; // 그믐(새 달) 뒤 며칠
+      const moon = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"][Math.round(age / MONTH * 8) % 8];
+      const after = (age - 1.5 + MONTH) % (MONTH / 2); // 사리는 보름·그믐보다 하루 이틀 늦게 와요
+      if (after < 2.5 || after > MONTH / 2 - 2.5) {
+        return moon + " " + (age > 7.4 && age < 22.1 ? "보름달" : "그믐(달이 안 보이는 때)") + " 무렵이라 사리예요. 한 달에 두 번, 물 차이가 가장 큰 때예요.";
+      }
+      if (after > 4.9 && after < 9.9) return moon + " 반달 무렵이라 조금이에요. 물 차이가 가장 작은 때예요.";
+      return moon + " 사리(물 차이가 가장 큰 때)와 조금(가장 작은 때) 사이예요.";
+    }
+
+    // ⚠️ 밀물·썰물이 셀 때 알려 주기 (오늘·내일 중 지금부터)
+    function drawTideDanger(times, heights, now) {
+      const box = $("tideDanger");
+      box.textContent = "";
+      // 물이 빨리 움직이는 때 (이어진 시간끼리 묶어요)
+      const runs = [];
+      for (let i = 0; i < heights.length - 1; i++) {
+        if (times[i + 1] <= now) continue; // 지나간 때는 빼요
+        const rate = heights[i + 1] - heights[i];
+        const level = tideLevel(rate);
+        if (!level) continue;
+        const last = runs[runs.length - 1];
+        if (last && last.end === i && last.rising === rate > 0) {
+          last.end = i + 1;
+          last.level = Math.max(last.level, level);
+        } else {
+          runs.push({ start: i, end: i + 1, rising: rate > 0, level: level });
+        }
+      }
+      const level = runs.reduce(function (most, run) { return Math.max(most, run.level); }, 0);
+      box.className = "tide-danger l" + level;
+      box.append(el("b", "", level ? "⚠️ 밀물·썰물이 센 때가 있어요" : "✅ 오늘·내일은 밀물·썰물이 세지 않아요"));
+
+      // 오늘 물 높이 차이 (가장 높을 때 - 가장 낮을 때)
+      const today = new Date(now).toDateString();
+      const todays = heights.filter(function (h, i) { return typeof h === "number" && times[i].toDateString() === today; });
+      if (todays.length) {
+        const range = Math.max.apply(null, todays) - Math.min.apply(null, todays);
+        const size = range > TIDE_RULES.hugeRange ? "아주 커요" : range > TIDE_RULES.bigRange ? "커요" : range < 1 ? "작아요" : "보통이에요";
+        box.append(el("br"), "📏 오늘 물 높이 차이: " + range.toFixed(1) + "m (" + size + ")");
+        box.append(el("br"), moonTide(now) + (range < 1 ? " 이곳은 물 차이가 작아서 사리여도 물이 조금만 움직여요." : ""));
+      }
+      const SHOW_RUNS = 4; // 가까운 때부터 이만큼만 보여 줘요
+      runs.slice(0, SHOW_RUNS).forEach(function (run) {
+        const from = times[run.start].getTime(), to = times[run.end].getTime();
+        const toText = dayIndex(to) === dayIndex(from) ? new Date(to).getHours() + "시" : hourName(to); // 밤 12시를 넘으면 "내일 1시"
+        box.append(el("br"), (run.level === 2 ? "🔴 " : "🟡 ") + hourName(from) + "~" + toText + " " +
+          (run.rising ? "⬆️ 밀물" : "⬇️ 썰물") + (run.level === 2 ? "이 아주 세요" : "이 세요"));
+      });
+      if (runs.length > SHOW_RUNS) box.append(el("br"), "… 그 뒤에도 " + (runs.length - SHOW_RUNS) + "번 더 있어요 (그래프의 주황·빨간 선)");
+      if (!level) return;
+      const tips = el("ul");
+      [
+        "🏃 갯벌·바위에 갔다면 만조(물이 가득) 2시간 전에는 꼭 나와요",
+        "🪨 물이 차면 돌아오는 길이 물에 잠겨요. 들어간 길을 기억해요",
+        "🌊 썰물 때는 물살이 바다 쪽으로 세게 흘러요. 깊은 곳으로 가지 않아요",
+        "🆘 물에 갇히거나 떠내려가면 122(해양경찰)에 전화해요"
+      ].forEach(function (tip) { tips.append(el("li", "", tip)); });
+      box.append(tips, el("small", "", "그래프의 주황 선은 물이 빨리, 빨간 선은 아주 빨리 움직이는 때예요 (1시간에 " +
+        TIDE_RULES.fast + "m, " + TIDE_RULES.veryFast + "m보다 많이)."));
     }
 
     // 지도: 고른 바닷가 📍
@@ -1147,7 +1258,7 @@
         getJson(WEATHER_URL + "?" + where + "&wind_speed_unit=ms&models=best_match," + windIds.join(",") +
           "&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,weather_code,precipitation_probability"),
         getJson(MARINE_URL + "?" + where + "&cell_selection=sea&models=best_match," + waveIds.join(",") +
-          "&hourly=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_period,sea_surface_temperature")
+          "&hourly=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_period,sea_surface_temperature,sea_level_height_msl")
       ]);
       const air = both[0].hourly || {};
       const sea = both[1].hourly || {};
@@ -1158,6 +1269,8 @@
         const list = source[name + "_best_match"] || source[name + "_marine_best_match"];
         return list && i >= 0 ? list[i] : null;
       }
+      const seaTimes = (sea.time || []).map(timeFromText);
+      const tide = sea.sea_level_height_msl_marine_best_match || sea.sea_level_height_msl_best_match || [];
       const start = nowHour();
       const hours = [];
       (air.time || []).forEach(function (text, i) {
@@ -1173,7 +1286,7 @@
           wind: median(winds), gust: median(gusts), windDir: meanDirection(pick(air, "wind_direction_10m", windIds, i)),
           wave: median(waves), waveDir: meanDirection(pick(sea, "wave_direction", waveIds, s)), period: median(pick(sea, "wave_period", waveIds, s)),
           swell: median(swells), swellPeriod: median(pick(sea, "swell_wave_period", waveIds, s)),
-          water: best(sea, "sea_surface_temperature", s),
+          water: best(sea, "sea_surface_temperature", s), tideRate: tideRateAt(seaTimes, tide, time),
           air: best(air, "temperature_2m", i), weather: best(air, "weather_code", i), rain: best(air, "precipitation_probability", i),
           windBest: best(air, "wind_speed_10m", i), gustBest: best(air, "wind_gusts_10m", i),
           winds: winds, gusts: gusts, waves: waves
