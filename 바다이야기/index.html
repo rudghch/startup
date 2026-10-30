@@ -395,6 +395,23 @@
     .isle-list a.ref { margin-left: 4px; font-size: 12px; white-space: nowrap; }
     .isle-wiki img { float: right; width: 120px; max-height: 120px; object-fit: cover; margin: 0 0 6px 10px; border-radius: 10px; }
     .pin.isle { border-color: #2e9d57; background: #e8f7ee; }
+    .region-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 8px; }
+    .region-button { padding: 7px 12px; border-radius: 999px; font-size: 14px; }
+    .region-button.on { background: #fff; color: #1f2430; border: 2px solid #1f2430; font-weight: bold; }
+    .region-panel { margin: 0 0 10px; padding: 14px; border-radius: 16px; background: #fff; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15); }
+    .region-steps { margin: 0 0 12px; color: #9aa1ad; font-size: 18px; font-weight: bold; }
+    .region-steps b { color: #1f2430; }
+    .region-steps button { padding: 0; border: 0; background: none; color: #0b6e8a; font: inherit; cursor: pointer; }
+    .region-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .region-grid button { padding: 10px 4px; border: 0; border-radius: 8px; background: #f3f5f8; color: #1f2430; font: inherit; font-size: 15px; font-weight: bold; cursor: pointer; }
+    .region-grid button:hover { background: #e3eef3; }
+    .region-grid button small { display: block; color: #8a919c; font-size: 11px; font-weight: normal; }
+    .region-grid button.on { background: #1f2430; color: #fff; }
+    .card .addr { color: #8a5300; font-size: 12px; }
+    .isle-pick { display: block; width: 100%; margin-bottom: 4px; padding: 7px 10px; border: 1px solid #d6e4ea; border-radius: 10px; background: #fff; text-align: left; font: inherit; cursor: pointer; }
+    .isle-pick b { font-size: 15px; }
+    .isle-pick small { display: block; color: #8a5300; font-size: 12px; }
+    .isle-pick.on { border-color: #ff8c00; }
     .isle-dot { padding: 1px 6px; border: 1px solid #2e9d57; border-radius: 999px; background: rgba(255,255,255,0.9); color: #1d6b3b; font-size: 11px; white-space: nowrap; cursor: pointer; }
     .isle-dot.rich { background: #2e9d57; color: #fff; font-weight: bold; font-size: 12px; }
     #critterDialog h2 { margin: 4px 0 0; }
@@ -532,6 +549,8 @@
       <h2>🏝️ 섬 둘러보기</h2>
       <p class="intro">섬을 고르거나, 지도에 보이는 <b>파란 선</b>(로드뷰를 볼 수 있는 길)을 누르면 그 자리의 로드뷰가 나와요. 로드뷰 안에서 화살표를 누르면 길을 따라 걸어가요. 아래에 그곳이 어디인지, 둘레 바다 생물과 바다 이야기도 함께 나와요.</p>
       <div class="chips" id="islandList"></div>
+      <div class="region-row"><button type="button" class="soft region-button" id="islandRegionButton">📍 지역별 섬 보기</button></div>
+      <div class="region-panel" id="islandRegionPanel" hidden></div>
       <input type="search" id="islandFind" placeholder="🔎 전국 섬 이름으로 찾기 (예: 청산도, 백령도)">
       <div class="chips" id="islandFound"></div>
       <p class="note" id="islandNote">섬을 고르거나 지도의 파란 선을 눌러 주세요.</p>
@@ -562,6 +581,8 @@
         <button type="button" class="primary" id="newStoryButton">＋ 사진·영상 올리기</button>
         <input type="search" id="storyFilter" placeholder="섬 이름이나 설명으로 찾기">
         <div class="chips" id="storySources"></div>
+        <div class="region-row"><button type="button" class="soft region-button" id="storyRegionButton">📍 지역별 섬 보기</button></div>
+        <div class="region-panel" id="storyRegionPanel" hidden></div>
         <div class="chips" id="storyKinds"></div>
         <p class="count" id="storyCount"></p>
         <div id="storyList"></div>
@@ -663,6 +684,18 @@
       <div class="view-buttons">
         <button type="button" class="soft" id="critterOnly">🗺️ 지도에서 이 생물만 보기</button>
         <button type="button" class="soft" id="critterClose">닫기</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- 지도 한 칸의 바다 생물 목록 -->
+  <dialog id="cellDialog">
+    <div class="view-body">
+      <h2 id="cellTitle"></h2>
+      <p class="note">기록이 많은 차례예요. 누르면 설명이 나와요.</p>
+      <div id="cellItems"></div>
+      <div class="view-buttons">
+        <button type="button" class="soft" id="cellClose">닫기</button>
       </div>
     </div>
   </dialog>
@@ -959,6 +992,7 @@
       kakao.maps.event.addListener(map, "idle", function () { // 지도를 다 움직이면 생물 그림·섬 이름표를 다시 놓아요
         if (pane === "where") drawCritterPins();
         else if (pane === "story" || pane === "ai") drawStorySpots();
+        saveView(); // 새로고침해도 이 자리로
       });
       setupPinchZoom();
       drawMap();
@@ -1043,7 +1077,10 @@
     function mapClicked(place) {
       if (picking === "story") { setStorySpot(place, "지도에서 고른 곳"); stopPicking(); }
       else if (pane === "island") showRoadviewAt(place, "");
-      else if (pane === "where") searchWhere(place); // 누른 바다 둘레의 생물을 찾아요
+      else if (pane === "where") { // 누른 바다 둘레의 생물을 찾아요 (멀리 있으면 동그라미가 다 보이게 확대해요)
+        if (map.getLevel() > 7) moveMap(place.lat, place.lng, 7);
+        searchWhere(place);
+      }
     }
 
     // ═════════ ① 섬과 바다 이야기 ═════════
@@ -1162,6 +1199,7 @@
 
     // 어디서 온 사진을 볼지: "all"(모두), "friends"(친구들이 올린 것), "web"(인터넷 사진)
     let storySourceFilter = "all";
+    let storyRegion = null; // 고른 지역 { sido, sigungu } (null이면 전국)
     function drawSourceFilter() {
       const box = $("storySources");
       box.textContent = "";
@@ -1187,7 +1225,8 @@
     // 섬 정보는 한 섬에 풍경·놀거리·리뷰가 함께 있어서 kinds에 여러 종류가 들어 있어요
     function shownStories() {
       const words = $("storyFilter").value.trim().toLowerCase();
-      const pool = storySourceFilter === "friends" ? stories : storySourceFilter === "web" ? webPhotos : storySourceFilter === "isle" ? isleStories : stories.concat(webPhotos, isleStories);
+      let pool = storySourceFilter === "friends" ? stories : storySourceFilter === "web" ? webPhotos : storySourceFilter === "isle" ? isleStories : stories.concat(webPhotos, isleStories);
+      if (storyRegion) pool = regionStories(storyRegion); // 지역을 고르면 그 시·군·구의 섬 전부와 그 둘레 사진
       return pool.filter(function (story) {
         if (storyKindFilter !== "all" && !(story.kinds || [story.kind]).includes(storyKindFilter)) return false;
         return !words || (story.island + " " + story.text + " " + (story.find || "")).toLowerCase().includes(words);
@@ -1244,20 +1283,22 @@
       const words = el("div");
       let text = story.text;
       if (story.isle) {
-        // 섬 정보: 고른 종류(풍경·놀거리·리뷰)에 맞는 내용을 보여 줘요
+        // 섬 정보: 고른 종류(풍경·놀거리·리뷰)에 맞는 내용을 보여 줘요. 섬 이름 바로 밑에 주소를 적어요
         const isle = story.isle;
-        if (storyKindFilter === "play") text = "🎡 " + isle.play.map(function (p) { return p.title; }).join(", ");
+        if (story.plain) text = "아직 정리한 이야기가 없어요. 눌러서 알아보기";
+        else if (storyKindFilter === "play") text = "🎡 " + isle.play.map(function (p) { return p.title; }).join(", ");
         else if (storyKindFilter === "review" && isle.reviews[0]) text = "⭐ " + isle.reviews[0].text;
-        words.append(el("span", "tag isle", "🏝️ 섬 정보"));
+        words.append(el("span", "tag isle", story.plain ? "🏝️ 섬" : "🏝️ 섬 정보"));
         story.kinds.slice(1).forEach(function (id) { words.append(document.createTextNode(" "), el("span", "tag", kindOf(id).name)); });
+        words.append(el("b", "", story.island), el("span", "addr", "📍 " + (addrOf(isle) || "주소 모름")));
       } else {
         words.append(el("span", "tag", kindOf(story.kind).name));
         if (story.web) words.append(document.createTextNode(" "), el("span", "tag web", "🌐 인터넷 사진"));
+        words.append(el("b", "", story.island));
       }
       words.append(
-        el("b", "", story.island),
         el("span", "", text.length > 40 ? text.slice(0, 40) + "…" : text),
-        el("span", "", story.isle ? (story.isle.area || "") + " · 출처 " + story.isle.sources.length + "곳"
+        el("span", "", story.isle ? (story.plain ? (story.isle.wiki ? "📖 위키백과 설명 있음" : "") : "출처 " + story.isle.sources.length + "곳")
           : story.web ? "사진: " + story.author + " · " + licenseName(story.license).split(" (")[0] : story.author + " · " + dateText(story.sk))
       );
       card.append(story.isle ? el("div", "thumb big-emoji", "🏝️") : thumbOf(story.media), words);
@@ -1273,7 +1314,10 @@
       const box = $("storyList");
       box.textContent = "";
       list.forEach(function (story) { box.append(storyCard(story)); });
-      $("storyCount").textContent = stories.length + webPhotos.length + isleStories.length ? list.length + "개" : "";
+      $("storyCount").textContent = storyRegion
+        ? "📍 " + regionText(storyRegion) + ": 섬 " + list.filter(function (s) { return s.isle; }).length + "곳" + (list.some(function (s) { return !s.isle; }) ? ", 사진 " + list.filter(function (s) { return !s.isle; }).length + "개" : "")
+        : stories.length + webPhotos.length + isleStories.length ? list.length + "개" : "";
+      saveView();
       $("storyEmpty").hidden = list.length > 0;
       drawSourceFilter(); // 사진 수가 바뀌었을 수 있어요
     }
@@ -1299,7 +1343,7 @@
       if (!map || pane === "where" || pane === "island") return; // "사는 생물"·"섬 보기"를 볼 때는 사진 자리를 숨겨요
       drawIsleDots(); // 정리한 이야기가 없는 섬은 확대했을 때 이름표만 보여요
       shownStories().forEach(function (story) {
-        if (story.isle) { addOverlay(story, isleTag(story.isle, true), 3); return; } // 섬 정보는 초록 이름표
+        if (story.isle) { addOverlay(story, isleTag(story.isle, !story.plain), 3); return; } // 섬 정보는 초록 이름표
         const first = story.media[0];
         const pin = story.web
           ? makePin(first.url, "🌐", "web")
@@ -1631,7 +1675,7 @@
     async function loadIsles() {
       try {
         const data = await (await fetch(ISLE_LIST_FILE)).json();
-        isleList = data.islands.map(function (r) { return { name: r[0], lat: r[1], lng: r[2], area: r[3], wiki: r[4] }; });
+        isleList = data.islands.map(function (r) { return { name: r[0], lat: r[1], lng: r[2], addr: r[3], wiki: r[4], sido: r[6] || "", sigungu: r[7] || "" }; });
       } catch (error) { isleList = []; }
       try {
         const data = await (await fetch(ISLE_STORY_FILE)).json();
@@ -1651,13 +1695,143 @@
         if (isle.reviews.length) kinds.push("review");
         return {
           sk: "isle-" + i, isle: isle, island: isle.name, kind: "view", kinds: kinds, text: isle.view || "",
-          find: [isle.area, isle.go].concat(isle.play.map(function (p) { return p.title + " " + p.text; }), isle.reviews.map(function (r) { return r.text; })).join(" "),
+          find: [isle.area, isle.addr, isle.go].concat(isle.play.map(function (p) { return p.title + " " + p.text; }), isle.reviews.map(function (r) { return r.text; })).join(" "),
           lat: isle.lat, lng: isle.lng, media: []
         };
       });
+      // 지역 고르기에 쓰는 전국 섬 (정리한 섬 + 아직 이야기가 없는 섬)
+      isleAll = isleInfos.concat(isleList.filter(function (s) { return !isleInfoOf(s); }));
+      drawStoryRegionLabel();
+      drawIslandRegionLabel();
+      if (islandRegion) drawIslePicks(islesIn(islandRegion));
       drawStoryList();
       drawStorySpots();
     }
+
+    // ── 📍 지역별 섬 보기 (시·도 → 시·군·구) ──
+    // 섬마다 주소(시·도, 시·군·구)는 오픈스트리트맵에서 섬 자리로 찾아 파일에 넣어 두었어요.
+    const SIDO_ORDER = [ // [주소에 쓰는 이름, 버튼에 쓰는 짧은 이름]
+      ["서울특별시", "서울시"], ["경기도", "경기도"], ["인천광역시", "인천시"], ["부산광역시", "부산시"], ["대전광역시", "대전시"],
+      ["대구광역시", "대구시"], ["울산광역시", "울산시"], ["세종특별자치시", "세종시"], ["전남광주통합특별시", "전남광주시"], ["전라남도", "전남도"],
+      ["강원특별자치도", "강원도"], ["충청북도", "충청북도"], ["충청남도", "충청남도"], ["경상북도", "경상북도"], ["경상남도", "경상남도"],
+      ["전북특별자치도", "전북도"], ["제주특별자치도", "제주도"]
+    ];
+    let isleAll = [];
+    let islandRegion = null; // 섬 보기에서 고른 지역
+    function sidoShort(sido) { const found = SIDO_ORDER.find(function (p) { return p[0] === sido; }); return found ? found[1] : sido; }
+    function regionText(region) { return sidoShort(region.sido) + " " + region.sigungu; }
+    function addrOf(isle) { return isle.addr || isle.area || ""; }
+    function islesIn(region) {
+      return isleAll.filter(function (isle) { return isle.sido === region.sido && isle.sigungu === region.sigungu; })
+        .sort(function (a, b) { return (a.view ? 0 : 1) - (b.view ? 0 : 1) || a.name.localeCompare(b.name, "ko"); });
+    }
+    // 지역 안의 섬 전부(정리한 섬은 섬 정보 카드, 나머지는 이름·주소 카드)와, 그 섬들 3km 안의 친구들·인터넷 사진
+    function regionStories(region) {
+      const isles = islesIn(region);
+      const isleCards = isles.map(function (isle) {
+        const rich = isleStories.find(function (s) { return s.isle === isle; });
+        return rich || { sk: "plain-" + isle.name + isle.lat, isle: isle, plain: true, island: isle.name, kind: "view", kinds: [], text: "", find: addrOf(isle), lat: isle.lat, lng: isle.lng, media: [] };
+      });
+      const near = function (story) { return isles.some(function (isle) { return distanceKm(isle, story) < 3; }); };
+      const photos = (storySourceFilter === "isle" ? [] : storySourceFilter === "friends" ? stories : storySourceFilter === "web" ? webPhotos : stories.concat(webPhotos)).filter(near);
+      return (storySourceFilter === "friends" || storySourceFilter === "web" ? [] : isleCards).concat(photos);
+    }
+    // 지역 고르기 상자 (button을 누르면 panel이 열려요). 고른 지역은 getRegion/setRegion으로 주고받아요
+    function regionPicker(button, panel, getRegion, setRegion) {
+      let step = null; // 시·군·구를 고르는 중인 시·도
+      function label() {
+        const region = getRegion();
+        button.textContent = region ? "📍 " + regionText(region) + " ▾" : "📍 지역별 섬 보기 ▾";
+        button.classList.toggle("on", Boolean(region));
+      }
+      function pickButton(text, small, on, onClick) {
+        const b = el("button", on ? "on" : "", text);
+        b.type = "button";
+        b.append(el("small", "", small));
+        b.addEventListener("click", onClick);
+        return b;
+      }
+      function draw() {
+        panel.textContent = "";
+        const steps = el("p", "region-steps");
+        const grid = el("div", "region-grid");
+        const region = getRegion();
+        if (!step) {
+          steps.append(el("b", "", "시·도"), document.createTextNode(" › 시·군·구"));
+          SIDO_ORDER.forEach(function (p) {
+            const n = isleAll.filter(function (isle) { return isle.sido === p[0] && isle.sigungu; }).length;
+            if (n) grid.append(pickButton(p[1], "섬 " + n + "곳", region && region.sido === p[0], function () { step = p[0]; draw(); }));
+          });
+        } else {
+          const back = el("button", "", sidoShort(step));
+          back.type = "button";
+          back.title = "시·도 다시 고르기";
+          back.addEventListener("click", function () { step = null; draw(); });
+          steps.append(back, document.createTextNode(" › "), el("b", "", "시·군·구"));
+          const counts = {};
+          isleAll.forEach(function (isle) { if (isle.sido === step && isle.sigungu) counts[isle.sigungu] = (counts[isle.sigungu] || 0) + 1; });
+          Object.keys(counts).sort(function (a, b) { return a.localeCompare(b, "ko"); }).forEach(function (g) {
+            grid.append(pickButton(g, "섬 " + counts[g] + "곳", region && region.sido === step && region.sigungu === g, function () {
+              panel.hidden = true;
+              setRegion({ sido: step, sigungu: g });
+              label();
+            }));
+          });
+        }
+        panel.append(steps, grid);
+        if (!isleAll.length) panel.append(el("p", "note", "섬 목록을 불러오는 중이에요…"));
+        if (region) {
+          const clear = el("button", "soft", "✕ 지역 풀기 (전국 보기)");
+          clear.type = "button";
+          clear.style.marginTop = "10px";
+          clear.addEventListener("click", function () { panel.hidden = true; setRegion(null); label(); });
+          panel.append(clear);
+        }
+      }
+      button.addEventListener("click", function () {
+        panel.hidden = !panel.hidden;
+        if (!panel.hidden) { step = getRegion() ? getRegion().sido : null; draw(); }
+      });
+      return label;
+    }
+    // 고른 지역의 섬이 모두 보이게 지도를 맞춰요
+    function fitIsles(isles) {
+      if (!map || !isles.length || !kakao.maps.LatLngBounds) return;
+      const bounds = new kakao.maps.LatLngBounds();
+      isles.forEach(function (isle) { bounds.extend(new kakao.maps.LatLng(isle.lat, isle.lng)); });
+      map.setBounds(bounds);
+    }
+    const drawStoryRegionLabel = regionPicker($("storyRegionButton"), $("storyRegionPanel"), function () { return storyRegion; }, function (region) {
+      storyRegion = region;
+      drawStoryList();
+      drawStorySpots();
+      if (region) { fitIsles(islesIn(region)); bringIntoView($("mapWrap")); }
+    });
+    // 섬 보기: 지역을 고르면 그 시·군·구의 섬 버튼(이름 + 주소)을 보여 주고, 누르면 로드뷰
+    function drawIslePicks(list) {
+      const box = $("islandFound");
+      box.textContent = "";
+      list.forEach(function (isle) {
+        const button = el("button", "isle-pick");
+        button.type = "button";
+        button.append(el("b", "", (isle.view ? "🏝️ " : "") + isle.name), el("small", "", "📍 " + (addrOf(isle) || "주소 모름")));
+        button.addEventListener("click", function () {
+          document.querySelectorAll("#islandList button, #islandFound button").forEach(function (b) { b.classList.toggle("on", b === button); });
+          pickIsland(isle);
+        });
+        box.append(button);
+      });
+    }
+    const drawIslandRegionLabel = regionPicker($("islandRegionButton"), $("islandRegionPanel"), function () { return islandRegion; }, function (region) {
+      islandRegion = region;
+      $("islandFind").value = "";
+      drawIslePicks(region ? islesIn(region) : []);
+      if (region) {
+        $("islandFound").prepend(el("p", "note", "📍 " + regionText(region) + "의 섬 " + islesIn(region).length + "곳이에요. 누르면 로드뷰를 찾아요."));
+        fitIsles(islesIn(region));
+      }
+      saveView();
+    });
 
     // 정리한 이야기가 있는 섬인지 (같은 이름이 3km 안에 있으면 같은 섬)
     function isleInfoOf(place) {
@@ -1667,12 +1841,12 @@
     // 지도 위 섬 이름표 (rich: 정리한 이야기가 있는 섬은 초록색으로 꽉 채워요)
     function isleTag(isle, rich) {
       const tag = el("div", "isle-dot" + (rich ? " rich" : ""), (rich ? "🏝️ " : "") + isle.name);
-      tag.title = isle.name + (isle.area ? " · " + isle.area : "") + (rich ? " (풍경·놀거리·리뷰)" : "");
+      tag.title = isle.name + (addrOf(isle) ? " · " + addrOf(isle) : "") + (rich ? " (풍경·놀거리·리뷰)" : "");
       tag.addEventListener("click", function () { openIsle(isleInfoOf(isle) || isle); });
       return tag;
     }
     function drawIsleDots() {
-      if (!map || map.getLevel() > ISLE_DOT_LEVEL || !map.getBounds) return;
+      if (!map || map.getLevel() > ISLE_DOT_LEVEL || !map.getBounds || storyRegion) return; // 지역을 고르면 그 지역 섬은 목록에서 이미 다 놓아요
       if (storySourceFilter !== "all" && storySourceFilter !== "isle") return;
       if (storyKindFilter !== "all") return;
       const words = $("storyFilter").value.trim().toLowerCase();
@@ -1680,7 +1854,7 @@
       let count = 0;
       isleList.forEach(function (isle) {
         if (count >= ISLE_DOT_MAX || isleInfoOf(isle)) return;
-        if (words && !(isle.name + " " + isle.area).toLowerCase().includes(words)) return;
+        if (words && !(isle.name + " " + addrOf(isle)).toLowerCase().includes(words)) return;
         if (!bounds.contain(new kakao.maps.LatLng(isle.lat, isle.lng))) return;
         addOverlay(isle, isleTag(isle, false), 2);
         count++;
@@ -1714,7 +1888,7 @@
     }
     // 검색어: "통영 우도 여행 후기"처럼 시·군 이름을 앞에 붙여서 같은 이름의 다른 섬과 헷갈리지 않게 해요
     function naverQuery(isle) {
-      const county = String(isle.area || "").split(/\s+/).filter(function (w) { return /(시|군)$/.test(w); })[0] || "";
+      const county = String(isle.sigungu || addrOf(isle)).split(/\s+/).filter(function (w) { return /(시|군)$/.test(w) && !/(특별|광역|통합)/.test(w); })[0] || "";
       const town = county.length > 2 ? county.slice(0, -1) : county;
       return (town ? town + " " : "") + isle.name.replace(/\s*\(.*\)$/, "") + " 여행 후기";
     }
@@ -1789,7 +1963,7 @@
     function openIsle(isle) {
       isleNow = isle;
       $("isleName").textContent = isle.name;
-      $("isleArea").textContent = [isle.area, isle.go ? "🚢 " + isle.go : ""].filter(Boolean).join(" · ");
+      $("isleArea").textContent = ["📍 " + (addrOf(isle) || "주소 모름"), isle.go ? "🚢 " + isle.go : ""].filter(Boolean).join(" · ");
       const body = $("isleBody");
       body.textContent = "";
       if (isle.view) body.append(el("h3", "", "🏞️ 섬 풍경"), el("p", "", isle.view));
@@ -1889,6 +2063,46 @@
       if (name !== "island") closeIslandView();
       drawWhereLayer();
       drawWhereCircle();
+      saveView();
+    }
+
+    // ── 새로고침(F5)해도 보던 칸과 지도 자리를 그대로 ──
+    // 이 창(탭)에서만 기억해요 (sessionStorage). 창을 닫으면 처음부터 시작해요.
+    const VIEW_KEY = "kisland.view";
+    let viewRestoring = false;
+    function saveView() {
+      if (viewRestoring || !me) return;
+      const c = map && map.getCenter ? map.getCenter() : null;
+      const view = {
+        pane: pane,
+        center: c ? { lat: c.getLat(), lng: c.getLng() } : null,
+        level: map ? map.getLevel() : null,
+        whereArea: whereArea,
+        spot: roadviewSpot ? roadviewSpot.place : null,
+        source: storySourceFilter,
+        kind: storyKindFilter,
+        region: storyRegion,
+        islandRegion: islandRegion
+      };
+      try { sessionStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch (error) { /* 기억하지 못해도 괜찮아요 */ }
+    }
+    function restoreView() {
+      let view = null;
+      try { view = JSON.parse(sessionStorage.getItem(VIEW_KEY) || "null"); } catch (error) { view = null; }
+      if (!view) return;
+      viewRestoring = true;
+      if (view.center && map) moveMap(view.center.lat, view.center.lng, view.level);
+      if (view.source) storySourceFilter = view.source;
+      if (view.kind) storyKindFilter = view.kind;
+      if (view.region) storyRegion = view.region;
+      if (view.islandRegion) islandRegion = view.islandRegion; // 섬 목록은 섬 파일을 다 읽은 뒤에 그려요 (loadIsles)
+      drawKindFilter();
+      drawStoryList();
+      setPane(view.pane || "story");
+      if (view.pane === "where" && view.whereArea) searchWhere(view.whereArea);
+      if (view.pane === "island" && view.spot) showRoadviewAt(view.spot, "");
+      viewRestoring = false;
+      saveView();
     }
     document.querySelectorAll("#modes button").forEach(function (button) {
       button.addEventListener("click", function () { setPane(button.dataset.pane); });
@@ -2013,7 +2227,7 @@
     // ═════════ 🗺️ 언제 어디에 살까? ═════════
     // OBIS(세계 해양생물 정보 시스템)에 모인 바다 생물 기록을 지도에 보이는 바다만큼 받아 와서, 고른 달·계절에 기록된 생물을 세어요.
     const OBIS_URL = "https://api.obis.org/v3/occurrence";
-    const WHERE_RADIUS_KM = 20;  // 지도에서 누른 곳 둘레 몇 km 안의 바다를 살펴볼지
+    const WHERE_RADIUS_KM = 5;   // 지도에서 누른 곳 둘레 몇 km 안의 바다를 살펴볼지
     const WHERE_PAGE = 5000;     // 한 번에 받을 기록 수
     const WHERE_PAGES = 3;       // 최대 몇 번 받을지 (많으면 느려져요)
     const SEASONS = { 봄: [3, 4, 5], 여름: [6, 7, 8], 가을: [9, 10, 11], 겨울: [12, 1, 2] };
@@ -2160,6 +2374,7 @@
       const ask = ++whereAsk;
       whereArea = center;
       whereRecords = null;
+      saveView();
       hideHint();
       $("wherePickNote").hidden = true;
       drawWhereCircle();
@@ -2323,68 +2538,68 @@
       return "🦐";
     }
 
-    // 확대하든 축소하든 찾은 생물이 모두 지도에 보이게 해요. 축소하면 그림을 작게 해서 더 많이 놓아요.
-    const CRITTER_SIZES = [[4, 40], [6, 34], [7, 28], [8, 24], [9, 20], [99, 16]]; // [지도 단계가 이것 이하일 때, 그림 크기 px]
-    const CRITTER_MAX_PINS = 700; // 지도에 한 번에 놓을 그림 수 (너무 많으면 느려져요). 생물마다 적어도 1개는 놓아요
-    function critterSize() {
-      const level = map.getLevel();
-      return CRITTER_SIZES.find(function (pair) { return level <= pair[0]; })[1];
-    }
+    // 지도를 CRITTER_CELL px 칸으로 나눠, 칸마다 기록이 가장 많은 생물(대표 생물) 그림 하나만 놓아요.
+    // 그 칸에 다른 생물도 있으면 그림 옆에 "+숫자"로 보여 주고, 누르면 그 칸의 생물 목록이 나와요.
+    const CRITTER_CELL = 64;
+    let cellList = []; // 생물 목록 창에 보여 주는 [{ species, n, emoji }]
     function drawCritterPins() {
       if (pane !== "where") return; // 섬 보기에서 둘레 생물을 찾을 때는 지도 위 로드뷰 표시를 지우지 않아요
       clearMarks();
       drawTalkPins(); // 👀 사람들이 본 생물 그림 (고른 섬·바다가 있을 때)
-      if (pane !== "where" || !map || !whereRecords) return;
+      if (!map || !whereRecords) return;
       const projection = map.getProjection();
       const months = shownMonths();
-      const size = critterSize();
-      const cellPx = size * 1.6; // 같은 생물은 이 크기 칸마다 그림 하나로 모아요
-      // 화면 1px이 위도·경도로 얼마인지 (그림이 겹치지 않게 조금씩 비켜 놓을 때 써요)
-      const c = map.getCenter ? map.getCenter() : new kakao.maps.LatLng(FIRST_PLACE.lat, FIRST_PLACE.lng);
-      const p0 = projection.containerPointFromCoords(c);
-      const p1 = projection.containerPointFromCoords(new kakao.maps.LatLng(c.getLat() + 0.01, c.getLng() + 0.01));
-      const latPerPx = 0.01 / Math.max(0.0001, Math.abs(p0.y - p1.y)), lngPerPx = 0.01 / Math.max(0.0001, Math.abs(p1.x - p0.x));
-      const bySpecies = {};
+      const cells = {};
       whereRecords.forEach(function (r) {
         if (!groupOn[r.group] || !months.includes(r.month)) return;
         if (whereFocus && r.species !== whereFocus) return;
         const p = projection.containerPointFromCoords(new kakao.maps.LatLng(r.lat, r.lng));
-        const key = Math.floor(p.x / cellPx) + "," + Math.floor(p.y / cellPx);
-        const s = bySpecies[r.species] || (bySpecies[r.species] = { emoji: r.emoji, cells: {} });
-        const cell = s.cells[key] || (s.cells[key] = { n: 0, lat: 0, lng: 0 });
+        const key = Math.floor(p.x / CRITTER_CELL) + "," + Math.floor(p.y / CRITTER_CELL);
+        const cell = cells[key] || (cells[key] = { n: 0, lat: 0, lng: 0, species: {} });
         cell.n++; cell.lat += r.lat; cell.lng += r.lng;
+        const s = cell.species[r.species] || (cell.species[r.species] = { species: r.species, n: 0, emoji: r.emoji });
+        s.n++;
       });
-      const names = Object.keys(bySpecies);
-      const perSpecies = Math.max(1, Math.floor(CRITTER_MAX_PINS / Math.max(1, names.length)));
-      // 같은 칸에 여러 생물이 있으면 해바라기 씨처럼 둥글게 비켜 놓아요
-      const crowd = {};
-      names.forEach(function (name) {
-        const cells = Object.keys(bySpecies[name].cells).sort(function (a, b) { return bySpecies[name].cells[b].n - bySpecies[name].cells[a].n; });
-        cells.slice(0, perSpecies).forEach(function (key) { (crowd[key] = crowd[key] || []).push({ name: name, cell: bySpecies[name].cells[key] }); });
-      });
-      Object.values(crowd).forEach(function (list) {
-        list.sort(function (a, b) { return b.cell.n - a.cell.n; });
-        list.forEach(function (item, k) {
-          const angle = k * 2.4, radius = size * 0.75 * Math.sqrt(k);
-          const spot = {
-            lat: item.cell.lat / item.cell.n - Math.sin(angle) * radius * latPerPx,
-            lng: item.cell.lng / item.cell.n + Math.cos(angle) * radius * lngPerPx
-          };
-          const pin = el("div", "critter-pin" + (whereFocus === item.name ? " on" : ""), bySpecies[item.name].emoji);
-          pin.style.width = pin.style.height = size + "px";
-          pin.style.fontSize = Math.round(size * 0.6) + "px";
-          pin.style.lineHeight = (size - 4) + "px";
-          if (size < 24) pin.style.borderWidth = "1px";
-          pin.title = item.name + " · " + item.cell.n + "건";
-          pin.addEventListener("mouseenter", function () { koreanName(item.name).then(function (kor) { pin.title = (kor || item.name) + " · 이곳 기록 " + item.cell.n + "건"; }); });
-          const others = list.filter(function (o) { return o !== item; }).slice(0, 5).map(function (o) { return o.name; });
-          pin.addEventListener("click", function () { openCritter(item.name, others); });
-          const holder = el("div"); // 지도가 바깥 상자의 모양을 바꿔도 그림 크기는 그대로 있게 한 겹 감싸요
-          holder.append(pin);
-          addOverlay(spot, holder, 4);
+      Object.values(cells).forEach(function (cell) {
+        const list = Object.values(cell.species).sort(function (a, b) { return b.n - a.n; });
+        const top = list[0];
+        const pin = el("div", "critter-pin" + (whereFocus === top.species ? " on" : ""), top.emoji);
+        if (list.length > 1) pin.append(el("small", "", "+" + (list.length - 1)));
+        pin.title = top.species + (list.length > 1 ? " 외 " + (list.length - 1) + "가지" : "");
+        pin.addEventListener("mouseenter", function () { koreanName(top.species).then(function (kor) { pin.title = (kor || top.species) + (list.length > 1 ? " 외 " + (list.length - 1) + "가지" : " · " + top.n + "건"); }); });
+        pin.addEventListener("click", function () {
+          if (list.length === 1) openCritter(top.species, []);
+          else openCellList(list);
         });
+        const holder = el("div"); // 지도가 바깥 상자의 모양을 바꿔도 그림 크기는 그대로 있게 한 겹 감싸요
+        holder.append(pin);
+        addOverlay({ lat: cell.lat / cell.n, lng: cell.lng / cell.n }, holder, 4);
       });
     }
+    // 한 칸의 생물 목록 창 (누르면 그 생물 설명 창)
+    function openCellList(list) {
+      cellList = list;
+      $("cellTitle").textContent = "이 자리 바다 생물 " + list.length + "가지";
+      const box = $("cellItems");
+      box.textContent = "";
+      list.forEach(function (s) {
+        const item = el("button", "critter");
+        item.type = "button";
+        const words = el("span", "words");
+        const name = el("b", "", s.species);
+        words.append(name, el("small", "", s.species));
+        koreanName(s.species).then(function (kor) { if (kor) name.textContent = kor; });
+        item.append(el("span", "emo", s.emoji), words, el("span", "num", s.n + "건"));
+        item.addEventListener("click", function () {
+          $("cellDialog").close();
+          openCritter(s.species, list.filter(function (o) { return o !== s; }).slice(0, 5).map(function (o) { return o.species; }));
+        });
+        box.append(item);
+      });
+      if (!$("cellDialog").open) $("cellDialog").showModal();
+    }
+    $("cellClose").addEventListener("click", function () { $("cellDialog").close(); });
+    $("cellDialog").addEventListener("click", function (event) { if (event.target === this) this.close(); });
 
     // ── 생물 설명 창 ──
     // 설명은 한국어 위키백과 요약을 가져와요 (없으면 학명으로 한 번 더 찾아봐요)
@@ -2843,15 +3058,8 @@
       const rich = isleInfos.filter(function (isle) { return isle.name.includes(words); });
       const plain = isleList.filter(function (isle) { return isle.name.includes(words) && !isleInfoOf(isle); });
       const found = rich.concat(plain).sort(function (a, b) { return (a.name.indexOf(words) === 0 ? 0 : 1) - (b.name.indexOf(words) === 0 ? 0 : 1); }).slice(0, 15);
-      found.forEach(function (isle) {
-        const button = el("button", "soft", (isleInfoOf(isle) ? "🏝️ " : "") + isle.name + (isle.area ? " (" + isle.area.split(" ").pop() + ")" : ""));
-        button.type = "button";
-        button.addEventListener("click", function () {
-          document.querySelectorAll("#islandList button, #islandFound button").forEach(function (b) { b.classList.toggle("on", b === button); });
-          pickIsland(isle);
-        });
-        box.append(button);
-      });
+      if (islandRegion) { islandRegion = null; drawIslandRegionLabel(); } // 이름으로 찾으면 지역 고르기는 풀어요
+      drawIslePicks(found); // 섬 이름 밑에 주소
       if (!found.length) box.append(el("p", "note", "'" + words + "'(이)라는 섬을 찾지 못했어요."));
     });
 
@@ -2913,7 +3121,7 @@
       else if (spotNear.length > 6) storyBox.append(el("p", "note", "이 둘레에 이야기가 " + spotNear.length + "개 있어요. 가까운 6개만 보여 줘요."));
       drawRoadviewMarks();
       // ③ 둘레 바다 생물 (3km 넘게 옮겼을 때만 새로 찾아요)
-      if (spotCritterAt && distanceKm(spotCritterAt, place) < 3 && whereRecords) { drawSpotCritters(place); return; }
+      if (spotCritterAt && distanceKm(spotCritterAt, place) < 2 && whereRecords) { drawSpotCritters(place); return; }
       spotCritterAt = place;
       $("spotCritterNote").textContent = "🔎 둘레 " + WHERE_RADIUS_KM + "km 바다의 생물 기록을 찾는 중…";
       $("spotCritters").textContent = "";
@@ -2996,6 +3204,7 @@
       if (pane === "island") roadviewSpot.overlay = addOverlay(place, el("div", "place-pin", "📷"), 6);
       $("kakaoLink").href = "https://map.kakao.com/link/roadview/" + place.lat.toFixed(6) + "," + place.lng.toFixed(6);
       describeSpot(place); // 여기가 어디인지, 둘레 바다 생물·이야기
+      saveView();
     }
     function showRoadviewAt(place, name) {
       if (!roadviewClient) { $("islandNote").textContent = "로드뷰는 지도가 보이는 웹 주소에서 볼 수 있어요."; return; }
@@ -3126,6 +3335,7 @@
       if (!webPhotos.length) loadWebPhotos();
       if (!talkPlaces.length) loadTalk();
       if (!isleList.length) loadIsles();
+      restoreView(); // 새로고침 전에 보던 칸과 지도 자리로
       clearInterval(refreshTimer);
       refreshTimer = setInterval(loadStories, 60000); // 1분마다 새 글이 있는지 보기
     }
