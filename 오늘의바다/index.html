@@ -366,6 +366,24 @@
     .tide-danger.l1 { background: #fff6dc; }
     .tide-danger.l2 { background: #fde8e6; }
     .tide-danger ul { margin: 4px 0 0; padding-left: 0; list-style: none; }
+    /* 🏝️ 섬 찾기 */
+    .island-box { margin-top: 10px; padding: 10px 12px; border: 2px solid #9fd3b8; border-radius: 12px; background: #f3fbf6; font-size: 14px; line-height: 1.6; }
+    .island-box h3 { margin: 0; }
+    .island-box .numbers { margin-top: 6px; }
+    .island-box .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; text-align: center; }
+    .island-box .days div { padding: 6px 4px; border-radius: 10px; background: #fff; }
+    .island-box .wiki { margin: 8px 0 0; }
+    .island-choice { display: block; width: 100%; margin-top: 6px; padding: 7px 10px; border: 1px solid #b7dcc8; border-radius: 10px; background: #fff; text-align: left; font-size: 14px; }
+    .island-choice small { display: block; color: #5b6272; }
+    /* 🔔 적조·환경 알림 */
+    .alert-box { margin-top: 10px; padding: 10px 12px; border: 2px solid #c0703b; border-radius: 12px; background: #fbeee4; font-size: 14px; line-height: 1.6; }
+    .alert-box button { display: block; width: 100%; margin-top: 6px; padding: 6px 10px; border: 1px solid #e3b48f; border-radius: 10px; background: #fff; text-align: left; font-size: 14px; }
+    .env { margin-top: 14px; }
+    .env-list { margin: 6px 0 8px; padding: 0; list-style: none; font-size: 14px; line-height: 1.5; }
+    .env-list li { margin-bottom: 6px; padding: 7px 10px; border-radius: 10px; background: #e9f7ef; }
+    .env-list li.l1 { background: #fff6dc; }
+    .env-list li.l2 { background: #fde8e6; }
+    .env-list small { display: block; color: #5b6272; }
     .links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     /* 📅 바다 예보 */
     .forecast { margin-top: 18px; padding-top: 4px; border-top: 2px dashed #b8d8e3; }
@@ -444,8 +462,9 @@
       </div>
       <div class="map-tools">
         <form id="placeForm">
-          <input id="placeInput" placeholder="섬·바닷가 이름으로 지도 옮기기" maxlength="30">
+          <input id="placeInput" placeholder="섬·바닷가 이름 찾기 (예: 거문도)" maxlength="30" list="islandNames" autocomplete="off">
           <button type="submit">찾기</button>
+          <datalist id="islandNames"></datalist>
         </form>
         <button type="button" id="mapTypeButton">🛰️ 위성지도</button>
         <button type="button" id="windLayerButton">💨 바람</button>
@@ -461,12 +480,14 @@
     <section id="seaPane">
       <div id="seaInfoPane">
         <h2><img class="logo" src="lighthouse.svg" alt=""> 씨그널</h2>
-        <p class="intro">지도에서 바닷가를 누르면 그곳을 크게 보여 주고, 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 수영해도 되는지 얼굴로 알려 주고, 낚시해도 되는 곳인지도 보여 줘요. 마을이 아닌 바다 위의 3일 예보를 여러 나라 예보와 견주어 보여 주고, 지도 위 💨 바람 · 🌊 파도 버튼으로 바람과 파도를 그림으로 볼 수 있어요.</p>
+        <p class="intro">지도에서 바닷가를 누르면 그곳을 크게 보여 주고, 지금 수온, 파도, 바람, 물때(물이 들어오고 나가는 때)와 수영해도 되는지 얼굴로 알려 주고, 낚시해도 되는 곳인지도 보여 줘요. 마을이 아닌 바다 위의 3일 예보를 여러 나라 예보와 견주어 보여 주고, 지도 위 💨 바람 · 🌊 파도 버튼으로 바람과 파도를 그림으로 볼 수 있어요. 지도 위 칸에 섬 이름을 넣으면 그 섬의 날씨와 소개가 나오고, 적조·기름 같은 바다 환경 문제도 알려 줘요.</p>
         <div class="row">
           <button type="button" class="soft" id="seaMapButton">🗺️ 지도에서 바닷가 누르기</button>
           <button type="button" class="soft" id="seaHereButton">📍 지금 내 자리</button>
         </div>
         <p class="note" id="seaPlaceNote"></p>
+        <div class="alert-box" id="alertBox" hidden></div>
+        <div class="island-box" id="islandBox" hidden></div>
 
         <div id="seaResult" hidden>
           <h3>수영해도 될까요?</h3>
@@ -480,6 +501,15 @@
             <p class="note" id="tideNote"></p>
             <div id="tideChart"></div>
             <div class="tide-danger" id="tideDanger"></div>
+          </div>
+          <div class="env">
+            <h3>🌍 바다 환경</h3>
+            <ul class="env-list" id="envList"></ul>
+            <div class="row">
+              <button type="button" class="soft" id="envReportButton">📷 환경 문제 사진 찍어 알리기</button>
+              <a class="soft" href="https://www.nifs.go.kr/red/main.red" target="_blank" rel="noopener">국립수산과학원 적조 정보</a>
+              <a class="soft" href="https://www.meis.go.kr" target="_blank" rel="noopener">해양환경정보포털</a>
+            </div>
           </div>
         </div>
         <div class="forecast" id="forecastBox" hidden>
@@ -512,7 +542,7 @@
         </div>
         <div class="danger-box">
           <h3>📸 위험 알리기 (최근 3일)</h3>
-          <p class="note">해파리, 적조, 깨진 유리처럼 위험한 것을 보면 사진을 찍어 올려 주세요. 근처에 알림이 있으면 수영 얼굴에도 나와요.</p>
+          <p class="note">해파리, 깨진 유리처럼 위험한 것이나 적조, 기름, 쓰레기 같은 환경 문제를 보면 사진을 찍어 올려 주세요. 근처에 알림이 있으면 수영 얼굴에도 나오고, 적조·기름은 위에 🔔 알림으로 떠요.</p>
           <button type="button" class="primary" id="newReportButton">📷 위험한 것 사진 찍어 알리기</button>
           <p class="count" id="reportCount"></p>
           <div id="reportList"></div>
@@ -751,11 +781,16 @@
       this.textContent = satellite ? "🗺️ 그림지도" : "🛰️ 위성지도";
     });
 
-    // 이름으로 지도 옮기기
-    $("placeForm").addEventListener("submit", function (event) {
+    // 이름으로 찾기: 섬 이름이면 그 섬의 날씨·정보를 보여 주고, 아니면 카카오맵으로 지도를 옮겨요
+    $("placeInput").addEventListener("focus", loadIslands);
+    $("placeForm").addEventListener("submit", async function (event) {
       event.preventDefault();
       const words = $("placeInput").value.trim();
-      if (!words || !placeSearch) return;
+      if (!words) return;
+      const found = await findIslands(words);
+      if (found.length === 1) { showIsland(found[0]); return; }
+      if (found.length > 1) { showIslandChoices(words, found); return; }
+      if (!placeSearch) { showHint("'" + words + "' 섬을 찾지 못했어요. 이름을 다시 확인해 주세요.", 3000); return; }
       placeSearch.keywordSearch(words, function (results, status) {
         if (status === kakao.maps.services.Status.OK && results[0]) {
           moveMap(Number(results[0].y), Number(results[0].x), 7);
@@ -764,6 +799,122 @@
         }
       });
     });
+
+    // ═════════ 🏝️ 섬 찾기 ═════════
+    // 섬 목록 islands.json: 바다이야기 팀이 모은 우리나라 바다 섬 1,257곳 [이름, 위도, 경도, 주소, 위키백과 글 이름]
+    const ISLAND_LEVEL = 7;  // 섬을 찾으면 지도를 이 크기로 보여 줘요 (숫자가 클수록 멀리)
+    const WIKI_LENGTH = 220; // 위키백과 소개를 이 글자 수까지만 보여 줘요
+    let islandList = null;
+    function loadIslands() {
+      if (!islandList) {
+        islandList = fetch("islands.json").then(function (response) { return response.json(); }).then(function (data) {
+          const names = Array.from(new Set(data.islands.map(function (island) { return island[0]; })));
+          const options = $("islandNames");
+          names.forEach(function (name) { const option = el("option"); option.value = name; options.append(option); });
+          return data.islands;
+        }).catch(function () { islandList = null; return []; });
+      }
+      return islandList;
+    }
+    // 이름이 같은 섬 → "도"를 붙인 이름 → 이름이 이렇게 시작하는 섬 순서로 찾아요.
+    // 같은 이름이 여러 곳이면 위키백과 글이 있는 큰 섬, 지금 보는 바다에서 가까운 섬부터
+    async function findIslands(words) {
+      const islands = await loadIslands();
+      const name = words.replace(/\s/g, "");
+      let found = islands.filter(function (island) { return island[0] === name; });
+      if (!found.length) found = islands.filter(function (island) { return island[0] === name + "도" || island[0] === name + "섬"; });
+      if (!found.length && name.length >= 2) found = islands.filter(function (island) { return island[0].indexOf(name) === 0; });
+      const here = seaPlace || FIRST_PLACE;
+      return found.sort(function (a, b) {
+        return (b[4] ? 1 : 0) - (a[4] ? 1 : 0) || distanceKm(here, { lat: a[1], lng: a[2] }) - distanceKm(here, { lat: b[1], lng: b[2] });
+      }).slice(0, 8);
+    }
+    function showIslandChoices(words, found) {
+      const box = $("islandBox");
+      box.textContent = "";
+      box.hidden = false;
+      box.append(el("b", "", "'" + words + "'(으)로 찾은 섬이 " + found.length + "곳이에요. 골라 주세요."));
+      found.forEach(function (island) {
+        const button = el("button", "island-choice");
+        button.type = "button";
+        button.append("🏝️ " + island[0], el("small", "", island[3] || "주소 없음"));
+        button.addEventListener("click", function () { showIsland(island); });
+        box.append(button);
+      });
+      bringIntoView(box);
+    }
+
+    async function showIsland(island) {
+      const place = { lat: island[1], lng: island[2] };
+      $("placeInput").value = island[0];
+      moveMap(place.lat, place.lng, ISLAND_LEVEL);
+      chooseSeaPlace(place, island[0] + " 둘레 바다"); // 섬 둘레 바다의 수영 신호등·물때·예보도 함께 바뀌어요
+      const ask = seaAsk;
+      const box = $("islandBox");
+      box.textContent = "";
+      box.hidden = false;
+      box.append(el("h3", "", "🏝️ " + island[0]), el("small", "", "📍 " + (island[3] || "주소 없음")));
+      const weather = el("div", "", "섬 날씨를 알아보는 중…");
+      const wiki = el("p", "wiki");
+      box.append(weather, wiki, el("p", "note", "섬 가운데(땅)의 날씨예요. 아래 \"수영해도 될까요?\"는 섬 둘레 바다의 상태예요."));
+      bringIntoView(box);
+      fetchIslandWeather(place).then(function (data) {
+        if (ask === seaAsk) drawIslandWeather(weather, data);
+      }).catch(function (error) {
+        if (ask === seaAsk) weather.textContent = "섬 날씨: " + errorText(error);
+      });
+      if (!island[4]) { wiki.textContent = "📖 위키백과에 글이 없는 작은 섬이에요."; return; }
+      try {
+        const page = await getJson("https://ko.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(island[4]));
+        if (ask !== seaAsk) return;
+        const text = page.extract || "";
+        wiki.append("📖 " + (text.length > WIKI_LENGTH ? text.slice(0, WIKI_LENGTH) + "…" : text) + " ");
+        const link = el("a", "", "위키백과에서 더 보기");
+        link.href = (page.content_urls && page.content_urls.desktop.page) || "https://ko.wikipedia.org/wiki/" + encodeURIComponent(island[4]);
+        link.target = "_blank";
+        link.rel = "noopener";
+        wiki.append(link);
+      } catch (error) {
+        if (ask === seaAsk) wiki.textContent = "📖 위키백과 소개를 받지 못했어요.";
+      }
+    }
+
+    // 섬 가운데의 날씨 (지금 + 3일). Open-Meteo, 키 필요 없음
+    async function fetchIslandWeather(place) {
+      return getJson(WEATHER_URL + "?latitude=" + place.lat.toFixed(4) + "&longitude=" + place.lng.toFixed(4) +
+        "&timezone=Asia%2FSeoul&forecast_days=3&wind_speed_unit=ms" +
+        "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m" +
+        "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset");
+    }
+    function drawIslandWeather(box, data) {
+      const now = data.current || {};
+      const day = data.daily || {};
+      function number(value, digits, unit) { return typeof value === "number" ? value.toFixed(digits) + unit : "모름"; }
+      function clock(text) { return text ? text.slice(11, 16) : "모름"; }
+      box.textContent = "";
+      const grid = el("div", "numbers");
+      [
+        ["🌡️ 기온", number(now.temperature_2m, 1, "°C")],
+        ["🤗 느끼는 온도", number(now.apparent_temperature, 1, "°C")],
+        ["날씨", weatherName(now.weather_code) || "모름"],
+        ["💨 바람", number(now.wind_speed_10m, 1, "m/s")],
+        ["💧 습도", number(now.relative_humidity_2m, 0, "%")],
+        ["🌅 해 뜨고 짐", clock((day.sunrise || [])[0]) + " / " + clock((day.sunset || [])[0])]
+      ].forEach(function (pair) {
+        const cell = el("div");
+        cell.append(el("small", "", pair[0]), el("b", "", pair[1]));
+        grid.append(cell);
+      });
+      const days = el("div", "days");
+      (day.time || []).forEach(function (text, i) {
+        const cell = el("div");
+        cell.append(el("b", "", DAY_NAMES[i] || text.slice(5)), el("br"), (weatherName(day.weather_code[i]) || "").split(" ")[0] + " " +
+          number(day.temperature_2m_min[i], 0, "") + "~" + number(day.temperature_2m_max[i], 0, "°C"), el("br"),
+          "☔ " + number(day.precipitation_probability_max[i], 0, "%"));
+        days.append(cell);
+      });
+      box.append(grid, days);
+    }
 
     // 지도 아래 주황색 안내
     let hintTimer = null;
@@ -908,6 +1059,7 @@
 
     async function chooseSeaPlace(place, name) {
       seaPlace = { lat: place.lat, lng: place.lng, name: name };
+      $("islandBox").hidden = true; // 섬을 찾았을 때만 다시 보여 줘요
       $("seaPlaceNote").textContent = "📍 " + name + " (" + placeText(place) + ") · 알아보는 중…";
       $("seaError").textContent = "";
       drawSeaLayer();
@@ -1038,6 +1190,7 @@
         grid.append(box);
       });
       drawTide(data);
+      drawEnv();
     }
 
     // 물때 그래프: 물높이가 가장 높을 때(만조, 물이 가득) / 가장 낮을 때(간조, 물이 빠짐)
@@ -1112,6 +1265,58 @@
       box.append(svg);
       drawTideDanger(times, heights, now);
     }
+
+    // ── 🌍 바다 환경: 고수온, 적조, 친구들이 알린 환경 문제 ──
+    // 공식 적조 속보는 공공데이터포털 인증키가 있어야 받을 수 있어서, 지금은 수온·달로 "잘 생기는 때"만 알려 주고 공식 사이트로 이어 줘요
+    const ENV_RULES = {
+      warmSea: 25,                  // 바닷물이 이것(°C)보다 따뜻하면 🟡 (국립수산과학원 고수온 예비특보 기준)
+      hotSea: 28,                   // 이것보다 따뜻하면 🔴 (고수온 주의보 기준)
+      redTideMonths: [7, 8, 9, 10], // 적조가 잘 생기는 달
+      redTideWater: [22, 28]        // 적조가 잘 생기는 수온(°C)
+    };
+    function drawEnv() {
+      const box = $("envList");
+      if (!seaData) return;
+      box.textContent = "";
+      function item(level, title, detail) {
+        const li = el("li", "l" + level);
+        li.append(el("b", "", title), el("small", "", detail));
+        box.append(li);
+      }
+      const r = ENV_RULES;
+      const water = seaData.water;
+      const temps = numbersOf([water].concat(forecast ? forecast.hours.map(function (hour) { return hour.water; }) : []));
+      const hottest = temps.length ? Math.max.apply(null, temps) : null; // 지금과 3일 예보 중 가장 따뜻할 때
+      const waterText = typeof water === "number" ? "지금 " + water.toFixed(1) + "°C" : "지금 수온 모름";
+
+      // 🌡️ 고수온 (바닷물이 너무 따뜻하면 물고기가 힘들고 적조·해파리가 늘어요)
+      if (hottest === null) item(0, "🌡️ 바닷물 온도를 알 수 없어요", "");
+      else if (hottest >= r.hotSea) item(2, "🌡️ 고수온: 바닷물이 아주 뜨거워요 (" + hottest.toFixed(1) + "°C)", "고수온 주의보 기준(" + r.hotSea + "°C)을 넘어요. 양식장 물고기가 죽을 수 있고 적조·해파리가 늘기 쉬워요. 진짜 특보는 국립수산과학원이 내려요.");
+      else if (hottest >= r.warmSea) item(1, "🌡️ 바닷물이 따뜻해지고 있어요 (" + hottest.toFixed(1) + "°C)", "고수온 예비특보 기준(" + r.warmSea + "°C)을 넘어요. " + r.hotSea + "°C를 넘으면 주의보 기준이에요.");
+      else item(0, "🌡️ 고수온이 아니에요 (" + waterText + ")", "바닷물이 " + r.warmSea + "°C를 넘으면 고수온 예비특보, " + r.hotSea + "°C를 넘으면 주의보 기준이에요 (국립수산과학원).");
+
+      // 🟤 적조 (작은 플랑크톤이 너무 많아져 바닷물 색이 붉게·갈색으로 바뀌는 것)
+      const redTides = nearReports(function (kind) { return kind.id === "redtide"; });
+      const month = new Date().getMonth() + 1;
+      const redTideTime = r.redTideMonths.indexOf(month) >= 0 && typeof water === "number" && water >= r.redTideWater[0] && water <= r.redTideWater[1];
+      const redTideAbout = "적조는 작은 플랑크톤이 너무 많아져 바닷물이 붉게·갈색으로 바뀌는 거예요. 여름~가을, 바닷물 " + r.redTideWater[0] + "~" + r.redTideWater[1] + "°C에서 잘 생겨요.";
+      if (redTides.length) item(2, "🟤 적조: 친구들이 " + redTides.length + "번 알렸어요 (" + reportWhere(redTides[0]) + ")", reportKindOf("redtide").tip);
+      else if (redTideTime) item(1, "🟤 적조가 잘 생기는 때예요 (" + waterText + ")", redTideAbout + " 생겼다는 뜻은 아니니 국립수산과학원 적조 정보를 확인해요.");
+      else item(0, "🟤 적조 알림이 없고, 잘 생기는 때도 아니에요 (" + waterText + ")", redTideAbout);
+
+      // 🗑️ 친구들이 알린 다른 환경 문제 (쓰레기, 기름, 죽은 물고기, 해조류)
+      const others = nearReports(function (kind) { return kind.env && kind.id !== "redtide"; });
+      if (others.length) {
+        const counts = {};
+        others.forEach(function (report) { counts[report.kind] = (counts[report.kind] || 0) + 1; });
+        const level = Math.max.apply(null, Object.keys(counts).map(function (id) { return reportKindOf(id).level; }));
+        item(level, "🗑️ 친구들이 알린 환경 문제: " + Object.keys(counts).map(function (id) { return reportKindOf(id).name + " " + counts[id] + "곳"; }).join(", "),
+          ENV_NEAR_KM + "km 안, 최근 " + REPORT_DAYS + "일. 아래 📸 위험 알리기 목록이나 지도의 빨간 동그라미를 누르면 사진을 볼 수 있어요.");
+      } else {
+        item(0, "🗑️ 쓰레기·기름 같은 환경 문제 알림이 없어요", "고른 바닷가 " + ENV_NEAR_KM + "km 안, 최근 " + REPORT_DAYS + "일. 보면 사진을 찍어 알려 주세요.");
+      }
+    }
+    $("envReportButton").addEventListener("click", function () { $("newReportButton").click(); });
 
     // 달 모양으로 사리(물 차이가 가장 큰 때)·조금(가장 작은 때) 알아보기. 바닷물은 달이 끌어당겨서 움직여요
     function moonTide(time) {
@@ -1307,6 +1512,7 @@
         forecast = { hours: hours, town: null };
         $("forecastBox").hidden = false;
         drawForecast();
+        drawEnv(); // 3일 중 가장 따뜻한 수온으로 고수온을 다시 봐요
         loadTown(place, ask);
       } catch (error) {
         if (ask !== seaAsk) return;
@@ -1992,15 +2198,22 @@
     const REPORT_NEAR_KM = 5;      // 고른 바닷가에서 이 거리(km) 안의 알림은 수영 얼굴에도 넣어요
     const PHOTO_SIZE = 1280;       // 사진이 너무 크면 이 크기로 줄여서 올려요
     // 위험 알림 종류 (더하거나 빼도 돼요). level 2는 🔴(들어가지 마세요), 1은 🟡(조심해요)
+    // env: 🌍 바다 환경 문제, alert: 🔔 알림 상자에 크게 띄우고 tip(지킬 것)을 보여 줘요. etc(기타)는 맨 끝에 두세요
     const REPORT_KINDS = [
       { id: "jelly", name: "🪼 해파리", level: 1 },
       { id: "shark", name: "🦈 상어", level: 2 },
-      { id: "redtide", name: "🟤 적조", level: 1 },
+      { id: "redtide", name: "🟤 적조", level: 1, env: true, alert: true,
+        tip: "적조가 있는 물에는 들어가지 마세요. 피부가 가렵거나 따가울 수 있어요. 그곳의 조개·해산물은 따지 말고, 죽은 물고기는 만지지 마세요." },
+      { id: "oil", name: "🛢️ 기름 띠", level: 2, env: true, alert: true,
+        tip: "기름이 뜬 물에는 들어가지 마세요. 기름 묻은 새·동물은 만지지 말고 어른께 알려요." },
+      { id: "deadfish", name: "🐟 죽은 물고기", level: 1, env: true },
+      { id: "seaweed", name: "🌿 떠밀려 온 해조류", level: 1, env: true },
       { id: "current", name: "🌀 물살이 셈", level: 2 },
-      { id: "trash", name: "🗑️ 쓰레기·유리", level: 1 },
+      { id: "trash", name: "🗑️ 쓰레기·유리", level: 1, env: true },
       { id: "rock", name: "🪨 미끄러운 바위", level: 1 },
       { id: "etc", name: "⚠️ 기타", level: 1 }
     ];
+    const ENV_NEAR_KM = 20; // 고른 바닷가에서 이 거리(km) 안의 적조·환경 알림을 🔔 알림과 🌍 바다 환경에 보여 줘요
     function reportKindOf(id) {
       return REPORT_KINDS.find(function (kind) { return kind.id === id; }) || REPORT_KINDS[REPORT_KINDS.length - 1];
     }
@@ -2141,12 +2354,41 @@
       if (!me) return;
       const key = list.map(function (item) { return item.sk; }).join(",");
       if (key === reportsKey) return;
+      const firstLoad = reportsKey === null;
+      const before = new Set(reports.map(function (report) { return report.sk; }));
       reportsKey = key;
       reports = list.map(readReport).filter(Boolean);
       drawReports();
       drawSeaLayer();
       drawSea(); // 수영 얼굴에 새 알림을 넣어요
       drawForecast();
+      // 🔔 가까운 바다에 새 적조·기름 알림이 올라오면 지도 아래에 바로 알려 줘요
+      const fresh = firstLoad ? [] : nearReports(function (kind) { return kind.alert; }).filter(function (report) { return !before.has(report.sk); });
+      if (fresh.length) showHint("🔔 새 알림: " + reportKindOf(fresh[0].kind).name + " (" + reportWhere(fresh[0]) + ")", 8000);
+    }
+
+    // ── 🔔 적조·기름 알림: 고른 바닷가 ENV_NEAR_KM 안에서 친구들이 알린 것 ──
+    function nearReports(test) {
+      if (!seaPlace) return [];
+      return recentReports().filter(function (report) {
+        return test(reportKindOf(report.kind)) && distanceKm(seaPlace, report) <= ENV_NEAR_KM;
+      }).sort(function (a, b) { return distanceKm(seaPlace, a) - distanceKm(seaPlace, b); });
+    }
+    function drawAlerts() {
+      const list = nearReports(function (kind) { return kind.alert; });
+      const box = $("alertBox");
+      box.textContent = "";
+      box.hidden = !list.length;
+      if (!list.length) return;
+      const kinds = Array.from(new Set(list.map(function (report) { return report.kind; }))).map(reportKindOf);
+      box.append(el("b", "", "🔔 가까운 바다에 " + kinds.map(function (kind) { return kind.name; }).join(" · ") + " 알림이 있어요"));
+      list.slice(0, 3).forEach(function (report) {
+        const button = el("button", "", reportKindOf(report.kind).name + " · " + reportWhere(report) + " · " + timeAgo(report.sk) + " (" + report.author + ")");
+        button.type = "button";
+        button.addEventListener("click", function () { openReport(report); });
+        box.append(button);
+      });
+      kinds.forEach(function (kind) { box.append(el("p", "note", kind.tip)); });
     }
     function timeAgo(sk) {
       const minutes = Math.round((Date.now() - timeOf(sk)) / 60000);
@@ -2187,6 +2429,7 @@
         box.append(card);
       });
       $("reportCount").textContent = list.length ? list.length + "개" : "최근 " + REPORT_DAYS + "일 동안 알린 위험이 없어요.";
+      drawAlerts();
     }
     // 지도 위 알림: 사진이 든 빨간 동그라미 + 종류 그림
     function drawReportPins() {
