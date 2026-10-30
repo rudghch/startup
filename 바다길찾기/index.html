@@ -242,6 +242,55 @@
     .card-pane { margin-top: 8px; padding: 4px 4px 0; border-top: 1px solid #eef2f5; }
     .card-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
     .card-actions .soft { padding: 5px 10px; font-size: 13px; }
+    .nav-start { margin-top: 8px; padding: 10px; }
+    .card-more { margin-top: 8px; border: 1px solid #d6e4ea; border-radius: 12px; }
+    .card-more > summary { padding: 8px 10px; font-size: 14px; font-weight: bold; cursor: pointer; list-style: none; }
+    .card-more > summary::-webkit-details-marker { display: none; }
+    .card-more > summary::before { content: "▸ "; color: #5b6272; }
+    .card-more[open] > summary::before { content: "▾ "; }
+    .card-more > summary small { font-weight: normal; color: #5b6272; font-size: 12px; }
+    .card-more > .card-tabs { margin: 0 8px; }
+    .card-more > .card-pane { margin: 8px 8px 0; }
+    .card-more[open] { padding-bottom: 8px; }
+    .nav-speeds { display: inline-flex; gap: 2px; }
+    .nav-speeds .soft { padding: 5px 7px; }
+    /* 모의 주행 안내판 */
+    .nav-banner {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: min(560px, calc(100% - 24px));
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: #0b6e8a;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    }
+    .nav-arrow { flex-shrink: 0; width: 56px; height: 56px; border-radius: 12px; background: rgba(255, 255, 255, 0.18); font-size: 38px; line-height: 56px; text-align: center; }
+    .nav-words b { display: block; font-size: 20px; line-height: 1.3; }
+    .nav-words small { display: block; margin-top: 2px; font-size: 13px; opacity: 0.85; }
+    .nav-danger {
+      position: absolute;
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      width: min(560px, calc(100% - 24px));
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: #fff6dc;
+      color: #7a4b00;
+      font-weight: bold;
+      font-size: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .nav-danger.l2 { background: #fde8e6; color: #9b2316; }
+    .navigating .map-tools, .navigating .legend { display: none; }
     .routing .side { display: none; }
     .routing.side-open .side { display: block; position: fixed; top: 56px; right: 0; bottom: 0; z-index: 30; width: min(400px, 100%); box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2); }
     .side-close { display: none; margin-bottom: 10px; }
@@ -366,12 +415,22 @@
         <button type="button" id="stopPickButton">그만</button>
       </div>
 
+      <!-- 모의 주행: 지도 위쪽에 다음에 할 일(왼쪽·오른쪽·위험)을 크게 -->
+      <div class="nav-banner" id="navBanner" hidden>
+        <div class="nav-arrow" id="navArrow"></div>
+        <div class="nav-words"><b id="navMain"></b><small id="navNext"></small></div>
+      </div>
+      <div class="nav-danger" id="navDanger" hidden></div>
+
       <!-- 길을 찾으면 오른쪽 칸 대신 지도 가운데 아래에 나오는 카드: 가장 궁금한 것만 크게, 나머지는 눌러서 펼쳐 봐요 -->
       <div class="trip-card" id="tripCard" hidden>
         <div class="glance" id="glance">
           <div class="glance-grid" id="glanceGrid"></div>
           <p class="glance-signal" id="glanceSignal"></p>
         </div>
+        <button type="button" class="primary nav-start" id="navStart">▶ 안내 시작 (모의 주행)</button>
+        <details class="card-more" id="cardMore">
+        <summary>자세히 보기 <small>바닷길·기름 · 가는 길 날씨 · 배 댈 곳 · 주변 편의시설</small></summary>
         <div class="card-tabs" id="cardTabs">
           <button type="button" data-pane="routePane"><b>🧭 바닷길·기름</b><small id="routeSum"></small></button>
           <button type="button" data-pane="tripPane"><b>🌦️ 가는 길 날씨</b><small id="tripSum">알아보는 중…</small></button>
@@ -397,7 +456,16 @@
           <p class="note" id="nearNote"></p>
           <div class="docks" id="nearList"></div>
         </div>
-        <div class="card-actions">
+        </details>
+        <!-- 모의 주행 중에만 보이는 단추들 -->
+        <div class="card-actions" id="navControls" hidden>
+          <button type="button" class="soft" id="navPause">⏸ 멈추기</button>
+          <span class="nav-speeds" id="navSpeeds"></span>
+          <button type="button" class="soft" id="navVoice">🔊 소리 켜짐</button>
+          <button type="button" class="soft" id="navFollow">🎯 배 따라가기</button>
+          <button type="button" class="soft" id="navStop">■ 안내 끝</button>
+        </div>
+        <div class="card-actions" id="cardActions">
           <button type="button" class="soft" id="cardUndo">↩ 하나 지우기</button>
           <button type="button" class="soft" id="cardClear">✕ 길 지우기</button>
           <button type="button" class="soft" id="cardMenu">☰ 배·내 위치 설정</button>
@@ -1462,6 +1530,7 @@
     let routePoints = []; // 지도에서 찍은 곳들 (첫째는 출발, 마지막은 도착)
     let routeLegs = [];   // 찍은 곳 사이마다 찾은 바닷길 { points, sea }
     let routeKm = 0;      // 바닷길 전체 길이 (한눈에 보기에 써요)
+    let sim = null;       // 모의 주행 중이면 { km, total, clock, ... } (아래 "모의 주행"에서 만들어요)
     let routeLine = null;
     let routeAsk = 0;
 
@@ -1520,6 +1589,7 @@
     async function routeChanged() {
       // 찍은 곳 사이마다 바닷길을 찾고, 못 찾으면 곧은 선으로 이어요
       const ask = ++routeAsk;
+      stopSim(); // 길이 바뀌면 모의 주행은 끝내요
       const points = routePoints.slice();
       routeLegs = [];
       for (let i = 1; i < points.length; i++) routeLegs.push({ points: [points[i - 1], points[i]], sea: false, waiting: true });
@@ -1675,6 +1745,7 @@
     }
     // 카드의 칸 버튼: 누르면 그 칸이 펼쳐지고, 한 번 더 누르면 접혀요 (한 번에 하나만)
     function openPane(id, keepOpen) {
+      if (keepOpen) $("cardMore").open = true;
       document.querySelectorAll("#cardTabs button").forEach(function (button) {
         const on = button.dataset.pane === id && (keepOpen || !button.classList.contains("on"));
         button.classList.toggle("on", on);
@@ -1706,10 +1777,10 @@
       const knots = Math.max(1, Number($("speedInput").value) || boat.knots);
       const live = Boolean(boatNow);
       const speed = live && boatNow.speed > 1 ? boatNow.speed : knots; // 배가 거의 서 있으면 정한 빠르기로 셈해요
-      const km = live ? kmLeft(boatNow) : routeKm;
+      const km = sim ? Math.max(0, sim.total - sim.km) : live ? kmLeft(boatNow) : routeKm;
       const trip = tripData && tripPoints.length ? tripAt(departTime()) : null;
       const hours = trip && !live ? (trip.arrive - trip.depart) / 3600000 : km / (speed * 1.852); // 날씨를 받았으면 물살까지 넣은 시간
-      const arrive = live ? Date.now() + hours * 3600000 : trip ? trip.arrive : departTime() + hours * 3600000;
+      const arrive = live ? (sim ? sim.clock : Date.now()) + hours * 3600000 : trip ? trip.arrive : departTime() + hours * 3600000;
       const finding = routeLegs.some(function (leg) { return leg.waiting; });
       const grid = $("glanceGrid");
       grid.textContent = "";
@@ -1726,6 +1797,253 @@
         trip ? ["🟢 날씨 좋아요", "🟡 날씨 조심", "🔴 이 시각에는 나가지 마세요"][trip.level] + trip.factors.filter(function (f) { return f.level === trip.level && trip.level > 0; })
           .map(function (f) { return " · " + f.icon + " " + f.name.split(" ")[0]; }).join("") : "";
     }
+
+    // ═════════ 모의 주행 (내비 안내 연습) ═════════
+    // 찾은 바닷길을 따라 배가 가는 것처럼 움직이면서, 꺾이는 곳마다 "왼쪽으로·오른쪽으로"와 위험한 곳을 알려 줘요.
+    // 진짜 GPS가 아니라 연습이에요. 소리는 브라우저의 말하기 기능(speechSynthesis)으로 내요 (무료, 인터넷 필요 없음).
+    const NAV_SPEEDS = [20, 60, 200];   // 모의 주행 빠르기: 진짜보다 몇 배 빠르게 (×60이면 1초에 1분 가요)
+    const NAV_SAY_AHEAD = [0.5, 0.08];  // 꺾이는 곳 몇 km 앞에서 말할지 (500m 앞, 바로 앞)
+    const NAV_TURN = [20, 60, 140];     // 몇 도 넘게 꺾이면 "살짝", "그냥", "크게 돌아서"라고 할지
+    const NAV_DANGER_AHEAD = 1;         // 위험한 곳 몇 km 앞에서 미리 알려 줄지
+    const SHALLOW = 5;                  // 이것보다 얕은(m) 곳을 지나면 알려 줘요 (수심 지도는 어림값이에요)
+    const NAV_TICK = 200;               // 몇 밀리초마다 배를 움직일지
+    const WEATHER_WARN = {
+      "💨": "바람이 세요", "💥": "돌풍이 불어요", "🌊": "파도가 높아요", "〰️": "너울이 와요",
+      "🌀": "물살이 세요", "🌫️": "안개로 앞이 잘 안 보여요", "⛈️": "비나 천둥번개가 와요"
+    };
+    let navSpeed = NAV_SPEEDS[1];
+    let navVoice = true;
+
+    function say(text) {
+      if (!navVoice || !window.speechSynthesis) return;
+      speechSynthesis.cancel(); // 앞의 말이 안 끝났으면 끊고 새 말을 해요
+      const talk = new SpeechSynthesisUtterance(text);
+      talk.lang = "ko-KR";
+      talk.rate = 1.05;
+      speechSynthesis.speak(talk);
+    }
+    function navKm(km) { return km < 1 ? Math.max(10, Math.round(km * 100) * 10) + "m" : km.toFixed(1) + "km"; } // 안내판 거리는 10m 단위로
+    function meterWords(km) { return km >= 0.95 ? Math.round(km * 10) / 10 + "킬로미터" : Math.round(km * 10) * 100 + "미터"; }
+    function turnOf(diff) {
+      const size = Math.abs(diff), right = diff > 0;
+      if (size < NAV_TURN[0]) return null;
+      if (size < NAV_TURN[1]) return right ? { arrow: "↗️", words: "살짝 오른쪽으로" } : { arrow: "↖️", words: "살짝 왼쪽으로" };
+      if (size < NAV_TURN[2]) return right ? { arrow: "➡️", words: "오른쪽으로" } : { arrow: "⬅️", words: "왼쪽으로" };
+      return { arrow: "↩️", words: (right ? "오른쪽" : "왼쪽") + "으로 크게 돌아서" };
+    }
+    // 바닷길 위 km 자리의 위도·경도와 가는 방향
+    function pointAt(path, at, km) {
+      let i = 1;
+      while (i < path.length - 1 && at[i] < km) i++;
+      const a = path[i - 1], b = path[i];
+      const share = at[i] > at[i - 1] ? Math.max(0, Math.min(1, (km - at[i - 1]) / (at[i] - at[i - 1]))) : 1;
+      return { lat: a.lat + (b.lat - a.lat) * share, lng: a.lng + (b.lng - a.lng) * share, heading: bearing(a, b) };
+    }
+
+    // 안내할 일들을 미리 만들어요: 꺾이는 곳, 들르는 곳, 날씨가 나쁜 곳, 얕은 곳, 도착
+    async function navEvents(path, at, total) {
+      const events = [];
+      let legEnd = 0;
+      routeLegs.forEach(function (leg, i) {
+        legEnd += pathKm(leg.points);
+        if (i < routeLegs.length - 1) events.push({ km: legEnd, kind: "via", arrow: "📍", words: (i + 1) + "번 들르는 곳", say: (i + 1) + "번 들르는 곳이에요" });
+      });
+      // 꺾이는 곳 (100m 안에서 두 번 꺾이면 하나로 합쳐요)
+      let last = null;
+      for (let i = 1; i < path.length - 1; i++) {
+        if (at[i] < 0.1) continue; // 출발하자마자 꺾는 것은 "○○쪽으로 출발하세요"로 말해요
+        if (events.some(function (e) { return e.kind === "via" && Math.abs(e.km - at[i]) < 0.05; })) continue;
+        const diff = (bearing(path[i], path[i + 1]) - bearing(path[i - 1], path[i]) + 540) % 360 - 180;
+        if (last && at[i] - last.km < 0.1) { last.diff += diff; last.out = bearing(path[i], path[i + 1]); continue; }
+        last = { km: at[i], diff: diff, out: bearing(path[i], path[i + 1]) };
+        events.push(last);
+      }
+      events.forEach(function (e) {
+        if (e.diff === undefined) return;
+        const turn = turnOf((e.diff + 540) % 360 - 180);
+        e.kind = turn ? "turn" : "skip";
+        if (!turn) return;
+        e.arrow = turn.arrow;
+        e.words = turn.words + " (" + directionName(e.out) + "으로)";
+        e.say = turn.words + " 꺾어서 " + directionName(e.out) + "으로 가세요";
+      });
+      // 날씨가 나쁜 곳 (가는 길 날씨에서 🟡🔴인 곳)
+      const trip = tripData && tripPoints.length ? tripAt(departTime()) : null;
+      if (trip) {
+        trip.points.forEach(function (point, i) {
+          if (!point.level) return;
+          const words = WEATHER_WARN[point.icon] || "날씨가 나빠요";
+          events.push({ km: tripPoints[i].km, end: tripPoints[i].km, kind: "danger", level: point.level, arrow: point.icon, words: point.icon + " " + words, say: words + ". 조심하세요" });
+        });
+      }
+      // 얕은 곳·땅에 가까운 곳: 200m마다 수심 지도(약 130m 칸)를 보고, 이어진 곳은 하나로 묶어요 (항구 앞 300m는 빼요)
+      // 수심 지도에서 0m 이상이면 땅이나 바닷가에 아주 가까운 곳이에요
+      let zone = null;
+      for (let km = 0.3; km < total - 0.3; km += 0.2) {
+        const h = await heightAt(pointAt(path, at, km));
+        if (h === null || h <= -SHALLOW) continue;
+        if (zone && km - zone.end <= 0.4) { zone.end = km; zone.depth = Math.min(zone.depth, -h); continue; }
+        zone = { km: km, end: km, depth: -h, kind: "danger", level: 1, arrow: "🪨" };
+        events.push(zone);
+      }
+      events.forEach(function (e) {
+        if (e.arrow !== "🪨") return;
+        if (e.depth > 0) {
+          e.words = "🪨 얕은 곳 (약 " + Math.max(1, e.depth) + "m)";
+          e.say = "얕은 곳이에요. 바위와 바닥을 조심하세요";
+        } else if (e.end - e.km <= 0.6) {
+          e.words = "🪨 좁은 물길 (다리 밑이나 섬 사이)";
+          e.say = "좁은 물길이에요. 천천히 가세요";
+        } else {
+          e.words = "🪨 바닷가 가까이 지나요 (바위 조심)";
+          e.say = "바닷가 가까이 지나요. 바위를 조심하세요";
+        }
+        e.end = Math.min(e.end, e.km + 0.5); // 긴 곳은 처음 500m만 띠로 보여 줘요 (계속 떠 있으면 다른 안내가 안 보여요)
+      });
+      events.push({ km: total, kind: "arrive", arrow: "🏁", words: "도착", say: "목적지에 도착했어요" });
+      return events.filter(function (e) { return e.kind !== "skip"; })
+        .sort(function (a, b) { return a.km - b.km; })
+        .map(function (e, i) { e.id = i; return e; });
+    }
+
+    async function startSim() {
+      if (routePoints.length < 2 || routeLegs.some(function (leg) { return leg.waiting; })) return;
+      if (watchId !== null) stopLive(); // 진짜 GPS와 섞이지 않게 꺼요
+      const path = routePath();
+      const at = [0];
+      for (let i = 1; i < path.length; i++) at.push(at[i - 1] + distanceKm(path[i - 1], path[i]));
+      $("navStart").disabled = true;
+      $("navStart").textContent = "안내 준비 중… (얕은 곳 살펴보는 중)";
+      const events = await navEvents(path, at, at[at.length - 1]);
+      $("navStart").disabled = false;
+      $("navStart").textContent = "▶ 안내 시작 (모의 주행)";
+      sim = { path: path, at: at, total: at[at.length - 1], km: 0, clock: departTime(), events: events, said: new Set(), paused: false, done: false };
+      document.body.classList.add("navigating");
+      $("cardMore").open = false;
+      $("navStart").hidden = $("cardActions").hidden = true;
+      $("navControls").hidden = $("navBanner").hidden = false;
+      $("navPause").disabled = false;
+      $("navPause").textContent = "⏸ 멈추기";
+      drawNavSpeeds();
+      follow = true;
+      const first = pointAt(path, at, 0);
+      moveMap(first.lat, first.lng, 4);
+      sim.intro = "안내를 시작해요. " + directionName(bearing(first, pointAt(path, at, Math.min(0.3, sim.total)))) + "으로 출발하세요";
+      sim.timer = setInterval(simTick, NAV_TICK);
+      simTick();
+    }
+    function stopSim() {
+      if (!sim) return;
+      clearInterval(sim.timer);
+      sim = null;
+      boatNow = null;
+      if (window.speechSynthesis) speechSynthesis.cancel();
+      document.body.classList.remove("navigating");
+      $("navBanner").hidden = $("navDanger").hidden = $("navControls").hidden = true;
+      $("navStart").hidden = $("cardActions").hidden = false;
+      drawBoat();
+      drawGlance();
+    }
+    function simTick() {
+      if (!sim || sim.done) return;
+      const knots = Math.max(1, Number($("speedInput").value) || boat.knots);
+      if (!sim.paused) {
+        const seconds = NAV_TICK / 1000 * navSpeed; // 모의 주행에서 흐른 시간
+        sim.clock += seconds * 1000;
+        sim.km = Math.min(sim.total, sim.km + knots * 1.852 * seconds / 3600);
+      }
+      const place = pointAt(sim.path, sim.at, sim.km);
+      boatNow = { lat: place.lat, lng: place.lng, speed: knots, heading: place.heading, time: sim.clock };
+      drawBoat();
+      if (follow) moveMap(place.lat, place.lng);
+      drawGlance();
+      drawNav();
+    }
+    // 같은 순간에 할 말이 여러 개면 모아서 한 번에 말해요 (따로 말하면 앞의 말이 끊겨요)
+    function sayOnce(key, text) {
+      if (sim.said.has(key)) return;
+      sim.said.add(key);
+      sim.words.push(text);
+    }
+    function drawNav() {
+      sim.words = sim.intro ? [sim.intro] : []; // 처음에는 "안내를 시작해요"부터
+      sim.intro = null;
+      showNav();
+      if (sim.words.length) say(sim.words.join(". "));
+    }
+    function showNav() {
+      const km = sim.km;
+      // "지금 ○○" 말하기: 그 자리에 오거나 지나쳤는데 아직 말하지 않은 일 (빠르게 돌리면 그 순간을 건너뛸 수 있어서 지나친 것도 봐요)
+      sim.events.forEach(function (e) {
+        if (e.kind === "arrive" || e.km > km + (e.kind === "danger" ? 0 : NAV_SAY_AHEAD[1])) return;
+        const key = e.id + "now";
+        if (sim.said.has(key)) return;
+        if (km - (e.end || e.km) > 0.3) { sim.said.add(key); return; } // 한참 지난 일은 말하지 않아요
+        sayOnce(key, e.kind === "danger" ? e.say : e.kind === "via" ? "여기가 " + e.say : "지금 " + e.say);
+      });
+      // 1) 다음에 할 일 (꺾기·들르는 곳·도착)
+      const ahead = sim.events.filter(function (e) { return e.kind !== "danger" && e.km >= km - 0.005; });
+      const next = ahead[0];
+      if (next && next.kind === "arrive" && km >= sim.total) {
+        $("navArrow").textContent = "🏁";
+        $("navMain").textContent = "도착했어요!";
+        $("navNext").textContent = docks.length ? "가까운 배 댈 곳: " + docks.slice(0, 2).map(function (d) { return d.name; }).join(", ") : "수고했어요";
+        sayOnce("arrive", "목적지에 도착했어요. 안내를 마칠게요");
+        sim.done = true;
+        $("navPause").disabled = true;
+        $("navDanger").hidden = true;
+        return;
+      }
+      const gap = next ? next.km - km : 0;
+      if (next && next.kind !== "arrive" && gap <= 2) {
+        $("navArrow").textContent = next.arrow;
+        $("navMain").textContent = (gap <= NAV_SAY_AHEAD[1] ? "지금 " : navKm(gap) + " 앞 ") + next.words;
+        if (gap > NAV_SAY_AHEAD[1] && gap <= NAV_SAY_AHEAD[0]) sayOnce(next.id + "soon", meterWords(gap) + (next.kind === "via" ? " 앞이 " : " 앞에서 ") + next.say);
+      } else {
+        $("navArrow").textContent = "⬆️";
+        $("navMain").textContent = (next && next.kind !== "arrive" ? navKm(gap) : "도착까지 " + navKm(sim.total - km)) + " 곧게 가요";
+      }
+      const after = ahead[1]; // 그다음에 할 일
+      $("navNext").textContent = "지금 " + directionName(boatNow.heading) + "으로 가는 중" +
+        (after && gap <= 2 ? " · 그다음: " + (after.kind === "arrive" ? "🏁 도착" : after.words) + " (" + navKm(after.km - km) + ")" : "");
+      // 2) 위험한 곳: 1km 앞부터 지나갈 때까지 노란(빨간) 띠로
+      const danger = sim.events.filter(function (e) { return e.kind === "danger" && km >= e.km - NAV_DANGER_AHEAD && km <= e.end + 0.1; })
+        .sort(function (a, b) { return b.level - a.level || a.km - b.km; })[0];
+      $("navDanger").hidden = !danger;
+      if (danger) {
+        const inside = km >= danger.km;
+        $("navDanger").className = "nav-danger l" + danger.level;
+        $("navDanger").textContent = "⚠️ " + (inside ? "지나는 중: " : navKm(danger.km - km) + " 앞: ") + danger.words;
+        if (!inside && danger.km - km >= 0.15) sayOnce(danger.id + "ahead", meterWords(danger.km - km) + " 앞에 위험한 곳이 있어요. " + danger.say); // 아주 가까우면 들어갈 때 한 번만 말해요
+      }
+    }
+    function drawNavSpeeds() {
+      const box = $("navSpeeds");
+      box.textContent = "";
+      NAV_SPEEDS.forEach(function (speed) {
+        const button = el("button", "soft" + (navSpeed === speed ? " on" : ""), "×" + speed);
+        button.type = "button";
+        button.title = "진짜보다 " + speed + "배 빠르게";
+        button.addEventListener("click", function () { navSpeed = speed; drawNavSpeeds(); });
+        box.append(button);
+      });
+    }
+    $("navStart").addEventListener("click", startSim);
+    $("navStop").addEventListener("click", stopSim);
+    $("navPause").addEventListener("click", function () {
+      if (!sim) return;
+      sim.paused = !sim.paused;
+      this.textContent = sim.paused ? "▶ 계속" : "⏸ 멈추기";
+    });
+    $("navVoice").addEventListener("click", function () {
+      navVoice = !navVoice;
+      this.textContent = navVoice ? "🔊 소리 켜짐" : "🔇 소리 꺼짐";
+      if (!navVoice && window.speechSynthesis) speechSynthesis.cancel();
+    });
+    $("navFollow").addEventListener("click", function () {
+      follow = true;
+      if (boatNow) moveMap(boatNow.lat, boatNow.lng);
+    });
 
     // 도착지의 바다 상태와 배를 댈 곳
     let docks = [];
@@ -2368,6 +2686,7 @@
 
     $("liveButton").addEventListener("click", function () {
       if (watchId !== null) { stopLive(); return; }
+      stopSim(); // 진짜 GPS를 켜면 모의 주행은 끝내요
       if (!navigator.geolocation) { $("liveBox").hidden = false; $("liveSea").textContent = ERROR_TEXT.NO_GPS; return; }
       this.textContent = "📡 내 배 위치 끄기";
       this.classList.add("on");
