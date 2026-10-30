@@ -1687,6 +1687,89 @@
       });
     }
 
+    // ── 📝 네이버 블로그 후기 ──
+    // 우리 서버(NaverBlogApi)가 네이버 검색 API에 물어보고, 블로그 글의 제목·짧은 소개·날짜·주소를 돌려줘요.
+    // 네이버 키는 비밀이라 서버에만 있어요. 서버 주소가 비어 있으면 "아직 꺼져 있어요"가 나와요.
+    const NAVER_BLOG_URL = ""; // 선생님이 스택을 업데이트하면 나오는 NaverBlogUrl을 여기에 넣어요
+    const NAVER_BLOG_SHOW = 5;  // 처음에 보여 줄 글 수 ("더 보기"를 누르면 10개까지)
+    Object.assign(ERROR_TEXT, {
+      NAVER_DOWN: "네이버에 물어보지 못했어요. 잠시 뒤에 다시 해 주세요."
+    });
+    const naverCache = new Map();
+    function naverBlogs(query, sort) {
+      const key = sort + "|" + query;
+      if (!naverCache.has(key)) {
+        naverCache.set(key, (async function () {
+          if (!NAVER_BLOG_URL) throw new Error("NO_KEY");
+          let response;
+          try {
+            response = await fetch(NAVER_BLOG_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: token, query: query, sort: sort }) });
+          } catch (error) { throw new Error("NO_SERVER"); }
+          const result = await response.json().catch(function () { return null; });
+          if (!response.ok || !result) throw new Error((result && result.error && !/^NAVER_/.test(result.error)) ? result.error : "NAVER_DOWN");
+          return result.items || [];
+        })().catch(function (error) { naverCache.delete(key); throw error; }));
+      }
+      return naverCache.get(key);
+    }
+    // 검색어: "통영 우도 여행 후기"처럼 시·군 이름을 앞에 붙여서 같은 이름의 다른 섬과 헷갈리지 않게 해요
+    function naverQuery(isle) {
+      const county = String(isle.area || "").split(/\s+/).filter(function (w) { return /(시|군)$/.test(w); })[0] || "";
+      const town = county.length > 2 ? county.slice(0, -1) : county;
+      return (town ? town + " " : "") + isle.name.replace(/\s*\(.*\)$/, "") + " 여행 후기";
+    }
+    function naverDate(d) { return /^\d{8}$/.test(d) ? d.slice(0, 4) + "." + d.slice(4, 6) + "." + d.slice(6) : ""; }
+    function naverBlogBox(isle) {
+      const box = el("div");
+      const query = naverQuery(isle);
+      let sort = "sim", showAll = false;
+      const tools = el("div", "chips");
+      const list = el("ul", "isle-list");
+      const note = el("p", "note");
+      box.append(el("h3", "", "📝 네이버 블로그 후기"), tools, list, note);
+      function draw() {
+        tools.textContent = "";
+        [["sim", "잘 맞는 글"], ["date", "최근 글"]].forEach(function (pair) {
+          const button = el("button", "soft" + (sort === pair[0] ? " on" : ""), pair[1]);
+          button.type = "button";
+          button.addEventListener("click", function () { sort = pair[0]; showAll = false; draw(); });
+          tools.append(button);
+        });
+        list.textContent = "";
+        note.textContent = "🔎 '" + query + "'(으)로 네이버 블로그를 찾는 중…";
+        naverBlogs(query, sort).then(function (items) {
+          if (isleNow !== isle) return;
+          list.textContent = "";
+          items.slice(0, showAll ? items.length : NAVER_BLOG_SHOW).forEach(function (item) {
+            const li = el("li");
+            const a = el("a", "", hideBadWords(item.title));
+            a.href = item.link;
+            a.target = "_blank";
+            a.rel = "noopener";
+            li.append(el("b", "", ""), document.createTextNode(hideBadWords(item.desc) + " "), el("small", "", naverDate(item.date)));
+            li.firstChild.append(a);
+            list.append(li);
+          });
+          note.textContent = items.length
+            ? "네이버 블로그 검색 결과예요. 글 앞부분 몇 줄만 보여 줘요. 제목을 누르면 원래 글이 새 창으로 열려요. 광고 글이 섞여 있을 수 있어요."
+            : "'" + query + "'(으)로 찾은 블로그 글이 없어요.";
+          if (items.length > NAVER_BLOG_SHOW && !showAll) {
+            const more = el("button", "soft", "더 보기 (" + items.length + "개)");
+            more.type = "button";
+            more.addEventListener("click", function () { showAll = true; draw(); });
+            note.append(document.createTextNode(" "), more);
+          }
+        }).catch(function (error) {
+          if (isleNow !== isle) return;
+          note.textContent = error.message === "NO_KEY"
+            ? "네이버 블로그 연결은 아직 꺼져 있어요. 선생님이 서버에 네이버 검색 키를 넣으면 켜져요. 지금은 아래 '📝 네이버 블로그' 버튼으로 찾아보세요."
+            : errorText(error);
+        });
+      }
+      draw();
+      return box;
+    }
+
     // 섬 정보 창
     let isleNow = null;
     function refLinks(isle, src) {
@@ -1728,6 +1811,7 @@
         });
         body.append(el("h3", "", "⭐ 리뷰 (다녀온 사람들 이야기)"), list);
       }
+      body.append(naverBlogBox(isle)); // 📝 네이버 블로그 후기 (우리 서버가 네이버 검색에 물어봐요)
       if (isle.wiki) { // 한국어 위키백과 요약
         const wiki = el("p", "isle-wiki", "위키백과 설명을 찾는 중…");
         body.append(el("h3", "", "📖 위키백과"), wiki);
