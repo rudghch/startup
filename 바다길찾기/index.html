@@ -319,7 +319,7 @@
 
     <aside class="side" id="side">
       <h2>⚓ dockmap</h2>
-      <p class="intro">지도에서 출발하는 곳과 도착하는 곳을 누르면 땅을 피해 가는 바닷길과 걸리는 시간, 기름값, 가는 길의 날씨(바람·파도·물살·안개 등)를 알려 주고, 도착지 근처 배 댈 곳의 자리 수·요금·위험한 점·리뷰와 둘레 편의점·음식점·숙소를 보여 줘요. 길을 찍지 않을 때 지도를 누르면 그곳 수심을 알려 줘요.</p>
+      <p class="intro">지도에서 출발하는 곳과 도착하는 곳을 누르면 땅을 피해 가는 바닷길과 걸리는 시간, 기름값, 가는 길의 날씨(바람·파도·물살·안개 등)를 알려 주고, 도착지 근처 배 댈 곳의 자리 수·요금·위험한 점·리뷰와 둘레 편의점·화장실·음식점·숙소를 보여 줘요. 길을 찍지 않을 때 지도를 누르면 그곳 수심을 알려 줘요.</p>
 
       <h3>1. 무엇을 타나요?</h3>
       <div class="chips" id="boatPick"></div>
@@ -380,7 +380,7 @@
     </div>
     <h3>⚠️ 사람들이 알려 준 위험한 점</h3>
     <ul class="risk-list" id="dockRisks"></ul>
-    <button type="button" class="soft" id="dockNearButton">🏪 이 근처 편의점·음식점·숙소 보기</button>
+    <button type="button" class="soft" id="dockNearButton">🏪 이 근처 편의점·화장실·음식점·숙소 보기</button>
     <h3>리뷰</h3>
     <div id="reviewList"></div>
 
@@ -1874,8 +1874,10 @@
     // ═════════ 주변 편의시설 ═════════
     // 카카오맵 장소 검색의 "분류(카테고리)" 찾기로 출발지·도착지·배 댈 곳 근처를 찾아요.
     // 카카오맵이 추천하는 순서(정확도 순)로 보여 주고, 별점·후기는 카카오맵 링크에서 볼 수 있어요.
+    // 화장실은 카카오맵에 분류 번호가 없어서 낱말(word)로 찾고, 급할 때 쓰니까 가까운 순서로 보여 줘요.
     const NEAR_KINDS = [
       { code: "CS2", name: "🏪 편의점" },
+      { word: "화장실", name: "🚻 화장실", nearest: true },
       { code: "FD6", name: "🍚 음식점" },
       { code: "AD5", name: "🛏️ 숙소" },
       { code: "CE7", name: "☕ 카페" },
@@ -1927,12 +1929,20 @@
       }
       $("nearNote").textContent = "찾는 중…";
       function search(step) {
-        placeSearch.categorySearch(nearKind.code, function (results, status) {
+        const options = {
+          location: new kakao.maps.LatLng(center.place.lat, center.place.lng), radius: NEAR_RADIUS[step],
+          sort: nearKind.nearest ? kakao.maps.services.SortBy.DISTANCE : kakao.maps.services.SortBy.ACCURACY
+        };
+        function got(results, status) {
           if (ask !== nearAsk) return;
-          const list = status === kakao.maps.services.Status.OK ? results : [];
+          let list = status === kakao.maps.services.Status.OK ? results : [];
+          // 낱말로 찾으면 "○○식당(화장실 있음)"처럼 다른 곳도 섞여 나와서, 이름이나 분류에 그 낱말이 있는 곳만 남겨요
+          if (nearKind.word) list = list.filter(function (item) { return (item.place_name + " " + item.category_name).includes(nearKind.word); });
           if (!list.length && step + 1 < NEAR_RADIUS.length) { search(step + 1); return; }
           showNear(list.slice(0, NEAR_COUNT), NEAR_RADIUS[step], center);
-        }, { location: new kakao.maps.LatLng(center.place.lat, center.place.lng), radius: NEAR_RADIUS[step], sort: kakao.maps.services.SortBy.ACCURACY });
+        }
+        if (nearKind.word) placeSearch.keywordSearch(nearKind.word, got, options);
+        else placeSearch.categorySearch(nearKind.code, got, options);
       }
       search(0);
     }
@@ -1945,7 +1955,7 @@
         };
       });
       $("nearNote").textContent = nearPlaces.length
-        ? center.name + " 둘레 " + radius / 1000 + "km 안의 " + nearKind.name + " · 카카오맵 추천 순서예요 (번호가 작을수록 추천)"
+        ? center.name + " 둘레 " + radius / 1000 + "km 안의 " + nearKind.name + (nearKind.nearest ? " · 가까운 순서예요" : " · 카카오맵 추천 순서예요 (번호가 작을수록 추천)")
         : center.name + " 둘레 " + radius / 1000 + "km 안에 " + nearKind.name + "이(가) 없어요.";
       const box = $("nearList");
       box.textContent = "";
