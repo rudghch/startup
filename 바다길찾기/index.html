@@ -210,6 +210,23 @@
     .live-grid div { padding: 8px 6px; border-radius: 10px; background: #f1f6f9; text-align: center; }
     .live-grid small { display: block; font-size: 12px; color: #5b6272; }
     .live-grid b { font-size: 16px; }
+    /* 한눈에 보기 (길을 찍으면 맨 위에) */
+    .glance { margin: 6px 0 12px; padding: 10px; border-radius: 14px; background: #e6f3f7; }
+    .glance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .glance-grid div { padding: 8px 4px; border-radius: 10px; background: #fff; text-align: center; }
+    .glance-grid small { display: block; font-size: 12px; color: #5b6272; }
+    .glance-grid b { font-size: 18px; }
+    .glance-signal { margin: 8px 2px 0; font-size: 14px; font-weight: bold; }
+    .glance-signal:empty { display: none; }
+    /* 접었다 펴는 칸: 제목 옆에 한 줄 요약, 누르면 자세히 */
+    .fold { margin-top: 10px; border: 1px solid #d6e4ea; border-radius: 12px; background: #fff; }
+    .fold > summary { padding: 10px 12px; font-size: 15px; font-weight: bold; cursor: pointer; list-style: none; }
+    .fold > summary::-webkit-details-marker { display: none; }
+    .fold > summary::before { content: "▸ "; color: #5b6272; }
+    .fold[open] > summary::before { content: "▾ "; }
+    .fold > summary small { display: block; margin-top: 2px; font-size: 13px; font-weight: normal; color: #3d5866; }
+    .fold > :not(summary) { margin-left: 12px; margin-right: 12px; }
+    .fold > :last-child { margin-bottom: 12px; }
 
     /* 배 댈 곳 창 */
     dialog {
@@ -319,12 +336,20 @@
 
     <aside class="side" id="side">
       <h2>⚓ dockmap</h2>
-      <p class="intro">지도에서 출발하는 곳과 도착하는 곳을 누르면 땅을 피해 가는 바닷길과 걸리는 시간, 기름값, 가는 길의 날씨(바람·파도·물살·안개 등)를 알려 주고, 도착지 근처 배 댈 곳의 자리 수·요금·위험한 점·리뷰와 둘레 편의점·화장실·음식점·숙소를 보여 줘요. 길을 찍지 않을 때 지도를 누르면 그곳 수심을 알려 줘요.</p>
+      <!-- 길을 찍으면 가장 궁금한 것만 크게 보여 줘요. 나머지는 아래에서 눌러서 펼쳐 봐요 -->
+      <div class="glance" id="glance" hidden>
+        <div class="glance-grid" id="glanceGrid"></div>
+        <p class="glance-signal" id="glanceSignal"></p>
+      </div>
+      <p class="intro" id="intro">지도에서 출발하는 곳과 도착하는 곳을 누르면 땅을 피해 가는 바닷길과 걸리는 시간, 기름값, 가는 길의 날씨(바람·파도·물살·안개 등)를 알려 주고, 도착지 근처 배 댈 곳의 자리 수·요금·위험한 점·리뷰와 둘레 편의점·화장실·음식점·숙소를 보여 줘요. 길을 찍지 않을 때 지도를 누르면 그곳 수심을 알려 줘요.</p>
 
       <h3>1. 무엇을 타나요?</h3>
       <div class="chips" id="boatPick"></div>
-      <p class="note">빠르기 <input type="number" id="speedInput" min="1" max="60" step="1"> 노트 (1노트 = 한 시간에 1.85km)</p>
-      <p class="note">한 시간에 쓰는 기름 <input type="number" id="fuelInput" min="0" max="2000" step="1"> L · 기름값 1L에 <input type="number" id="priceInput" min="0" max="10000" step="10"> 원</p>
+      <details class="fold">
+        <summary>⚙️ 빠르기·기름 바꾸기 <small id="boatSum"></small></summary>
+        <p class="note">빠르기 <input type="number" id="speedInput" min="1" max="60" step="1"> 노트 (1노트 = 한 시간에 1.85km)</p>
+        <p class="note">한 시간에 쓰는 기름 <input type="number" id="fuelInput" min="0" max="2000" step="1"> L · 기름값 1L에 <input type="number" id="priceInput" min="0" max="10000" step="10"> 원</p>
+      </details>
 
       <h3>2. 바닷길 찍기</h3>
       <div class="row">
@@ -333,24 +358,33 @@
         <button type="button" class="soft" id="routeClearButton">모두 지우기</button>
       </div>
       <p class="note" id="routeNote">아직 찍은 곳이 없어요.</p>
-      <ol class="legs" id="routeLegs"></ol>
-      <div class="box" id="routeTotal" hidden></div>
+      <details class="fold" id="routeFold" hidden>
+        <summary>🧭 바닷길·기름 자세히 <small id="routeSum"></small></summary>
+        <ol class="legs" id="routeLegs"></ol>
+        <div class="box" id="routeTotal" hidden></div>
+      </details>
 
       <div id="routeEndBox" hidden>
-        <h3>3. 가는 길 날씨 (배에 영향을 주는 것)</h3>
-        <p class="note">출발 시각 <select id="departSelect"></select> · 바닷길 위 여러 곳에서, 배가 그곳을 지날 때의 예보를 봐요.</p>
-        <div id="tripWeather"><p class="note">바닷길을 다 찾으면 알려 줘요.</p></div>
-        <button type="button" class="soft" id="routeSeaButton" style="margin-top: 8px;">🚦 씨그널에서 도착지 바다 자세히 보기</button>
+        <details class="fold">
+          <summary>🌦️ 3. 가는 길 날씨 <small id="tripSum">알아보는 중…</small></summary>
+          <p class="note">출발 시각 <select id="departSelect"></select> · 바닷길 위 여러 곳에서, 배가 그곳을 지날 때의 예보를 봐요.</p>
+          <div id="tripWeather"><p class="note">바닷길을 다 찾으면 알려 줘요.</p></div>
+          <button type="button" class="soft" id="routeSeaButton" style="margin-top: 8px;">🚦 씨그널에서 도착지 바다 자세히 보기</button>
+        </details>
 
-        <h3>4. 배를 댈 곳 (도착지 근처 20km)</h3>
-        <p class="note">눌러서 자리 수, 요금, 위험한 점, 리뷰를 보고, 다녀왔으면 리뷰를 남겨 주세요.</p>
-        <div class="docks" id="dockList"></div>
+        <details class="fold">
+          <summary>⚓ 4. 배를 댈 곳 (도착지 근처 20km) <small id="dockSum">찾는 중…</small></summary>
+          <p class="note">눌러서 자리 수, 요금, 위험한 점, 리뷰를 보고, 다녀왔으면 리뷰를 남겨 주세요.</p>
+          <div class="docks" id="dockList"></div>
+        </details>
 
-        <h3 id="nearTitle">5. 주변 편의시설</h3>
-        <div class="chips" id="nearWherePick"></div>
-        <div class="chips" id="nearKindPick"></div>
-        <p class="note" id="nearNote"></p>
-        <div class="docks" id="nearList"></div>
+        <details class="fold" id="nearFold">
+          <summary id="nearTitle">🏪 5. 주변 편의시설 <small id="nearSum">찾는 중…</small></summary>
+          <div class="chips" id="nearWherePick"></div>
+          <div class="chips" id="nearKindPick"></div>
+          <p class="note" id="nearNote"></p>
+          <div class="docks" id="nearList"></div>
+        </details>
       </div>
 
       <h3>📡 내 배 위치</h3>
@@ -1389,6 +1423,7 @@
     let boat = BOATS[1];
     let routePoints = []; // 지도에서 찍은 곳들 (첫째는 출발, 마지막은 도착)
     let routeLegs = [];   // 찍은 곳 사이마다 찾은 바닷길 { points, sea }
+    let routeKm = 0;      // 바닷길 전체 길이 (한눈에 보기에 써요)
     let routeLine = null;
     let routeAsk = 0;
 
@@ -1460,6 +1495,7 @@
       fillDepartSelect();
       $("tripWeather").textContent = "";
       $("tripWeather").append(el("p", "note", "🔎 바닷길을 다 찾으면 가는 길의 날씨를 알려 줘요."));
+      $("tripSum").textContent = "바닷길을 다 찾으면 알려 줘요";
       checkRouteEnd(points[points.length - 1], ask);
       // 찾는 동안 "지도 조각 ○개 받는 중"이 바뀌는 것을 보여 줘요
       const ticker = setInterval(function () { if (ask === routeAsk) drawRouteText(); }, 700);
@@ -1564,9 +1600,17 @@
       const box = $("routeTotal");
       box.hidden = routePoints.length < 2;
       box.textContent = "";
+      $("routeFold").hidden = routePoints.length < 2;
+      $("intro").hidden = routePoints.length >= 2; // 길을 찍으면 설명은 숨기고 한눈에 보기를 보여 줘요
+      $("boatSum").textContent = boat.name + " " + knots + "노트 · 한 시간에 기름 " + fuelPerHour + "L";
+      routeKm = total;
+      drawGlance();
       if (routePoints.length < 2) return;
       const hours = total / kmPerHour;
       const liters = hours * fuelPerHour;
+      $("routeSum").textContent = "모두 " + total.toFixed(1) + "km · " + (fuelPerHour === 0 ? "⛽ 기름이 안 들어요" :
+        "⛽ 기름 약 " + liters.toFixed(1) + "L · 약 " + (Math.round(liters * price / 100) * 100).toLocaleString("ko-KR") + "원") +
+        (routeLegs.some(function (leg) { return leg.waiting; }) ? " · 🔎 찾는 중" : "");
       box.append(
         el("b", "big", "모두 " + total.toFixed(1) + "km (" + (total / 1.852).toFixed(1) + "해리)"),
         el("br"),
@@ -1577,6 +1621,44 @@
           : "⛽ 기름 약 " + liters.toFixed(1) + "L · 약 " + (Math.round(liters * price / 100) * 100).toLocaleString("ko-KR") + "원 · 연비 " + (total / liters).toFixed(2) + "km/L (1L로 가는 거리)")
       );
       if (routeLegs.some(function (leg) { return leg.waiting; })) box.append(el("br"), el("small", "", "바닷길을 찾는 중이라 숫자가 바뀔 수 있어요."));
+    }
+
+    // ───────── 한눈에 보기 ─────────
+    // 걸리는 시간, 남은 거리, 도착 예상 시각, 날씨 신호만 크게 보여 줘요.
+    // 내 배 위치를 켜면 내 배에서 도착지까지 바닷길을 따라 남은 거리와 시간으로 바뀌어요.
+    function kmLeft(place) {
+      // 바닷길에서 내 배와 가장 가까운 점을 찾고, 그 점부터 도착지까지 길이를 더해요
+      const all = routePath();
+      let nearest = 0;
+      all.forEach(function (p, i) { if (distanceKm(place, p) < distanceKm(place, all[nearest])) nearest = i; });
+      return distanceKm(place, all[nearest]) + pathKm(all.slice(nearest));
+    }
+    function drawGlance() {
+      const box = $("glance");
+      box.hidden = routePoints.length < 2;
+      if (box.hidden) return;
+      const knots = Math.max(1, Number($("speedInput").value) || boat.knots);
+      const live = Boolean(boatNow);
+      const speed = live && boatNow.speed > 1 ? boatNow.speed : knots; // 배가 거의 서 있으면 정한 빠르기로 셈해요
+      const km = live ? kmLeft(boatNow) : routeKm;
+      const trip = tripData && tripPoints.length ? tripAt(departTime()) : null;
+      const hours = trip && !live ? (trip.arrive - trip.depart) / 3600000 : km / (speed * 1.852); // 날씨를 받았으면 물살까지 넣은 시간
+      const arrive = live ? Date.now() + hours * 3600000 : trip ? trip.arrive : departTime() + hours * 3600000;
+      const finding = routeLegs.some(function (leg) { return leg.waiting; });
+      const grid = $("glanceGrid");
+      grid.textContent = "";
+      [
+        [live ? "⏱ 남은 시간" : "⏱ 걸리는 시간", hoursText(hours)],
+        [live ? "📏 남은 거리" : "📏 거리", kmText(km)],
+        ["🏁 도착 예상", timeLabel(arrive).replace("오늘 ", "")]
+      ].forEach(function (pair) {
+        const cell = el("div");
+        cell.append(el("small", "", pair[0]), el("b", "", finding ? "…" : pair[1]));
+        grid.append(cell);
+      });
+      $("glanceSignal").textContent = finding ? "🔎 바닷길을 찾는 중이에요" :
+        trip ? ["🟢 날씨 좋아요", "🟡 날씨 조심", "🔴 이 시각에는 나가지 마세요"][trip.level] + " · " + (trip.factors.filter(function (f) { return f.level === trip.level && trip.level > 0; })
+          .map(function (f) { return f.icon + " " + f.name.split(" ")[0]; }).join(", ") || "자세한 날씨는 아래 3번") : "";
     }
 
     // 도착지의 바다 상태와 배를 댈 곳
@@ -1601,10 +1683,12 @@
       docks = [];
       if (!placeSearch) {
         box.append(el("p", "note", "배를 댈 곳은 지도가 보이는 웹 주소에서 찾을 수 있어요."));
+        $("dockSum").textContent = "지도가 보이는 웹 주소에서 찾을 수 있어요";
         drawRoute();
         return;
       }
       box.append(el("p", "note", "찾는 중…"));
+      $("dockSum").textContent = "찾는 중…";
       const found = {};
       let left = DOCK_WORDS.length;
       DOCK_WORDS.forEach(function (word) {
@@ -1640,6 +1724,7 @@
         }).catch(function () {});
       });
       if (!docks.length) box.append(el("p", "note", "도착지 근처 20km 안에서 배를 댈 곳을 찾지 못했어요."));
+      $("dockSum").textContent = docks.length ? docks.length + "곳 · 가장 가까운 곳: " + docks[0].name + " " + kmText(docks[0].km) : "20km 안에서 찾지 못했어요";
       drawRoute();
     }
 
@@ -1689,13 +1774,14 @@
       tripData = null;
       $("tripWeather").textContent = "";
       $("tripWeather").append(el("p", "note", "가는 길의 날씨를 알아보는 중…"));
+      $("tripSum").textContent = "알아보는 중…";
       try {
         const data = await fetchTrip(tripPoints);
         if (ask !== routeAsk) return;
         tripData = data;
         drawTrip();
       } catch (error) {
-        if (ask === routeAsk) $("tripWeather").textContent = errorText(error);
+        if (ask === routeAsk) $("tripWeather").textContent = $("tripSum").textContent = errorText(error);
       }
     }
 
@@ -1850,6 +1936,10 @@
       );
       if (trip.beyond) sum.append(el("br"), el("small", "", "길이 멀어서 " + TRIP_DAYS + "일 뒤부터는 마지막 예보로 봤어요."));
       box.append(sum);
+      const bad = trip.factors.filter(function (f) { return f.level > 0; });
+      $("tripSum").textContent = ["🟢 다녀오기 좋아요", "🟡 조심해서 다녀와요", "🔴 나가지 마세요"][trip.level] + " · " + timeLabel(trip.depart) + " 출발" +
+        (bad.length ? " · 조심할 것: " + bad.map(function (f) { return f.icon + " " + f.name.split(" ")[0]; }).join(", ") : "");
+      drawGlance();
       trip.factors.forEach(function (f) {
         const row = el("div", "factor");
         const words = el("div");
@@ -1923,11 +2013,11 @@
       const center = nearCenter();
       if (!center.place) return;
       if (!placeSearch) {
-        $("nearNote").textContent = "편의시설은 지도가 보이는 웹 주소에서 찾을 수 있어요.";
+        $("nearNote").textContent = $("nearSum").textContent = "편의시설은 지도가 보이는 웹 주소에서 찾을 수 있어요.";
         drawRoute();
         return;
       }
-      $("nearNote").textContent = "찾는 중…";
+      $("nearNote").textContent = $("nearSum").textContent = "찾는 중…";
       function search(step) {
         const options = {
           location: new kakao.maps.LatLng(center.place.lat, center.place.lng), radius: NEAR_RADIUS[step],
@@ -1957,6 +2047,9 @@
       $("nearNote").textContent = nearPlaces.length
         ? center.name + " 둘레 " + radius / 1000 + "km 안의 " + nearKind.name + (nearKind.nearest ? " · 가까운 순서예요" : " · 카카오맵 추천 순서예요 (번호가 작을수록 추천)")
         : center.name + " 둘레 " + radius / 1000 + "km 안에 " + nearKind.name + "이(가) 없어요.";
+      $("nearSum").textContent = center.name + " 둘레 " + nearKind.name + " " + (nearPlaces.length
+        ? nearPlaces.length + "곳 · 가장 가까운 곳 " + kmText(Math.min.apply(null, nearPlaces.map(function (p) { return p.km; })))
+        : "없음 (" + radius / 1000 + "km 안)");
       const box = $("nearList");
       box.textContent = "";
       nearPlaces.forEach(function (place, i) {
@@ -1982,6 +2075,7 @@
       nearDock = openedDock;
       nearWhere = "dock";
       $("dockDialog").close();
+      $("nearFold").open = true; // 접혀 있으면 펼쳐서 보여 줘요
       drawNearPicks();
       findNear();
       $("nearTitle").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2229,6 +2323,7 @@
       $("followButton").hidden = true;
       $("liveBox").hidden = true;
       drawBoat();
+      drawGlance();
     }
     $("followButton").addEventListener("click", function () {
       follow = true;
@@ -2294,6 +2389,7 @@
         box.append(el("small", "", pair[0]), el("b", "", pair[1]));
         grid.append(box);
       });
+      drawGlance();
     }
 
     // ───────── 로그인 ─────────
