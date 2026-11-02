@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>파일함</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: #f4f6fb;
+      color: #1f2430;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    [hidden] { display: none !important; }
+
+    /* 맨 위 줄 */
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 56px;
+      padding: 0 16px;
+      background: #3b5bdb;
+      color: #fff;
+    }
+    .top h1 { margin: 0; font-size: 20px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .top a, .top button {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.15);
+      border: 0;
+      border-radius: 8px;
+      padding: 6px 10px;
+      text-decoration: none;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .top .me { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+    /* 로그인 */
+    .login {
+      max-width: 400px;
+      margin: 40px auto;
+      padding: 24px;
+      background: #fff;
+      border-radius: 16px;
+      border: 2px solid #e1e5ee;
+    }
+    .login h2 { margin: 0 0 6px; }
+    .login p { margin: 0 0 16px; color: #5b6272; font-size: 14px; }
+    .login input { display: block; width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #c9d0dc; border-radius: 8px; }
+    .login .link { background: none; border: 0; color: #3b5bdb; padding: 8px 0; text-decoration: underline; }
+    .primary {
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 10px;
+      background: #3b5bdb;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    .login .primary { width: 100%; }
+    .primary:disabled { opacity: 0.5; cursor: default; }
+    .soft {
+      padding: 7px 12px;
+      border: 1px solid #c9d0dc;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+      color: inherit;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .error { min-height: 20px; margin: 8px 0 0; color: #c0392b; font-size: 14px; }
+
+    /* 파일함 */
+    .app { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+    .notice { padding: 12px 14px; border-radius: 12px; background: #fff4e0; color: #8a5300; font-size: 15px; line-height: 1.6; }
+    .drop {
+      margin-top: 4px;
+      padding: 28px 16px;
+      border: 2px dashed #9fb0e0;
+      border-radius: 16px;
+      background: #fff;
+      text-align: center;
+    }
+    .drop.over { border-color: #3b5bdb; background: #eef2ff; }
+    .drop b { display: block; margin-bottom: 10px; font-size: 18px; }
+    .drop small { display: block; margin-top: 12px; color: #5b6272; font-size: 13px; line-height: 1.6; }
+    .queue { margin: 12px 0 0; padding: 0; list-style: none; }
+    .queue li { padding: 8px 12px; margin-bottom: 6px; border-radius: 10px; background: #fff; border: 1px solid #e1e5ee; font-size: 14px; }
+    .queue .bar { height: 6px; margin-top: 6px; border-radius: 3px; background: #e1e5ee; overflow: hidden; }
+    .queue .bar i { display: block; height: 100%; width: 0; background: #3b5bdb; transition: width 0.2s; }
+    .queue li.done .bar i { background: #1e9e6a; }
+    .queue li.fail { color: #c0392b; }
+    .queue li.fail .bar { display: none; }
+
+    .tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 24px 0 10px; }
+    .tools input { flex: 1; min-width: 180px; padding: 8px 10px; border: 1px solid #c9d0dc; border-radius: 8px; }
+    .tools select { padding: 7px 8px; border: 1px solid #c9d0dc; border-radius: 8px; background: #fff; }
+    .count { margin: 0 0 8px; color: #5b6272; font-size: 14px; }
+    .files { margin: 0; padding: 0; list-style: none; }
+    .files li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #e1e5ee;
+    }
+    .files .icon { flex-shrink: 0; font-size: 28px; }
+    .files .words { flex: 1; min-width: 0; }
+    .files .words b { display: block; font-size: 16px; overflow-wrap: anywhere; }
+    .files .words small { display: block; margin-top: 2px; color: #5b6272; font-size: 13px; }
+    .files .buttons { display: flex; gap: 6px; flex-shrink: 0; }
+    .files .get { background: #3b5bdb; border-color: #3b5bdb; color: #fff; }
+    .empty { padding: 30px 0; text-align: center; color: #5b6272; }
+    @media (max-width: 520px) {
+      .files li { flex-wrap: wrap; }
+      .files .buttons { width: 100%; justify-content: flex-end; }
+      #meName { display: none; } /* 아주 좁으면 제목이 보이게 아이디를 숨겨요 */
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1>📁 파일함</h1>
+    <div class="me" id="meBox" hidden>
+      <b id="meName"></b>
+      <button type="button" id="logoutButton">로그아웃</button>
+    </div>
+    <a href="../">🏠 처음 화면</a>
+  </header>
+
+  <!-- 로그인 -->
+  <section class="login" id="loginBox" hidden>
+    <h2 id="loginTitle">로그인</h2>
+    <p>우리 반 친구들과 파일을 올리고 내려받는 곳이에요.</p>
+    <p id="loginHelp"></p>
+    <form id="loginForm">
+      <input id="idInput" placeholder="아이디" autocomplete="username" maxlength="12">
+      <input id="passwordInput" type="password" placeholder="비밀번호" autocomplete="current-password" maxlength="50">
+      <input id="codeInput" placeholder="가입 코드 (선생님께 물어보세요)" hidden>
+      <button type="submit" class="primary" id="loginButton">로그인</button>
+    </form>
+    <button type="button" class="link" id="modeButton"></button>
+    <p class="error" id="loginError"></p>
+  </section>
+
+  <main class="app" id="appBox" hidden>
+    <p class="notice" id="offNotice" hidden>아직 서버에 파일함 기능이 켜지지 않았어요. 선생님이 서버를 업데이트하면 쓸 수 있어요.</p>
+
+    <!-- 올리기 -->
+    <div class="drop" id="dropBox">
+      <b>📤 여기에 파일을 끌어다 놓거나</b>
+      <button type="button" class="primary" id="pickButton">📎 파일 고르기</button>
+      <input type="file" id="fileInput" multiple hidden>
+      <small>
+        한 파일에 50MB까지, 여러 개를 한 번에 올릴 수 있어요. 어떤 파일이든 괜찮아요 (PDF, 한글, PPT, 사진, 압축 파일 …).<br>
+        로그인한 친구들이 모두 볼 수 있으니, 이름·전화번호 같은 개인정보가 든 파일은 올리지 마세요.
+      </small>
+    </div>
+    <ul class="queue" id="queue"></ul>
+
+    <!-- 목록 -->
+    <div class="tools">
+      <input id="searchInput" placeholder="🔎 파일 이름이나 올린 사람으로 찾기" maxlength="40">
+      <select id="whoSelect">
+        <option value="all">모든 파일</option>
+        <option value="mine">내가 올린 파일</option>
+      </select>
+      <button type="button" class="soft" id="reloadButton">🔄 새로 보기</button>
+    </div>
+    <p class="count" id="countText"></p>
+    <ul class="files" id="fileList"></ul>
+    <p class="error" id="listError"></p>
+  </main>
+
+  <script>
+    const $ = function (id) { return document.getElementById(id); };
+
+    // ───────── 서버 ─────────
+    // 계정은 메신저·잉스타와 같은 서버(API_URL)에서 확인하고, 파일은 그 서버의 "파일함" 기능(FILES_URL)에 올려요.
+    const API_URL = "https://be7dswschuowu4qnq5kcuwhhiu0zdxdj.lambda-url.ap-northeast-2.on.aws/"; // 서버 주소
+    const FILES_URL = ""; // 파일함 기능 주소 (선생님이 서버를 업데이트한 뒤 출력 탭의 FilesUrl을 여기에 적어요)
+    const TOKEN_KEY = "messenger.token"; // 메신저·잉스타와 같은 이름이라 한 번 로그인하면 다 들어가져요
+    const MAX_MB = 50;                   // 파일 하나의 크기 한도 (서버도 50MB로 막아요)
+    const LINK_MINUTES = 50;             // 내려받기 링크는 1시간 쓸 수 있어서, 50분이 지나면 목록을 새로 받아요
+
+    let token = localStorage.getItem(TOKEN_KEY);
+    let me = null;       // 지금 로그인한 아이디
+    let files = [];      // 서버에서 받은 파일 목록
+    let loadedAt = 0;    // 목록을 받은 시각
+
+    const ERROR_TEXT = {
+      BAD_ID: "아이디는 띄어쓰기 없이 2~12글자로 적어 주세요.",
+      BAD_PASSWORD: "비밀번호는 4글자부터 적을 수 있어요.",
+      BAD_CODE: "가입 코드가 맞지 않아요. 선생님께 물어보세요.",
+      ID_TAKEN: "이미 누가 쓰고 있는 아이디예요. 다른 아이디를 적어 주세요.",
+      WRONG_LOGIN: "아이디나 비밀번호가 맞지 않아요.",
+      NOT_LOGGED_IN: "다시 로그인해 주세요.",
+      TOO_BIG: "파일이 너무 커요. 한 파일에 " + MAX_MB + "MB까지 올릴 수 있어요.",
+      BAD_FILE: "올릴 수 없는 파일 이름이에요.",
+      NOT_UPLOADED: "파일이 끝까지 올라가지 않았어요. 다시 올려 주세요.",
+      UPLOAD_FAILED: "파일을 올리다가 끊겼어요. 인터넷을 확인하고 다시 올려 주세요.",
+      BAD_WORD: "파일 이름에 나쁜 말이 들어 있어요. 이름을 바꿔서 올려 주세요.",
+      NOT_YOURS: "내가 올린 파일만 지울 수 있어요.",
+      BAD_ORIGIN: "파일함은 우리 사이트 주소(rudghch.github.io)에서만 쓸 수 있어요.",
+      NO_SERVER: "서버에 연결하지 못했어요. 인터넷을 확인해 주세요."
+    };
+    function errorText(error) {
+      return ERROR_TEXT[error.message] || "문제가 생겼어요. 잠시 뒤에 다시 해 주세요.";
+    }
+
+    // 서버에 일 시키기 (url: 어느 서버, action: 시킬 일 이름, data: 함께 보낼 내용)
+    async function ask(url, action, data) {
+      let response;
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          body: JSON.stringify(Object.assign({ action: action, token: token }, data))
+        });
+      } catch (error) {
+        throw new Error("NO_SERVER");
+      }
+      const result = await response.json().catch(function () { return null; });
+      if (!response.ok) throw new Error((result && result.error) || "SERVER_ERROR");
+      return result;
+    }
+    function call(action, data) { return ask(API_URL, action, data); }        // 계정
+    function callFiles(action, data) { return ask(FILES_URL, action, data); } // 파일함
+
+    // ───────── 나쁜 말 막기 (잉스타·dockmap과 같은 목록) ─────────
+    const BAD_WORDS = [
+      "시발", "씨발", "씨빨", "씨바", "씨팔", "시팔",
+      "병신", "븅신", "지랄", "존나", "좆나", "좆까", "좆", "썅",
+      "개새끼", "개새", "새끼야", "미친놈", "미친년", "미친새끼", "또라이", "등신",
+      "니애미", "니어미", "느금마",
+      "닥쳐", "엿먹어", "꺼져라", "죽어라", "뒤져라",
+      "ㅅㅂ", "ㅆㅂ", "ㅂㅅ", "ㅄ", "ㅈㄹ", "ㅈㄴ", "ㅈㄲ", "ㄴㅇㅁ", "ㄴㄱㅁ",
+      "ㄳㄲ", "ㄱㅅㄲ", "ㅅㄲ", "ㅁㅊㄴ", "ㄲㅈ", "ㄷㅊ",
+      "fuck", "shit", "bitch"
+    ];
+    const BAD_WORD_PATTERN = new RegExp(
+      BAD_WORDS.slice().sort(function (a, b) { return b.length - a.length; }).map(function (word) {
+        return Array.from(word).join("[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z\\s]*");
+      }).join("|"),
+      "gi"
+    );
+    function hasBadWords(text) {
+      BAD_WORD_PATTERN.lastIndex = 0;
+      return BAD_WORD_PATTERN.test(text);
+    }
+
+    // ───────── 작은 도구들 ─────────
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    function timeOf(sk) { return Number(String(sk).slice(0, -6)); } // 올린 시각 (밀리초)
+    function timeAgo(sk) {
+      const minutes = Math.round((Date.now() - timeOf(sk)) / 60000);
+      if (minutes < 60) return Math.max(1, minutes) + "분 전";
+      if (minutes < 60 * 24) return Math.round(minutes / 60) + "시간 전";
+      return Math.round(minutes / 60 / 24) + "일 전";
+    }
+    function sizeText(bytes) {
+      if (bytes < 1024) return bytes + "B";
+      if (bytes < 1048576) return Math.round(bytes / 1024) + "KB";
+      return (bytes / 1048576).toFixed(1) + "MB";
+    }
+    // 파일 끝 이름(확장자)으로 그림 고르기
+    const FILE_ICONS = [
+      ["📕", ["pdf"]],
+      ["📝", ["hwp", "hwpx", "doc", "docx", "txt", "rtf", "odt", "md"]],
+      ["📊", ["ppt", "pptx", "key", "odp"]],
+      ["📈", ["xls", "xlsx", "csv", "cell", "ods"]],
+      ["🖼️", ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "heic"]],
+      ["🎬", ["mp4", "mov", "avi", "mkv", "webm"]],
+      ["🎵", ["mp3", "wav", "m4a", "ogg"]],
+      ["🗜️", ["zip", "7z", "rar", "egg", "alz"]]
+    ];
+    function iconOf(name) {
+      const end = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+      const found = FILE_ICONS.find(function (pair) { return pair[1].includes(end); });
+      return found ? found[0] : "📄";
+    }
+
+    // ───────── 올리기 ─────────
+    // 1) 서버에 "올려도 돼요?" 묻기 → 2) 받은 주소로 파일 보내기(보관함으로 바로 가요) → 3) 서버에 "다 올렸어요" 알리기
+    function putFile(url, file, onProgress) {
+      return new Promise(function (resolve, reject) {
+        const xhr = new XMLHttpRequest(); // fetch와 달리 얼마나 올라갔는지 알려 줘요
+        xhr.open("PUT", url);
+        xhr.setRequestHeader("Content-Type", "application/octet-stream");
+        xhr.upload.onprogress = function (event) { if (event.lengthComputable) onProgress(event.loaded / event.total); };
+        xhr.onload = function () { xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("UPLOAD_FAILED")); };
+        xhr.onerror = function () { reject(new Error("UPLOAD_FAILED")); };
+        xhr.send(file);
+      });
+    }
+    let sending = Promise.resolve(); // 파일을 하나씩 차례로 올려요
+    function addFiles(list) {
+      Array.from(list).forEach(function (file) {
+        const row = el("li");
+        const words = el("span", "", "⏳ " + file.name + " · " + sizeText(file.size) + " · 기다리는 중");
+        const bar = el("div", "bar");
+        const fill = el("i");
+        bar.append(fill);
+        row.append(words, bar);
+        $("queue").prepend(row);
+        function fail(error) {
+          row.className = "fail";
+          words.textContent = "❌ " + file.name + " · " + errorText(error);
+        }
+        if (file.size > MAX_MB * 1048576) { fail(new Error("TOO_BIG")); return; }
+        if (file.size === 0) { fail(new Error("BAD_FILE")); return; }
+        if (hasBadWords(file.name)) { fail(new Error("BAD_WORD")); return; }
+        sending = sending.then(async function () {
+          try {
+            words.textContent = "📤 " + file.name + " · " + sizeText(file.size) + " · 올리는 중";
+            const ticket = await callFiles("upload", { name: file.name, size: file.size });
+            await putFile(ticket.url, file, function (share) { fill.style.width = Math.round(share * 100) + "%"; });
+            await callFiles("save", { key: ticket.key, name: file.name });
+            fill.style.width = "100%";
+            row.className = "done";
+            words.textContent = "✅ " + file.name + " · 올렸어요";
+            setTimeout(function () { row.remove(); }, 5000);
+            loadFiles();
+          } catch (error) {
+            fail(error);
+            if (error.message === "NOT_LOGGED_IN") leave();
+          }
+        });
+      });
+    }
+    $("pickButton").addEventListener("click", function () { $("fileInput").click(); });
+    $("fileInput").addEventListener("change", function () {
+      addFiles(this.files);
+      this.value = ""; // 같은 파일을 또 고를 수 있게 비워요
+    });
+    // 끌어다 놓기
+    const drop = $("dropBox");
+    ["dragenter", "dragover"].forEach(function (name) {
+      drop.addEventListener(name, function (event) { event.preventDefault(); drop.classList.add("over"); });
+    });
+    ["dragleave", "drop"].forEach(function (name) {
+      drop.addEventListener(name, function () { drop.classList.remove("over"); });
+    });
+    drop.addEventListener("drop", function (event) {
+      event.preventDefault();
+      if (!FILES_URL) return;
+      addFiles(event.dataTransfer.files);
+    });
+    // 파일함 밖에 잘못 놓아도 브라우저가 그 파일을 열지 않게 해요
+    window.addEventListener("dragover", function (event) { event.preventDefault(); });
+    window.addEventListener("drop", function (event) { event.preventDefault(); });
+
+    // ───────── 목록 ─────────
+    async function loadFiles() {
+      if (!FILES_URL) return;
+      $("listError").textContent = "";
+      try {
+        files = await callFiles("files");
+        loadedAt = Date.now();
+        drawFiles();
+      } catch (error) {
+        $("listError").textContent = errorText(error);
+        if (error.message === "NOT_LOGGED_IN") leave();
+      }
+    }
+    function drawFiles() {
+      const words = $("searchInput").value.trim().toLowerCase();
+      const mineOnly = $("whoSelect").value === "mine";
+      const shown = files.filter(function (file) {
+        if (mineOnly && file.author !== me) return false;
+        return !words || (file.name + " " + file.author).toLowerCase().includes(words);
+      });
+      $("countText").textContent = files.length
+        ? (shown.length === files.length ? "파일 " + files.length + "개" : files.length + "개 중 " + shown.length + "개") + " · 새것부터 보여요"
+        : "";
+      const list = $("fileList");
+      list.textContent = "";
+      if (!shown.length) {
+        list.append(el("p", "empty", files.length ? "찾는 파일이 없어요." : "아직 올린 파일이 없어요. 첫 파일을 올려 보세요!"));
+        return;
+      }
+      shown.forEach(function (file) {
+        const row = el("li");
+        const words = el("div", "words");
+        words.append(el("b", "", file.name), el("small", "", sizeText(Number(file.size)) + " · " + file.author + " · " + timeAgo(file.sk)));
+        const buttons = el("div", "buttons");
+        const get = el("a", "soft get", "⬇ 받기");
+        get.href = file.url;
+        get.rel = "noopener";
+        get.addEventListener("click", async function (event) {
+          if (Date.now() - loadedAt < LINK_MINUTES * 60000) return; // 링크가 아직 살아 있으면 그대로 받아요
+          event.preventDefault(); // 오래된 링크는 목록을 새로 받아서 새 링크로 받아요
+          await loadFiles();
+          const fresh = files.find(function (f) { return f.sk === file.sk; });
+          if (fresh) location.href = fresh.url;
+        });
+        buttons.append(get);
+        if (file.author === me) {
+          const remove = el("button", "soft", "삭제");
+          remove.type = "button";
+          remove.addEventListener("click", async function () {
+            if (!confirm("'" + file.name + "' 파일을 지울까요? 지우면 되돌릴 수 없어요.")) return;
+            remove.disabled = true;
+            try {
+              await callFiles("remove", { sk: file.sk });
+              files = files.filter(function (f) { return f.sk !== file.sk; });
+              drawFiles();
+            } catch (error) {
+              remove.disabled = false;
+              alert(errorText(error));
+            }
+          });
+          buttons.append(remove);
+        }
+        row.append(el("span", "icon", iconOf(file.name)), words, buttons);
+        list.append(row);
+      });
+    }
+    $("searchInput").addEventListener("input", drawFiles);
+    $("whoSelect").addEventListener("change", drawFiles);
+    $("reloadButton").addEventListener("click", loadFiles);
+
+    // ───────── 로그인 ─────────
+    let signupMode = false;
+    let needsCode = true;
+
+    function setMode(signup) {
+      signupMode = signup;
+      $("loginTitle").textContent = signup ? "계정 만들기" : "로그인";
+      $("loginHelp").textContent = signup
+        ? "진짜 이름 말고 별명으로 아이디를 지어 주세요. 비밀번호는 다른 곳에서 쓰는 것 말고 새로 지어 주세요."
+        : "message나 잉스타 계정이 있으면 그 아이디와 비밀번호로 들어올 수 있어요.";
+      $("loginButton").textContent = signup ? "가입하기" : "로그인";
+      $("modeButton").textContent = signup ? "이미 계정이 있어요. 로그인하기" : "처음이에요. 계정 만들기";
+      $("passwordInput").autocomplete = signup ? "new-password" : "current-password";
+      $("codeInput").hidden = !(signup && needsCode);
+      $("loginError").textContent = "";
+    }
+    $("modeButton").addEventListener("click", function () { setMode(!signupMode); });
+
+    $("loginForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const id = $("idInput").value.trim();
+      const password = $("passwordInput").value;
+      if (Array.from(id).length < 2 || /\s/.test(id)) { $("loginError").textContent = ERROR_TEXT.BAD_ID; return; }
+      if (password.length < 4) { $("loginError").textContent = ERROR_TEXT.BAD_PASSWORD; return; }
+
+      $("loginButton").disabled = true;
+      $("loginError").textContent = "";
+      try {
+        const result = signupMode
+          ? await call("signup", { id: id, password: password, code: $("codeInput").value.trim() })
+          : await call("login", { id: id, password: password });
+        token = result.token;
+        localStorage.setItem(TOKEN_KEY, token);
+        $("loginForm").reset();
+        enter(result.id);
+      } catch (error) {
+        $("loginError").textContent = errorText(error);
+      }
+      $("loginButton").disabled = false;
+    });
+
+    function enter(id) {
+      me = id;
+      $("meName").textContent = id;
+      $("meBox").hidden = false;
+      $("loginBox").hidden = true;
+      $("appBox").hidden = false;
+      // 서버에 파일함 기능이 아직 없으면 안내만 보여 줘요
+      $("offNotice").hidden = Boolean(FILES_URL);
+      $("pickButton").disabled = !FILES_URL;
+      loadFiles();
+    }
+
+    function leave() {
+      me = null;
+      token = null;
+      files = [];
+      localStorage.removeItem(TOKEN_KEY);
+      $("meBox").hidden = true;
+      $("appBox").hidden = true;
+      $("loginBox").hidden = false;
+      setMode(false);
+    }
+
+    $("logoutButton").addEventListener("click", function () {
+      call("logout").catch(function () {});
+      leave();
+    });
+
+    // ───────── 시작 ─────────
+    async function start() {
+      try {
+        needsCode = (await call("info")).needsCode;
+      } catch (error) {
+        // 서버에 물어보지 못하면 가입 코드 칸을 보여 줘요
+      }
+      setMode(false);
+      if (token) {
+        try {
+          const result = await call("whoami");
+          enter(result.id);
+          return;
+        } catch (error) {
+          if (error.message === "NOT_LOGGED_IN") { token = null; localStorage.removeItem(TOKEN_KEY); }
+        }
+      }
+      $("loginBox").hidden = false;
+    }
+    start();
+  </script>
+</body>
+</html>
