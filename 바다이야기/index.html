@@ -3203,6 +3203,7 @@
     const SPOT_CRITTERS = 12;  // 로드뷰 자리 둘레 바다 생물을 몇 가지까지 보여 줄지
     const ROADVIEW_RADII = [50, 300, 1000, 3000]; // 고른 곳에서 가까운 로드뷰를 이만큼씩 넓혀 가며 찾아요 (m)
     let roadview = null, roadviewClient = null, roadviewSpot = null, roadviewAsk = 0;
+    let roadviewLines = false; // 지도에 파란 선(로드뷰 길)을 깔았는지
 
     function drawIslandList() {
       const box = $("islandList");
@@ -3360,7 +3361,8 @@
     }
     function openIslandView() {
       if (!map || !kakao.maps.Roadview) { $("islandNote").textContent = "로드뷰는 지도가 보이는 웹 주소에서 볼 수 있어요."; return; }
-      map.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW); // 로드뷰가 있는 길을 파란 선으로
+      // 로드뷰가 있는 길을 파란 선으로 (여러 번 깔면 겹겹이 쌓여서, 한 번만 깔아요)
+      if (!roadviewLines) { map.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW); roadviewLines = true; }
       if (!roadview) {
         roadview = new kakao.maps.Roadview($("roadview"));
         roadviewClient = new kakao.maps.RoadviewClient();
@@ -3376,7 +3378,8 @@
       if (roadviewSpot) placeRoadviewSpot(roadviewSpot.place);
     }
     function closeIslandView() {
-      if (map && roadview) map.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW); // 파란 선 끄기
+      if (map && roadviewLines) { map.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW); roadviewLines = false; } // 파란 선 끄기
+      if (roadviewSpot && roadviewSpot.overlay) { roadviewSpot.overlay.setMap(null); roadviewSpot.overlay = null; } // 📷 표시도 바로 지워요
     }
     function placeRoadviewSpot(place) {
       if (roadviewSpot && roadviewSpot.overlay) roadviewSpot.overlay.setMap(null);
