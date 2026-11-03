@@ -440,6 +440,7 @@
     #helpDialog h3 { margin: 16px 0 6px; font-size: 16px; }
     #helpDialog ul, #helpDialog ol { margin: 0; padding-left: 22px; line-height: 1.7; font-size: 15px; }
     #helpDialog li { margin-bottom: 3px; }
+    .help-off { display: flex; align-items: center; gap: 6px; margin-right: auto; color: #5b6272; font-size: 14px; cursor: pointer; }
     .help-lead { margin: 10px 0 4px; padding: 10px 12px; border-radius: 10px; background: #e6f3f7; color: #0b4f63; font-size: 15px; line-height: 1.6; }
 
     /* 좁은 화면(핸드폰): 지도 위, 옆 칸 아래 */
@@ -804,7 +805,8 @@
       </section>
 
       <div class="view-buttons">
-        <button type="button" class="soft" id="helpClose">닫기</button>
+        <label class="help-off"><input type="checkbox" id="helpOff"> 다음부터 처음에 열지 않기</label>
+        <button type="button" class="primary" id="helpClose">시작하기</button>
       </div>
     </div>
   </dialog>
@@ -1797,6 +1799,21 @@
     });
     $("helpClose").addEventListener("click", function () { $("helpDialog").close(); });
     $("helpDialog").addEventListener("click", function (event) { if (event.target === this) this.close(); });
+
+    // 서비스에 처음 들어오면 "처음 시작" 사용법을 열어 줘요.
+    // 새로고침(F5)할 때는 다시 열지 않고(이 창에서 한 번만), "다음부터 처음에 열지 않기"를 고르면 이 컴퓨터에서는 열지 않아요.
+    const HELP_SEEN_KEY = "kisland.helpSeen"; // sessionStorage: 이 창에서 이미 보여 줌
+    const HELP_OFF_KEY = "kisland.helpOff";   // localStorage: 다음부터 열지 않기
+    function storageGet(store, key) { try { return store.getItem(key); } catch (error) { return null; } }
+    function storageSet(store, key, value) { try { if (value === null) store.removeItem(key); else store.setItem(key, value); } catch (error) { /* 기억하지 못해도 괜찮아요 */ } }
+    $("helpOff").checked = storageGet(localStorage, HELP_OFF_KEY) === "1";
+    $("helpOff").addEventListener("change", function () { storageSet(localStorage, HELP_OFF_KEY, this.checked ? "1" : null); });
+    function showHelpOnFirstVisit() {
+      if (storageGet(sessionStorage, HELP_SEEN_KEY) || storageGet(localStorage, HELP_OFF_KEY) === "1") return;
+      storageSet(sessionStorage, HELP_SEEN_KEY, "1");
+      showHelp("start");
+      if (!$("helpDialog").open) $("helpDialog").showModal();
+    }
 
     // ═════════ 🏝️ 전국 섬 정보 ═════════
     // island-list.json: 우리나라 바다 섬 1,259곳의 이름과 자리 (위키데이터, 누구나 쓸 수 있는 자료)
@@ -3628,6 +3645,7 @@
       drawIslandList();
       drawStreetTabs();
       drawSourceFilter();
+      showHelpOnFirstVisit(); // 처음 들어오면 사용법부터
       try {
         needsCode = (await call("info")).needsCode;
       } catch (error) {
