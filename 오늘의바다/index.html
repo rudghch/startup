@@ -389,8 +389,24 @@
     .island-box { margin-top: 10px; padding: 10px 12px; border: 2px solid #9fd3b8; border-radius: 12px; background: #f3fbf6; font-size: 14px; line-height: 1.6; }
     .island-box h3 { margin: 0; }
     .island-box .numbers { margin-top: 6px; }
-    .island-box .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; text-align: center; }
+    .island-box .days, .island-pop .days { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; text-align: center; }
     .island-box .days div { padding: 6px 4px; border-radius: 10px; background: #fff; }
+    /* 🏝️ 섬을 찾으면 화면 가운데에 먼저 뜨는 요약 */
+    .island-pop { width: min(420px, calc(100% - 24px)); padding: 18px 16px 16px; font-size: 14px; line-height: 1.5; }
+    .island-pop h2 { margin: 0 40px 2px 0; font-size: 22px; }
+    .island-pop .meta { margin: 0 0 10px; color: #5b6272; font-size: 13px; }
+    .island-pop .pop-close { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border: 0; border-radius: 8px; background: #eef3f6; font-size: 17px; }
+    .pop-swim { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #f1f6f9; font-size: 15px; }
+    .pop-swim.l0 { background: #e9f7ef; }
+    .pop-swim.l1 { background: #fff6dc; }
+    .pop-swim.l2 { background: #fde8e6; }
+    .pop-swim .light { font-size: 34px; line-height: 1; }
+    .pop-swim small { display: block; color: #5b6272; font-size: 12px; }
+    .island-pop .numbers { margin-top: 8px; }
+    .island-pop .days div { padding: 6px 4px; border-radius: 10px; background: #f1f6f9; font-size: 13px; }
+    .pop-wiki { margin: 10px 0 0; color: #3d5866; }
+    .pop-buttons { margin-top: 14px; }
+    .pop-buttons .primary { flex: 1; width: auto; }
     .island-box .wiki { margin: 8px 0 0; }
     .island-choice { display: block; width: 100%; margin-top: 6px; padding: 7px 10px; border: 1px solid #b7dcc8; border-radius: 10px; background: #fff; text-align: left; font-size: 14px; }
     .island-choice small { display: block; color: #5b6272; }
@@ -674,6 +690,21 @@
     </div>
   </dialog>
 
+  <!-- 🏝️ 섬을 찾으면 화면 가운데에 먼저 띄우는 요약 (자세한 것은 오른쪽 칸의 섬 상자) -->
+  <dialog id="islandDialog" class="island-pop" aria-labelledby="islandPopName">
+    <button type="button" class="pop-close" id="islandPopClose" aria-label="섬 요약 닫기">✕</button>
+    <h2 id="islandPopName"></h2>
+    <p class="meta" id="islandPopAddress"></p>
+    <div class="pop-swim" id="islandPopSwim"></div>
+    <div class="numbers" id="islandPopNow"></div>
+    <div class="days" id="islandPopDays"></div>
+    <p class="pop-wiki" id="islandPopWiki"></p>
+    <div class="row pop-buttons">
+      <button type="button" class="primary" id="islandPopMore">📋 자세히 보기</button>
+      <button type="button" class="soft" id="islandPopMap">🗺️ 지도 보기</button>
+    </div>
+  </dialog>
+
   <!-- ❓ 사용 방법 (튜토리얼) -->
   <div class="tour-block" id="tourBlock" hidden></div>
   <div class="tour-spot" id="tourSpot" hidden></div>
@@ -923,7 +954,7 @@
       const place = { lat: island[1], lng: island[2] };
       $("placeInput").value = island[0];
       moveMap(place.lat, place.lng, ISLAND_LEVEL);
-      chooseSeaPlace(place, island[0] + " 둘레 바다"); // 섬 둘레 바다의 수영 신호등·물때·예보도 함께 바뀌어요
+      const seaDone = chooseSeaPlace(place, island[0] + " 둘레 바다"); // 섬 둘레 바다의 수영 신호등·물때·예보도 함께 바뀌어요
       const ask = seaAsk;
       const box = $("islandBox");
       box.textContent = "";
@@ -932,17 +963,28 @@
       const weather = el("div", "", "섬 날씨를 알아보는 중…");
       const wiki = el("p", "wiki");
       box.append(weather, wiki, el("p", "note", "섬 가운데(땅)의 날씨예요. 아래 \"수영해도 될까요?\"는 섬 둘레 바다의 상태예요."));
-      bringIntoView(box);
+      openIslandPop(island); // 화면 가운데에 요약을 먼저 띄워요
+      seaDone.then(function () { if (ask === seaAsk) fillIslandPopSwim(); });
       fetchIslandWeather(place).then(function (data) {
-        if (ask === seaAsk) drawIslandWeather(weather, data);
+        if (ask !== seaAsk) return;
+        drawIslandWeather(weather, data);
+        fillIslandPopWeather(data);
       }).catch(function (error) {
-        if (ask === seaAsk) weather.textContent = "섬 날씨: " + errorText(error);
+        if (ask !== seaAsk) return;
+        weather.textContent = "섬 날씨: " + errorText(error);
+        $("islandPopNow").textContent = "";
+        $("islandPopDays").textContent = "섬 날씨를 받지 못했어요.";
       });
-      if (!island[4]) { wiki.textContent = "📖 위키백과에 글이 없는 작은 섬이에요."; return; }
+      if (!island[4]) {
+        wiki.textContent = "📖 위키백과에 글이 없는 작은 섬이에요.";
+        $("islandPopWiki").textContent = wiki.textContent;
+        return;
+      }
       try {
         const page = await getJson("https://ko.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(island[4]));
         if (ask !== seaAsk) return;
         const text = page.extract || "";
+        $("islandPopWiki").textContent = text ? "📖 " + firstSentence(text) : "";
         wiki.append("📖 " + (text.length > WIKI_LENGTH ? text.slice(0, WIKI_LENGTH) + "…" : text) + " ");
         const link = el("a", "", "위키백과에서 더 보기");
         link.href = (page.content_urls && page.content_urls.desktop.page) || "https://ko.wikipedia.org/wiki/" + encodeURIComponent(island[4]);
@@ -951,8 +993,74 @@
         wiki.append(link);
       } catch (error) {
         if (ask === seaAsk) wiki.textContent = "📖 위키백과 소개를 받지 못했어요.";
+        if (ask === seaAsk) $("islandPopWiki").textContent = "";
       }
     }
+
+    // ── 가운데 요약 창: 수영해도 되는지, 지금 날씨, 3일 날씨, 소개 한 줄 ──
+    const POP_WIKI_LENGTH = 90; // 요약 창의 위키백과 소개는 첫 문장을 이 글자 수까지
+    function openIslandPop(island) {
+      $("islandPopName").textContent = "🏝️ " + island[0];
+      $("islandPopAddress").textContent = "📍 " + (island[3] || "주소 없음");
+      $("islandPopSwim").className = "pop-swim";
+      $("islandPopSwim").textContent = "🌊 섬 둘레 바다를 알아보는 중…";
+      $("islandPopNow").textContent = "";
+      $("islandPopDays").textContent = "섬 날씨를 알아보는 중…";
+      $("islandPopWiki").textContent = island[4] ? "📖 소개를 불러오는 중…" : "";
+      if (!$("islandDialog").open) $("islandDialog").showModal();
+    }
+    // 오른쪽 칸의 수영 얼굴을 그대로 옮겨 와요
+    function fillIslandPopSwim() {
+      const swim = $("islandPopSwim");
+      swim.textContent = "";
+      if ($("seaResult").hidden) { swim.textContent = "🌊 섬 둘레 바다 정보를 받지 못했어요."; return; }
+      swim.className = "pop-swim " + $("seaSignal").className.replace("signal", "").trim();
+      const words = el("div");
+      words.append(el("b", "", $("seaSignalText").textContent), el("small", "", "섬 둘레 바다에서 수영해도 될까요?"));
+      swim.append(el("span", "light", $("seaLight").textContent), words);
+    }
+    function fillIslandPopWeather(data) {
+      const now = data.current || {};
+      const day = data.daily || {};
+      function number(value, digits, unit) { return typeof value === "number" ? value.toFixed(digits) + unit : "모름"; }
+      const grid = $("islandPopNow");
+      grid.textContent = "";
+      [
+        ["🌡️ 지금 기온", number(now.temperature_2m, 1, "°C")],
+        ["날씨", weatherName(now.weather_code) || "모름"],
+        ["💨 바람", number(now.wind_speed_10m, 1, "m/s")]
+      ].forEach(function (pair) {
+        const cell = el("div");
+        cell.append(el("small", "", pair[0]), el("b", "", pair[1]));
+        grid.append(cell);
+      });
+      const days = $("islandPopDays");
+      days.textContent = "";
+      (day.time || []).forEach(function (text, i) {
+        const cell = el("div");
+        cell.append(el("b", "", DAY_NAMES[i] || text.slice(5)), el("br"), (weatherName(day.weather_code[i]) || "").split(" ")[0] + " " +
+          number(day.temperature_2m_min[i], 0, "") + "~" + number(day.temperature_2m_max[i], 0, "°C"), el("br"),
+          "☔ " + number(day.precipitation_probability_max[i], 0, "%"));
+        days.append(cell);
+      });
+    }
+    function firstSentence(text) {
+      const first = (text.match(/^[\s\S]*?[.!?](?=\s|$)/) || [text])[0];
+      return first.length > POP_WIKI_LENGTH ? first.slice(0, POP_WIKI_LENGTH) + "…" : first;
+    }
+    $("islandPopMore").addEventListener("click", function () {
+      $("islandDialog").close();
+      $("islandBox").scrollIntoView({ behavior: "smooth", block: "start" }); // 오른쪽 칸(핸드폰은 아래)의 섬 상자로
+    });
+    $("islandPopMap").addEventListener("click", function () {
+      $("islandDialog").close();
+      bringIntoView($("mapWrap"));
+    });
+    $("islandPopClose").addEventListener("click", function () { $("islandDialog").close(); });
+    $("islandDialog").addEventListener("click", function (event) {
+      const r = this.getBoundingClientRect(); // 어두운 바깥을 누르면 닫혀요 (창 안쪽 여백은 빼고)
+      if (event.target === this && (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)) this.close();
+    });
 
     // 섬 가운데의 날씨 (지금 + 3일). Open-Meteo, 키 필요 없음
     async function fetchIslandWeather(place) {
@@ -2725,7 +2833,9 @@
 
     // ═════════ ❓ 사용 방법 (튜토리얼) ═════════
     // 맨 위 파란 줄의 "❓ 사용 방법"을 누르면 화면을 어둡게 하고, 설명할 곳만 밝게 비추며 한 단계씩 알려 줘요 (2026-11-03 선생님 요청).
+    // 처음 들어온 사람(이 브라우저에서 한 번도 끝까지 보거나 끄지 않은 사람)에게는 로그인하자마자 저절로 떠요 (2026-11-03 선생님 요청).
     // 단계를 더하거나 고치려면 TOUR_STEPS만 바꾸면 돼요. targets: 밝게 비출 곳의 id (여러 개면 모두 감싸요)
+    const TOUR_SEEN_KEY = "signal.tourSeen"; // 이 브라우저에서 사용 방법을 본 적이 있는지
     const TOUR_STEPS = [
       {
         title: "1. 검색은 여기서 해요",
@@ -2735,7 +2845,7 @@
       {
         title: "2. 섬 이름을 쓰면 그 섬의 날씨와 정보가 나와요",
         targets: ["seaPlaceNote", "islandBox"],
-        text: "섬을 찾으면 지도가 그 섬으로 가고, 여기에 그 섬의 <b>날씨</b>와 <b>소개</b>가 나와요. 그 섬 바다의 수영·물때·예보도 아래에 함께 바뀌어요.",
+        text: "섬을 찾으면 지도가 그 섬으로 가고, 화면 가운데에 그 섬의 <b>요약</b>(수영해도 되는지, 날씨, 소개)이 먼저 떠요. <b>📋 자세히 보기</b>를 누르면 여기에 자세한 <b>날씨</b>와 <b>소개</b>가 나와요. 그 섬 바다의 수영·물때·예보도 아래에 함께 바뀌어요.",
         tryLabel: "👀 금오도로 해 보기",
         tryIt: function () {
           $("placeInput").value = "금오도"; // 같은 이름의 섬이 하나뿐인 섬 (거문도는 2곳이라 고르는 칸이 나와요)
@@ -2790,6 +2900,7 @@
     }
     function closeTour() {
       tourIndex = -1;
+      try { localStorage.setItem(TOUR_SEEN_KEY, "1"); } catch (error) { /* 저장이 막힌 브라우저면 다음에 또 떠요 */ }
       clearTimeout(tourTryTimer);
       $("tourBlock").hidden = true;
       $("tourSpot").hidden = true;
@@ -2855,6 +2966,12 @@
       }
       card.style.top = Math.max(8, top) + "px";
       card.style.left = left + "px";
+    }
+    // 처음 들어왔으면 화면이 자리 잡을 때까지 조금 기다렸다가 사용 방법을 띄워요
+    function openTourFirstTime() {
+      let seen = false;
+      try { seen = localStorage.getItem(TOUR_SEEN_KEY) === "1"; } catch (error) { seen = false; }
+      if (!seen) setTimeout(function () { if (me && tourIndex < 0) openTour(); }, 800);
     }
     $("tourButton").addEventListener("click", openTour);
     $("tourClose").addEventListener("click", closeTour);
@@ -2947,6 +3064,7 @@
       loadReports();
       clearInterval(reportTimer);
       reportTimer = setInterval(loadReports, 60000); // 1분마다 새 위험 알림이 있는지 봐요
+      openTourFirstTime();
     }
     let reportTimer = null;
 
