@@ -41,6 +41,7 @@
       white-space: nowrap;
     }
     .top .me { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .top h1 .home-link { background: none; padding: 0; border-radius: 0; color: inherit; font-size: inherit; } /* 제목을 누르면 처음 화면으로 (버튼 모양은 빼요) */
 
     /* 로그인 */
     .login {
@@ -457,7 +458,7 @@
 </head>
 <body>
   <header class="top">
-    <h1><img class="logo" src="logo.png" alt=""> k-island map</h1>
+    <h1><a class="home-link" href="../" title="처음 화면으로 가기"><img class="logo" src="logo.png" alt=""> k-island map</a></h1>
     <button type="button" id="helpButton">❓ 사용법</button>
     <div class="me" id="meBox" hidden>
       <b id="meName"></b>
