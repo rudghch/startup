@@ -366,7 +366,36 @@
     }
     @media (max-width: 480px) {
       #meName { display: none; } /* 아주 좁으면 제목이 보이게 아이디를 숨겨요 */
+      .top .wide { display: none; } /* "처음 화면"은 🏠만 */
     }
+    /* 사용 방법 (따라 하기 안내) */
+    .tour {
+      position: fixed;
+      top: 72px;
+      left: 16px;
+      z-index: 40;
+      width: min(360px, calc(100% - 32px));
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: #fff;
+      border: 2px solid #ff8c00;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    }
+    .tour.right { left: auto; right: 16px; } /* 반짝이는 곳이 왼쪽에 있으면 안내는 오른쪽에 */
+    @media (max-width: 800px) { /* 핸드폰: 화면 아래(반짝이는 곳이 아래쪽이면 위)에 가득 */
+      .tour, .tour.right { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; }
+      .tour.high { top: 64px; bottom: auto; }
+    }
+    .tour small { color: #ff8c00; font-weight: bold; font-size: 13px; }
+    .tour b { display: block; margin: 4px 0 6px; font-size: 17px; line-height: 1.4; }
+    .tour p { margin: 0 0 10px; font-size: 14px; color: #3d5866; line-height: 1.55; }
+    .tour p.later { margin-top: -4px; color: #a05a00; }
+    .tour .row { justify-content: flex-end; }
+    .tour-dots { display: flex; gap: 4px; margin-right: auto; align-items: center; }
+    .tour-dots i { width: 8px; height: 8px; border-radius: 50%; background: #d6e4ea; }
+    .tour-dots i.on { background: #ff8c00; }
+    .tour-focus { outline: 3px solid #ff8c00 !important; outline-offset: 3px; border-radius: 8px; animation: tourPulse 1.2s ease-in-out infinite; }
+    @keyframes tourPulse { 50% { box-shadow: 0 0 0 8px rgba(255, 140, 0, 0.35); } }
   </style>
 </head>
 <body>
@@ -374,9 +403,10 @@
     <h1>⚓ dockmap</h1>
     <div class="me" id="meBox" hidden>
       <b id="meName"></b>
+      <button type="button" id="tourButton" title="사용 방법">❓<span class="wide"> 사용 방법</span></button>
       <button type="button" id="logoutButton">로그아웃</button>
     </div>
-    <a href="../">🏠 처음 화면</a>
+    <a href="../">🏠<span class="wide"> 처음 화면</span></a>
   </header>
 
   <!-- 로그인 -->
@@ -480,7 +510,7 @@
 
       <h3>1. 무엇을 타나요?</h3>
       <div class="chips" id="boatPick"></div>
-      <details class="fold">
+      <details class="fold" id="boatFold">
         <summary>⚙️ 빠르기·기름 바꾸기 <small id="boatSum"></small></summary>
         <p class="note">빠르기 <input type="number" id="speedInput" min="1" max="60" step="1"> 노트 (1노트 = 한 시간에 1.85km)</p>
         <p class="note">한 시간에 쓰는 기름 <input type="number" id="fuelInput" min="0" max="2000" step="1"> L · 기름값 1L에 <input type="number" id="priceInput" min="0" max="10000" step="10"> 원</p>
@@ -507,6 +537,20 @@
       <p class="warn">바닷길은 약 130m 칸으로 나눈 지도로 찾아서(먼 길은 더 큰 칸), 아주 작은 섬이나 바위, 얕은 곳은 잘 모를 수 있어요. 수심은 약 1.8km 칸으로 잰 어림값이고, 기름값도 어림값이에요. 진짜로 배를 탈 때는 선장님과 해도(바다 지도)를 꼭 따라야 해요.</p>
     </aside>
   </main>
+
+  <!-- 사용 방법: 한 단계씩 보여 주고, 눌러야 할 곳을 주황색으로 반짝여요 -->
+  <div class="tour" id="tourBox" hidden>
+    <small id="tourStep"></small>
+    <b id="tourTitle"></b>
+    <p id="tourText"></p>
+    <p class="later" id="tourLater" hidden></p>
+    <div class="row">
+      <span class="tour-dots" id="tourDots"></span>
+      <button type="button" class="soft" id="tourPrev">← 이전</button>
+      <button type="button" class="soft on" id="tourNext">다음 →</button>
+      <button type="button" class="soft" id="tourClose">닫기</button>
+    </div>
+  </div>
 
   <!-- 배 댈 곳 자세히 보기 (자리 수와 리뷰) -->
   <dialog id="dockDialog">
@@ -2776,6 +2820,86 @@
       drawGlance();
     }
 
+    // ───────── 사용 방법 (따라 하기 안내) ─────────
+    // 맨 위 "❓ 사용 방법"을 누르면 한 단계씩 설명하고, 그 단계에서 누를 곳을 주황색으로 반짝여요.
+    // targets: 반짝일 곳의 id (data-pane은 카드의 칸 버튼), needsRoute: 길을 찍어야 보이는 곳, open: 미리 펼칠 것
+    const TOUR_STEPS = [
+      { title: "지도에서 위성지도 또는 일반지도를 선택하고 출발할 장소를 찾는다.",
+        text: "지도 위 '🛰️ 위성지도' 버튼으로 위성지도와 일반지도를 바꿔요. 옆 칸에 섬이나 바닷가 이름을 적고 '찾기'를 누르면 지도가 그곳으로 가요.",
+        targets: ["placeForm", "mapTypeButton"] },
+      { title: "배의 속도, 시간당 연료 소비량, 기름값을 입력한다.",
+        text: "'1. 무엇을 타나요?'에서 배를 고르고, '⚙️ 빠르기·기름 바꾸기'에 빠르기(노트), 한 시간에 쓰는 기름(L), 기름 1L 값(원)을 적어요.",
+        targets: ["boatPick", "boatFold"], open: ["boatFold"] },
+      { title: "'지도에 길 찍기' 기능을 이용해 출발지부터 도착지까지 이동 경로를 설정한다.",
+        text: "'🗺️ 지도에 길 찍기'를 누르고 지도에서 출발지 → 들를 곳 → 도착지를 차례로 눌러요. 다 찍었으면 지도 위 '그만'을 눌러요. 잘못 찍었으면 '↩ 하나 지우기'.",
+        targets: ["routeDrawButton"] },
+      { title: "설정한 경로를 확인하고 예상 이동 시간과 연료비를 확인한다.",
+        text: "땅을 피해 가는 바닷길이 주황색 선으로 그려지고, 지도 아래 카드에 걸리는 시간·거리·도착 예상이 나와요. 기름값은 '자세히 보기 → 🧭 바닷길·기름'에 있어요.",
+        targets: ["glance", "routePane"], needsRoute: true, open: ["cardMore"] },
+      { title: "날씨 기능을 이용해 이동 경로의 바람, 파도, 물살 등을 확인한다.",
+        text: "카드의 '자세히 보기 → 🌦️ 가는 길 날씨'를 누르면 바람·파도·물살·안개를 🟢🟡🔴로 알려 줘요. 출발 시각을 바꿔 보면 언제 떠나는 게 좋은지도 알 수 있어요.",
+        targets: ["tripPane"], needsRoute: true, open: ["cardMore"] },
+      { title: "도착지 주변의 정박 장소와 편의시설을 검색한다.",
+        text: "'⚓ 배 댈 곳'에서 도착지 근처 정박 장소의 자리 수·요금·리뷰를, '🏪 주변 편의시설'에서 편의점·화장실·음식점·숙소를 찾아요.",
+        targets: ["dockPane", "nearPane"], needsRoute: true, open: ["cardMore"] },
+      { title: "'내 배 위치 켜기'를 눌러 현재 위치를 확인하거나 모의 주행 기능으로 이동 경로를 안내받는다.",
+        text: "'📡 내 배 위치 켜기'로 지금 내 배 자리를 보거나, 카드의 '▶ 안내 시작 (모의 주행)'으로 왼쪽·오른쪽·위험 안내를 미리 들어 봐요.",
+        targets: ["liveButton", "navStart"] }
+    ];
+    let tourAt = -1;          // 지금 보여 주는 단계 (-1이면 꺼짐)
+    let tourOpenedSide = false; // 길을 찍어 오른쪽 칸이 숨었을 때, 안내 때문에 잠깐 열었는지
+    function tourTarget(id) {
+      const pane = document.querySelector('#cardTabs [data-pane="' + id + '"]'); // 카드의 칸은 그 칸 버튼을 반짝여요
+      return pane || $(id);
+    }
+    function shown(node) { return Boolean(node) && node.getClientRects().length > 0; }
+    function clearTour() {
+      document.querySelectorAll(".tour-focus").forEach(function (node) { node.classList.remove("tour-focus"); });
+      if (tourOpenedSide) document.body.classList.remove("side-open");
+      tourOpenedSide = false;
+    }
+    function showTour(i) {
+      clearTour();
+      tourAt = i;
+      const step = TOUR_STEPS[i];
+      const routing = document.body.classList.contains("routing");
+      (step.open || []).forEach(function (id) { if ($(id)) $(id).open = true; });
+      // 오른쪽 칸에 있는 버튼인데 길을 찍어서 칸이 숨어 있으면 잠깐 열어요
+      if (routing && step.targets.some(function (id) { return $("side").contains(tourTarget(id)); }) && !document.body.classList.contains("side-open")) {
+        document.body.classList.add("side-open");
+        tourOpenedSide = true;
+      }
+      let targets = step.targets.map(tourTarget).filter(shown);
+      const later = step.needsRoute && !routing;
+      if (later) targets = [$("routeDrawButton")]; // 길이 없으면 먼저 길 찍기 버튼을 보여 줘요
+      targets.forEach(function (node) { node.classList.add("tour-focus"); });
+      if (targets[0]) targets[0].scrollIntoView({ block: "center" });
+      $("tourStep").textContent = (i + 1) + " / " + TOUR_STEPS.length + " 단계";
+      $("tourTitle").textContent = (i + 1) + ". " + step.title;
+      $("tourText").textContent = step.text;
+      $("tourLater").hidden = !later;
+      $("tourLater").textContent = "👉 아직 길을 찍지 않아서 이 부분이 안 보여요. 3단계처럼 먼저 길을 찍어 보세요.";
+      $("tourDots").textContent = "";
+      TOUR_STEPS.forEach(function (s, k) { $("tourDots").append(el("i", k === i ? "on" : "")); });
+      $("tourPrev").disabled = i === 0;
+      $("tourNext").textContent = i === TOUR_STEPS.length - 1 ? "다 봤어요 ✓" : "다음 →";
+      $("tourBox").hidden = false;
+      // 안내 상자가 반짝이는 곳을 가리지 않게: 컴퓨터는 왼쪽/오른쪽, 핸드폰은 위/아래로 옮겨요
+      const box = targets[0] && targets[0].getBoundingClientRect();
+      $("tourBox").classList.toggle("right", Boolean(box) && box.left + box.width / 2 < window.innerWidth / 2);
+      $("tourBox").classList.toggle("high", Boolean(box) && box.top + box.height / 2 > window.innerHeight / 2);
+    }
+    function closeTour() {
+      clearTour();
+      tourAt = -1;
+      $("tourBox").hidden = true;
+    }
+    $("tourButton").addEventListener("click", function () { tourAt >= 0 ? closeTour() : showTour(0); });
+    $("tourPrev").addEventListener("click", function () { if (tourAt > 0) showTour(tourAt - 1); });
+    $("tourNext").addEventListener("click", function () { tourAt < TOUR_STEPS.length - 1 ? showTour(tourAt + 1) : closeTour(); });
+    $("tourClose").addEventListener("click", closeTour);
+    document.addEventListener("keydown", function (event) { if (event.key === "Escape" && tourAt >= 0) closeTour(); });
+
     // ───────── 로그인 ─────────
     let signupMode = false;
     let needsCode = true;
@@ -2832,6 +2956,7 @@
       token = null;
       localStorage.removeItem(TOKEN_KEY);
       stopLive();
+      closeTour();
       if ($("dockDialog").open) $("dockDialog").close();
       $("meBox").hidden = true;
       $("appBox").hidden = true;
