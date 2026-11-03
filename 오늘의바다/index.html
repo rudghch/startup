@@ -436,19 +436,51 @@
       .map-tools button { padding: 6px 8px; font-size: 13px; }
       .top h1 { font-size: 17px; }
     }
+    /* ❓ 사용 방법 (튜토리얼): 어두운 화면에 설명할 곳만 밝게 비추고 옆에 설명 카드 */
+    .top .tour-button { background: #ffd54a; color: #1f2430; font-weight: bold; }
+    .tour-block { position: fixed; inset: 0; z-index: 1000; }
+    .tour-spot {
+      position: fixed;
+      z-index: 1001;
+      border: 3px solid #ffd54a;
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+    }
+    .tour-card {
+      position: fixed;
+      z-index: 1002;
+      width: min(360px, calc(100vw - 24px));
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .tour-card h3 { margin: 0 0 6px; font-size: 18px; }
+    .tour-card p { margin: 0 0 10px; }
+    .tour-count { color: #0b6e8a; font-size: 13px; font-weight: bold; }
+    .tour-dots { display: flex; gap: 4px; margin-bottom: 8px; }
+    .tour-dots span { width: 8px; height: 8px; border-radius: 50%; background: #d6e4ea; }
+    .tour-dots span.on { background: #0b6e8a; }
+    .tour-buttons { display: flex; gap: 6px; }
+    .tour-buttons .primary { flex: 1; }
+    .tour-card .fish-pin.small { margin: 0 2px; }
     @media (max-width: 480px) {
-      #meName { display: none; } /* 아주 좁으면 제목이 보이게 아이디를 숨겨요 */
+      #meName, .top .wide { display: none; } /* 아주 좁으면 제목이 보이게 아이디와 "처음 화면" 글자를 숨겨요 */
     }
   </style>
 </head>
 <body>
   <header class="top">
     <h1><img class="logo" src="lighthouse.svg" alt=""> 씨그널</h1>
+    <button type="button" class="tour-button" id="tourButton" hidden>❓ 사용 방법</button>
     <div class="me" id="meBox" hidden>
       <b id="meName"></b>
       <button type="button" id="logoutButton">로그아웃</button>
     </div>
-    <a href="../">🏠 처음 화면</a>
+    <a href="../">🏠<span class="wide"> 처음 화면</span></a>
   </header>
 
   <!-- 로그인 -->
@@ -533,13 +565,13 @@
             <div><b id="seaSignalText"></b><ul id="seaReasons"></ul></div>
           </div>
           <div class="numbers" id="seaNumbers"></div>
-          <div class="tide">
+          <div class="tide" id="tideBox">
             <h3>🌊 물때 (오늘과 내일)</h3>
             <p class="note" id="tideNote"></p>
             <div id="tideChart"></div>
             <div class="tide-danger" id="tideDanger"></div>
           </div>
-          <div class="env">
+          <div class="env" id="envBox">
             <h3>🌍 바다 환경</h3>
             <ul class="env-list" id="envList"></ul>
             <div class="row">
@@ -640,6 +672,22 @@
       <p class="error" id="reportViewError"></p>
     </div>
   </dialog>
+
+  <!-- ❓ 사용 방법 (튜토리얼) -->
+  <div class="tour-block" id="tourBlock" hidden></div>
+  <div class="tour-spot" id="tourSpot" hidden></div>
+  <div class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle" tabindex="-1" hidden>
+    <div class="tour-dots" id="tourDots"></div>
+    <p class="tour-count" id="tourCount"></p>
+    <h3 id="tourTitle"></h3>
+    <p id="tourText"></p>
+    <p><button type="button" class="soft" id="tourTry" hidden></button></p>
+    <div class="tour-buttons">
+      <button type="button" class="soft" id="tourClose">끝내기</button>
+      <button type="button" class="soft" id="tourPrev">← 이전</button>
+      <button type="button" class="primary" id="tourNext">다음 →</button>
+    </div>
+  </div>
 
   <script>
     const $ = function (id) { return document.getElementById(id); };
@@ -2674,6 +2722,160 @@
       $("reportSend").textContent = "알리기";
     });
 
+    // ═════════ ❓ 사용 방법 (튜토리얼) ═════════
+    // 맨 위 파란 줄의 "❓ 사용 방법"을 누르면 화면을 어둡게 하고, 설명할 곳만 밝게 비추며 한 단계씩 알려 줘요 (2026-11-03 선생님 요청).
+    // 단계를 더하거나 고치려면 TOUR_STEPS만 바꾸면 돼요. targets: 밝게 비출 곳의 id (여러 개면 모두 감싸요)
+    const TOUR_STEPS = [
+      {
+        title: "1. 검색은 여기서 해요",
+        targets: ["placeForm"],
+        text: "지도 위 칸에 섬이나 바닷가 이름(예: 금오도, 청산도)을 쓰고 <b>찾기</b>를 눌러요. 지도에서 바닷가를 바로 눌러도 돼요."
+      },
+      {
+        title: "2. 섬 이름을 쓰면 그 섬의 날씨와 정보가 나와요",
+        targets: ["seaPlaceNote", "islandBox"],
+        text: "섬을 찾으면 지도가 그 섬으로 가고, 여기에 그 섬의 <b>날씨</b>와 <b>소개</b>가 나와요. 그 섬 바다의 수영·물때·예보도 아래에 함께 바뀌어요.",
+        tryLabel: "👀 금오도로 해 보기",
+        tryIt: function () {
+          $("placeInput").value = "금오도"; // 같은 이름의 섬이 하나뿐인 섬 (거문도는 2곳이라 고르는 칸이 나와요)
+          $("placeForm").requestSubmit();
+        }
+      },
+      {
+        title: "3. 수영해도 되는지 얼굴로 알려 줘요",
+        targets: ["seaSignal"],
+        text: "😄 초록이면 수영하기 괜찮아요. 😬 노랑이면 조심해요. 🥶·😨·😱 빨강이면 오늘은 물에 들어가지 마세요. 얼굴 옆에 <b>까닭</b>(물이 차가워요, 파도가 높아요…)이 나와요."
+      },
+      {
+        title: "4. 물때와 바다 상태를 알려 줘요",
+        targets: ["seaNumbers", "tideBox"],
+        text: "수온·파도·바람·기온·날씨·자외선을 숫자로 보여 줘요. <b>물때 그래프</b>는 물이 언제 가득 차고(만조) 언제 빠지는지(간조) 알려 줘요. 물이 들어올 때 갯벌·바위에 오래 있으면 위험해요."
+      },
+      {
+        title: "4. 바다 환경도 알려 줘요",
+        targets: ["envBox"],
+        text: "적조(바다가 붉게 변하는 것), 기름, 쓰레기 같은 <b>바다 환경 문제</b>를 알려 줘요. 보면 사진을 찍어 친구들에게 알릴 수 있어요."
+      },
+      {
+        title: "5. 💨 바람 그림 읽는 법",
+        targets: ["windLayerButton"],
+        text: "<b>💨 바람</b>을 누르면 지도에 바람 화살표가 나와요. 화살표 <b>꼬리 쪽에서 바람이 불어와서</b> 머리 쪽으로 불어 가요. 색이 빨갈수록 바람이 세요. 작은 선들도 바람을 따라 흘러가요."
+      },
+      {
+        title: "5. 🌊 파도 그림 읽는 법",
+        targets: ["waveLayerButton"],
+        text: "<b>🌊 파도</b>를 누르면 파도 화살표가 나와요. 화살표 <b>꼬리 쪽에서 파도가 밀려와요</b>. 숫자는 파도 높이(m)예요. 아래 시간 막대의 ▶를 누르면 3일 동안 바뀌는 모습을 볼 수 있어요."
+      },
+      {
+        title: "5. 🎣 낚시 그림 읽는 법",
+        targets: ["fishButton"],
+        text: "<b>🎣 낚시</b>를 누르면 낚시해도 되는 곳인지 알려 줘요. 지도에서 <span class=\"fish-pin small\">🎣</span>는 낚시해도 되는 곳, " +
+          "빨간 줄이 그어진 <span class=\"fish-pin small no\">🎣</span>는 낚시하면 안 되는 곳이에요. 빨갛게 칠한 곳은 낚시 금지·출입 통제 구역이에요."
+      }
+    ];
+    let tourIndex = -1; // 지금 보여 주는 단계 (-1이면 꺼짐)
+    let tourTryTimer = null;
+
+    function visibleTargets(step) {
+      return step.targets.map(function (id) { return $(id); }).filter(function (element) {
+        return element && element.getClientRects().length > 0; // 숨어 있는 곳은 빼요
+      });
+    }
+    function openTour() {
+      $("tourBlock").hidden = false;
+      $("tourCard").hidden = false;
+      showTourStep(0);
+      $("tourCard").focus();
+    }
+    function closeTour() {
+      tourIndex = -1;
+      clearTimeout(tourTryTimer);
+      $("tourBlock").hidden = true;
+      $("tourSpot").hidden = true;
+      $("tourCard").hidden = true;
+    }
+    function showTourStep(index) {
+      tourIndex = index;
+      const step = TOUR_STEPS[index];
+      const dots = $("tourDots");
+      dots.textContent = "";
+      TOUR_STEPS.forEach(function (other, i) { dots.append(el("span", i === index ? "on" : "")); });
+      $("tourCount").textContent = (index + 1) + " / " + TOUR_STEPS.length;
+      $("tourTitle").textContent = step.title;
+      $("tourText").innerHTML = step.text; // 위에 직접 쓴 글만 넣어요
+      $("tourTry").hidden = !step.tryIt;
+      $("tourTry").textContent = step.tryLabel || "";
+      $("tourPrev").disabled = index === 0;
+      $("tourNext").textContent = index === TOUR_STEPS.length - 1 ? "다 봤어요 ✔" : "다음 →";
+      const first = visibleTargets(step)[0];
+      if (first) first.scrollIntoView({ block: "center", inline: "nearest" });
+      placeTour();
+    }
+    // 밝게 비출 곳과 설명 카드 자리 정하기
+    function placeTour() {
+      if (tourIndex < 0) return;
+      const spot = $("tourSpot"), card = $("tourCard");
+      const targets = visibleTargets(TOUR_STEPS[tourIndex]);
+      const gap = 6;
+      let box = null;
+      targets.forEach(function (element) {
+        const r = element.getBoundingClientRect();
+        box = box ? {
+          left: Math.min(box.left, r.left), top: Math.min(box.top, r.top),
+          right: Math.max(box.right, r.right), bottom: Math.max(box.bottom, r.bottom)
+        } : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+      });
+      spot.hidden = false;
+      if (box) {
+        box = { // 화면 밖으로 나가지 않게 잘라요
+          left: Math.max(4, box.left - gap), top: Math.max(4, box.top - gap),
+          right: Math.min(window.innerWidth - 4, box.right + gap), bottom: Math.min(window.innerHeight - 4, box.bottom + gap)
+        };
+        Object.assign(spot.style, { left: box.left + "px", top: box.top + "px", width: (box.right - box.left) + "px", height: (box.bottom - box.top) + "px" });
+      } else {
+        // 아직 화면에 없는 곳이면 (예: 바다 정보를 받는 중) 밝게 비추지 않고 카드만 가운데에
+        Object.assign(spot.style, { left: "50%", top: "50%", width: "0", height: "0" });
+      }
+      const w = card.offsetWidth, h = card.offsetHeight;
+      let top, left;
+      if (!box) {
+        top = (window.innerHeight - h) / 2;
+        left = (window.innerWidth - w) / 2;
+      } else {
+        left = Math.min(Math.max(12, (box.left + box.right) / 2 - w / 2), window.innerWidth - w - 12);
+        if (box.bottom + 12 + h <= window.innerHeight - 8) top = box.bottom + 12;      // 아래에
+        else if (box.top - 12 - h >= 8) top = box.top - 12 - h;                      // 위에
+        else {
+          top = Math.min(Math.max(8, box.top), window.innerHeight - h - 12);
+          if (box.left - 12 - w >= 8) left = box.left - 12 - w;                      // 왼쪽에 (컴퓨터에서 옆 칸을 비출 때)
+          else if (box.right + 12 + w <= window.innerWidth - 8) left = box.right + 12; // 오른쪽에
+          else top = window.innerHeight - h - 12;                                    // 자리가 없으면 화면 아래쪽에
+        }
+      }
+      card.style.top = Math.max(8, top) + "px";
+      card.style.left = left + "px";
+    }
+    $("tourButton").addEventListener("click", openTour);
+    $("tourClose").addEventListener("click", closeTour);
+    $("tourPrev").addEventListener("click", function () { if (tourIndex > 0) showTourStep(tourIndex - 1); });
+    $("tourNext").addEventListener("click", function () {
+      if (tourIndex < TOUR_STEPS.length - 1) showTourStep(tourIndex + 1);
+      else closeTour();
+    });
+    $("tourTry").addEventListener("click", function () {
+      const index = tourIndex;
+      TOUR_STEPS[index].tryIt();
+      clearTimeout(tourTryTimer);
+      tourTryTimer = setTimeout(function () { if (tourIndex === index) showTourStep(index); }, 1500); // 결과가 나오면 다시 비춰요
+    });
+    $("tourCard").addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeTour();
+      if (event.key === "ArrowRight") $("tourNext").click();
+      if (event.key === "ArrowLeft") $("tourPrev").click();
+    });
+    window.addEventListener("resize", placeTour);
+    document.addEventListener("scroll", placeTour, true); // 옆 칸이 스크롤돼도 따라가요
+
     // ───────── 로그인 ─────────
     let signupMode = false;
     let needsCode = true;
@@ -2729,6 +2931,7 @@
       me = id;
       $("meName").textContent = id;
       $("meBox").hidden = false;
+      $("tourButton").hidden = false;
       $("loginBox").hidden = true;
       $("appBox").hidden = false;
       setupMap();
@@ -2759,6 +2962,8 @@
       if (weatherLayer) setWeatherLayer(weatherLayer); // 지도 위 바람·파도 끄기
       stopPlay();
       $("meBox").hidden = true;
+      $("tourButton").hidden = true;
+      closeTour();
       $("appBox").hidden = true;
       $("loginBox").hidden = false;
       setMode(false);
