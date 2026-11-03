@@ -119,6 +119,22 @@
     .files .buttons { display: flex; gap: 6px; flex-shrink: 0; }
     .files .get { background: #3b5bdb; border-color: #3b5bdb; color: #fff; }
     .empty { padding: 30px 0; text-align: center; color: #5b6272; }
+    .files .open { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; padding: 0; border: 0; background: none; color: inherit; text-align: left; }
+    .files .open:hover b { color: #3b5bdb; text-decoration: underline; }
+
+    /* 바로 보기 창 */
+    dialog.viewer { width: min(960px, calc(100% - 16px)); height: min(92vh, 900px); max-height: none; padding: 0; border: 0; border-radius: 14px; overflow: hidden; }
+    dialog.viewer::backdrop { background: rgba(0, 0, 0, 0.7); }
+    .viewer .head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #3b5bdb; color: #fff; }
+    .viewer .head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+    .viewer .head a, .viewer .head button { padding: 6px 10px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 14px; text-decoration: none; white-space: nowrap; }
+    .viewer .body { display: flex; align-items: center; justify-content: center; height: calc(100% - 52px); background: #2b2f38; }
+    .viewer .body img, .viewer .body video { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .viewer .body iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+    .viewer .body audio { width: min(480px, 90%); }
+    .viewer .msg { max-width: 460px; padding: 24px; border-radius: 14px; background: #fff; font-size: 16px; line-height: 1.7; text-align: center; }
+    .viewer .msg .big { display: block; font-size: 48px; }
+    @media (max-width: 520px) { .viewer .head .wide { display: none; } }
     @media (max-width: 520px) {
       .files li { flex-wrap: wrap; }
       .files .buttons { width: 100%; justify-content: flex-end; }
@@ -179,6 +195,17 @@
     <ul class="files" id="fileList"></ul>
     <p class="error" id="listError"></p>
   </main>
+
+  <!-- 바로 보기 창 -->
+  <dialog class="viewer" id="viewer">
+    <div class="head">
+      <b id="viewName"></b>
+      <a id="viewNewTab" target="_blank" rel="noopener" hidden><span class="wide">↗ 새 창에서 </span>크게</a>
+      <a id="viewGet" rel="noopener">⬇ 받기</a>
+      <button type="button" id="viewClose">✕ 닫기</button>
+    </div>
+    <div class="body" id="viewBody"></div>
+  </dialog>
 
   <script>
     const $ = function (id) { return document.getElementById(id); };
@@ -424,10 +451,93 @@
           });
           buttons.append(remove);
         }
-        row.append(el("span", "icon", iconOf(file.name)), words, buttons);
+        // 그림이나 이름을 누르면 바로 보기 창이 열려요
+        const open = el("button", "open");
+        open.type = "button";
+        open.title = "눌러서 바로 보기";
+        open.append(el("span", "icon", iconOf(file.name)), words);
+        open.addEventListener("click", function () { openViewer(file); });
+        const look = el("button", "soft", "👀 보기");
+        look.type = "button";
+        look.addEventListener("click", function () { openViewer(file); });
+        buttons.prepend(look);
+        row.append(open, buttons);
         list.append(row);
       });
     }
+
+    // ───────── 바로 보기 ─────────
+    // 사진·영상·소리는 브라우저가 바로 보여 줘요. PDF·글(txt)은 서버가 주는 "바로 보기 링크"(view)로 창 안에서 열어요.
+    // 한글·PPT·엑셀·압축 파일은 브라우저가 직접 열 수 없어서 내려받아야 해요.
+    const VIEW_KINDS = {
+      image: ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"],
+      video: ["mp4", "webm", "mov"],
+      audio: ["mp3", "wav", "m4a", "ogg"],
+      page: ["pdf", "txt", "md", "csv"] // 서버의 바로 보기 링크가 있어야 해요
+    };
+    function viewKindOf(name) {
+      const end = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+      return Object.keys(VIEW_KINDS).find(function (kind) { return VIEW_KINDS[kind].includes(end); }) || null;
+    }
+    // 링크는 1시간만 쓸 수 있어서, 목록을 받은 지 오래됐으면 새로 받아요
+    async function freshFile(file) {
+      if (Date.now() - loadedAt < LINK_MINUTES * 60000) return file;
+      await loadFiles();
+      return files.find(function (f) { return f.sk === file.sk; }) || file;
+    }
+    function viewMessage(big, text) {
+      const box = el("div", "msg");
+      box.append(el("span", "big", big), document.createTextNode(text));
+      return box;
+    }
+    async function openViewer(original) {
+      const body = $("viewBody");
+      body.textContent = "";
+      $("viewName").textContent = iconOf(original.name) + " " + original.name;
+      $("viewNewTab").hidden = true;
+      if (!$("viewer").open) $("viewer").showModal();
+      body.append(viewMessage("⏳", "여는 중…"));
+      const file = await freshFile(original);
+      $("viewGet").href = file.url;
+      const kind = viewKindOf(file.name);
+      const link = file.view || file.url; // 사진·영상·소리는 내려받기 링크로도 볼 수 있어요
+      body.textContent = "";
+      if (kind === "image") {
+        const img = el("img");
+        img.src = link;
+        img.alt = file.name;
+        img.onerror = function () { body.textContent = ""; body.append(viewMessage("😢", "이 사진은 브라우저에서 열리지 않아요. ⬇ 받기로 내려받아 열어 주세요.")); };
+        body.append(img);
+      } else if (kind === "video" || kind === "audio") {
+        const media = el(kind);
+        media.src = link;
+        media.controls = true;
+        media.onerror = function () { body.textContent = ""; body.append(viewMessage("😢", "이 파일은 브라우저에서 재생되지 않아요. ⬇ 받기로 내려받아 열어 주세요.")); };
+        body.append(media);
+      } else if (kind === "page" && file.view) {
+        const frame = document.createElement("iframe");
+        frame.src = file.view;
+        frame.title = file.name;
+        body.append(frame);
+      } else if (kind === "page") {
+        body.append(viewMessage("🛠️", "PDF·글 파일을 바로 보려면 선생님이 서버를 한 번 업데이트해야 해요. 지금은 ⬇ 받기로 내려받아 열어 주세요."));
+      } else {
+        body.append(viewMessage(iconOf(file.name), "이 파일(한글·PPT·엑셀·압축 파일 등)은 브라우저에서 바로 열 수 없어요. 위의 ⬇ 받기를 눌러 내려받은 뒤 열어 주세요."));
+      }
+      // 핸드폰에서는 창 안의 PDF가 잘 안 보일 수 있어서 새 창으로도 열 수 있게 해요
+      if (kind && file.view) { // 내려받기 링크(url)는 새 창에서 열면 내려받아지니까 바로 보기 링크가 있을 때만
+        $("viewNewTab").href = link;
+        $("viewNewTab").hidden = false;
+      }
+    }
+    function closeViewer() {
+      $("viewBody").textContent = ""; // 영상·소리가 계속 나오지 않게 비워요
+      if ($("viewer").open) $("viewer").close();
+    }
+    $("viewClose").addEventListener("click", closeViewer);
+    $("viewer").addEventListener("click", function (event) { if (event.target === this) closeViewer(); });
+    // "닫힘" 알림은 조금 늦게 와요. 그사이 다른 파일로 다시 열었으면 지우지 않아요
+    $("viewer").addEventListener("close", function () { if (!this.open) $("viewBody").textContent = ""; });
     $("searchInput").addEventListener("input", drawFiles);
     $("whoSelect").addEventListener("change", drawFiles);
     $("reloadButton").addEventListener("click", loadFiles);
